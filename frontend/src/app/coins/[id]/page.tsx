@@ -53,6 +53,13 @@ function formatSupply(value: number | null | undefined): string {
   }).format(value);
 }
 
+const statCardAccents = [
+  { border: "border-l-indigo-500", iconBg: "bg-indigo-500/15 text-indigo-400" },
+  { border: "border-l-emerald-500", iconBg: "bg-emerald-500/15 text-emerald-400" },
+  { border: "border-l-amber-500", iconBg: "bg-amber-500/15 text-amber-400" },
+  { border: "border-l-cyan-500", iconBg: "bg-cyan-500/15 text-cyan-400" },
+];
+
 export default function CoinDetailPage() {
   const params = useParams();
   const coinId = Number(params.id);
@@ -130,6 +137,13 @@ export default function CoinDetailPage() {
     );
   }
 
+  const stats = [
+    { label: "Price", value: formatPrice(coin.price_usd), icon: <DollarSign className="size-5" /> },
+    { label: "Market Cap", value: formatCompact(coin.market_cap), icon: <BarChart3 className="size-5" /> },
+    { label: "24h Volume", value: formatCompact(coin.total_volume), icon: <Activity className="size-5" /> },
+    { label: "Circulating Supply", value: formatSupply(coin.circulating_supply), icon: <Coins className="size-5" /> },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -154,10 +168,10 @@ export default function CoinDetailPage() {
         </div>
         {coin.price_change_24h_pct !== null && (
           <span
-            className={`ml-2 rounded-full px-3 py-1 text-sm font-medium ${
+            className={`ml-2 rounded-full px-3 py-1 text-sm font-medium border ${
               coin.price_change_24h_pct >= 0
-                ? "bg-emerald-500/10 text-emerald-400"
-                : "bg-red-500/10 text-red-400"
+                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                : "bg-red-500/10 text-red-400 border-red-500/20"
             }`}
           >
             {coin.price_change_24h_pct >= 0 ? "+" : ""}
@@ -171,65 +185,28 @@ export default function CoinDetailPage() {
         Key metrics from the latest market data snapshot. Market cap and volume are sourced from CoinGecko, while the price history chart below is built from our star-schema fact table with data points captured every 10 minutes.
       </p>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="bg-slate-800/50 border-slate-700/50">
-          <CardContent className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-slate-700/50 text-slate-400">
-              <DollarSign className="size-5" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-400">Price</p>
-              <p className="text-lg font-bold text-white">
-                {formatPrice(coin.price_usd)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-slate-800/50 border-slate-700/50">
-          <CardContent className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-slate-700/50 text-slate-400">
-              <BarChart3 className="size-5" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-400">Market Cap</p>
-              <p className="text-lg font-bold text-white">
-                {formatCompact(coin.market_cap)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-slate-800/50 border-slate-700/50">
-          <CardContent className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-slate-700/50 text-slate-400">
-              <Activity className="size-5" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-400">24h Volume</p>
-              <p className="text-lg font-bold text-white">
-                {formatCompact(coin.total_volume)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-slate-800/50 border-slate-700/50">
-          <CardContent className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-slate-700/50 text-slate-400">
-              <Coins className="size-5" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-400">Circulating Supply</p>
-              <p className="text-lg font-bold text-white">
-                {formatSupply(coin.circulating_supply)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {stats.map((stat, i) => {
+          const accent = statCardAccents[i];
+          return (
+            <Card key={stat.label} className={`glass-card border-l-[3px] ${accent.border}`}>
+              <CardContent className="flex items-center gap-3">
+                <div className={`flex size-10 items-center justify-center rounded-lg ${accent.iconBg}`}>
+                  {stat.icon}
+                </div>
+                <div>
+                  <p className="text-sm text-slate-400">{stat.label}</p>
+                  <p className="text-lg font-bold text-white">
+                    {stat.value}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Price Chart */}
-      <Card className="bg-slate-800/50 border-slate-700/50">
+      <Card className="glass-card">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-white">Price History</CardTitle>

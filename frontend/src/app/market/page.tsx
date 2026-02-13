@@ -46,12 +46,12 @@ export default function MarketPage() {
           placeholder="Search coins..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-10 bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500"
+          className="pl-10 bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500/50 focus:ring-indigo-500/20 transition-all duration-200"
         />
       </div>
 
       {/* Market Table */}
-      <Card className="bg-slate-800/50 border-slate-700/50">
+      <Card className="glass-card">
         <CardContent className="p-0">
           {loading ? (
             <div className="space-y-3 p-6">

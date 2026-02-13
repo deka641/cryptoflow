@@ -23,7 +23,7 @@ function formatCompact(value: number): string {
 
 function KpiSkeleton() {
   return (
-    <Card className="bg-slate-800/50 border-slate-700/50">
+    <Card className="glass-card">
       <CardContent className="flex items-start justify-between">
         <div className="space-y-3">
           <Skeleton className="h-4 w-24 bg-slate-700" />
@@ -79,24 +79,28 @@ export default function DashboardPage() {
               value={formatCompact(data.total_market_cap)}
               change={null}
               icon={<DollarSign className="size-5" />}
+              accentColor="indigo"
             />
             <KpiCard
               title="24h Volume"
               value={formatCompact(data.total_volume_24h)}
               change={null}
               icon={<BarChart3 className="size-5" />}
+              accentColor="emerald"
             />
             <KpiCard
               title="BTC Dominance"
               value={`${data.btc_dominance.toFixed(1)}%`}
               change={null}
               icon={<Bitcoin className="size-5" />}
+              accentColor="amber"
             />
             <KpiCard
               title="Active Coins"
               value={new Intl.NumberFormat("en-US").format(data.active_coins)}
               change={null}
               icon={<Coins className="size-5" />}
+              accentColor="cyan"
             />
           </>
         )}
@@ -111,7 +115,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {loading || !data ? (
           <>
-            <Card className="bg-slate-800/50 border-slate-700/50">
+            <Card className="glass-card">
               <CardHeader>
                 <CardTitle className="text-white">Top Gainers</CardTitle>
               </CardHeader>
@@ -119,7 +123,7 @@ export default function DashboardPage() {
                 <MoversSkeleton />
               </CardContent>
             </Card>
-            <Card className="bg-slate-800/50 border-slate-700/50">
+            <Card className="glass-card">
               <CardHeader>
                 <CardTitle className="text-white">Top Losers</CardTitle>
               </CardHeader>
@@ -130,7 +134,7 @@ export default function DashboardPage() {
           </>
         ) : (
           <>
-            <Card className="bg-slate-800/50 border-slate-700/50">
+            <Card className="glass-card">
               <CardHeader>
                 <CardTitle className="text-white">Top Gainers</CardTitle>
               </CardHeader>
@@ -138,7 +142,7 @@ export default function DashboardPage() {
                 <TopMovers title="Top Gainers" movers={data.top_gainers} />
               </CardContent>
             </Card>
-            <Card className="bg-slate-800/50 border-slate-700/50">
+            <Card className="glass-card">
               <CardHeader>
                 <CardTitle className="text-white">Top Losers</CardTitle>
               </CardHeader>

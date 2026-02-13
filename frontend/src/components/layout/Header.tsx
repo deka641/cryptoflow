@@ -39,7 +39,7 @@ export function Header() {
   const title = getPageTitle(pathname);
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-slate-800 bg-slate-950/80 backdrop-blur-sm px-4 lg:px-6">
+    <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-slate-700/50 bg-slate-950/70 backdrop-blur-xl px-4 lg:px-6">
       <Sheet>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" className="lg:hidden text-slate-400 hover:text-white">
@@ -47,10 +47,10 @@ export function Header() {
             <span className="sr-only">Open menu</span>
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-64 bg-slate-900 border-slate-800 p-0">
+        <SheetContent side="left" className="w-64 bg-gradient-to-b from-slate-900 to-slate-950 border-slate-800 p-0">
           <SheetHeader className="flex h-16 items-center gap-2 px-6 border-b border-slate-800">
             <div className="flex items-center gap-2">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-indigo-600 text-white font-bold text-sm">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-700 text-white font-bold text-sm shadow-lg shadow-indigo-500/25">
                 CF
               </div>
               <SheetTitle className="text-lg font-bold text-white tracking-tight">
@@ -69,8 +69,10 @@ export function Header() {
       <div className="ml-auto flex items-center gap-4">
         <div className="flex items-center gap-2 text-sm text-slate-400">
           <span
-            className={`size-2.5 rounded-full ${
-              connected ? "bg-emerald-500" : "bg-slate-600"
+            className={`size-2.5 rounded-full transition-all duration-300 ${
+              connected
+                ? "bg-emerald-500 animate-[pulse-dot_2s_infinite_ease-in-out] shadow-[0_0_8px_rgba(52,211,153,0.5)]"
+                : "bg-slate-600"
             }`}
           />
           <span className="hidden sm:inline">

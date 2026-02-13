@@ -45,6 +45,42 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+  --animate-shimmer: shimmer 2s infinite linear;
+  --animate-pulse-dot: pulse-dot 2s infinite ease-in-out;
+  --animate-fade-in: fade-in 0.3s ease-out;
+  --animate-flash-green: flash-green 0.6s ease-out;
+  --animate-flash-red: flash-red 0.6s ease-out;
+  --animate-glow-border: glow-border 2s infinite ease-in-out;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
+  50% { opacity: 0.8; box-shadow: 0 0 8px 2px currentColor; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes flash-green {
+  0% { background-color: rgba(52, 211, 153, 0.25); }
+  100% { background-color: transparent; }
+}
+
+@keyframes flash-red {
+  0% { background-color: rgba(248, 113, 113, 0.25); }
+  100% { background-color: transparent; }
+}
+
+@keyframes glow-border {
+  0%, 100% { border-color: rgba(99, 102, 241, 0.3); }
+  50% { border-color: rgba(99, 102, 241, 0.6); }
 }
 
 :root {
@@ -119,10 +155,39 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground;
-    @apply bg-background text-foreground;
   }
+}
+
+/* Utility classes */
+.glass {
+  @apply backdrop-blur-xl bg-white/5 border border-white/10;
+}
+
+.glass-card {
+  @apply bg-gradient-to-br from-slate-800/80 to-slate-900/80 border-slate-700/40 shadow-lg shadow-black/20 backdrop-blur-sm;
+}
+
+.animate-shimmer {
+  animation: var(--animate-shimmer);
+}
+
+/* Skeleton shimmer overlay */
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(148, 163, 184, 0.08) 50%,
+    transparent 100%
+  );
+  animation: shimmer 2s infinite linear;
 }

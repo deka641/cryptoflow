@@ -33,7 +33,7 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
   const entry = payload[0].payload;
 
   return (
-    <div className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 shadow-lg">
+    <div className="rounded-lg border border-slate-700/50 bg-slate-800/90 backdrop-blur-md px-3 py-2 shadow-xl shadow-black/20">
       <p className="text-sm font-semibold text-white">{entry.name}</p>
       <p className="text-xs text-slate-400">
         Volatility: {(entry.volatility * 100).toFixed(2)}%
@@ -97,7 +97,7 @@ export function VolatilityChart({ data }: VolatilityChartProps) {
             width={50}
           />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(148, 163, 184, 0.1)" }} />
-          <Bar dataKey="displayVol" radius={[0, 4, 4, 0]} barSize={24}>
+          <Bar dataKey="displayVol" radius={[0, 6, 6, 0]} barSize={24} isAnimationActive={true} animationDuration={600}>
             {chartData.map((entry, index) => (
               <Cell
                 key={`cell-${index}`}

@@ -40,9 +40,9 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-[calc(100vh-10rem)] items-center justify-center">
-      <Card className="w-full max-w-md bg-slate-800/50 border-slate-700/50">
+      <Card className="w-full max-w-md bg-slate-800/60 border-slate-700/50 backdrop-blur-xl shadow-2xl shadow-black/30">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-xl bg-indigo-600 text-white">
+          <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 text-white shadow-lg shadow-indigo-500/25">
             <LogIn className="size-6" />
           </div>
           <CardTitle className="text-2xl text-white">Welcome back</CardTitle>
@@ -68,7 +68,7 @@ export default function LoginPage() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-slate-900/50 border-slate-700 text-white placeholder:text-slate-500"
+                className="bg-slate-900/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500/50 focus:ring-indigo-500/20 transition-all duration-200"
                 autoComplete="email"
                 required
               />
@@ -84,7 +84,7 @@ export default function LoginPage() {
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="bg-slate-900/50 border-slate-700 text-white placeholder:text-slate-500"
+                className="bg-slate-900/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500/50 focus:ring-indigo-500/20 transition-all duration-200"
                 autoComplete="current-password"
                 required
               />
@@ -92,7 +92,7 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              className="w-full bg-indigo-600 text-white hover:bg-indigo-700"
+              className="w-full bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:brightness-110"
               disabled={loading}
             >
               {loading ? "Signing in..." : "Sign in"}

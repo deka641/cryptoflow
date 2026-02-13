@@ -2,16 +2,43 @@ import { ReactNode } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
+type AccentColor = "indigo" | "emerald" | "amber" | "cyan";
+
+const accentStyles: Record<AccentColor, { border: string; iconBg: string }> = {
+  indigo: {
+    border: "border-l-indigo-500",
+    iconBg: "bg-indigo-500/15 text-indigo-400",
+  },
+  emerald: {
+    border: "border-l-emerald-500",
+    iconBg: "bg-emerald-500/15 text-emerald-400",
+  },
+  amber: {
+    border: "border-l-amber-500",
+    iconBg: "bg-amber-500/15 text-amber-400",
+  },
+  cyan: {
+    border: "border-l-cyan-500",
+    iconBg: "bg-cyan-500/15 text-cyan-400",
+  },
+};
+
 interface KpiCardProps {
   title: string;
   value: string;
   change: number | null;
   icon: ReactNode;
+  accentColor?: AccentColor;
 }
 
-export function KpiCard({ title, value, change, icon }: KpiCardProps) {
+export function KpiCard({ title, value, change, icon, accentColor = "indigo" }: KpiCardProps) {
+  const accent = accentStyles[accentColor];
+
   return (
-    <Card className="bg-slate-800/50 border-slate-700/50">
+    <Card className={cn(
+      "glass-card border-l-[3px] hover:shadow-xl hover:shadow-black/30 transition-all duration-300",
+      accent.border
+    )}>
       <CardContent className="flex items-start justify-between">
         <div className="space-y-2">
           <p className="text-sm font-medium text-slate-400">{title}</p>
@@ -28,7 +55,7 @@ export function KpiCard({ title, value, change, icon }: KpiCardProps) {
             </p>
           )}
         </div>
-        <div className="flex size-10 items-center justify-center rounded-lg bg-slate-700/50 text-slate-400">
+        <div className={cn("flex size-10 items-center justify-center rounded-lg", accent.iconBg)}>
           {icon}
         </div>
       </CardContent>

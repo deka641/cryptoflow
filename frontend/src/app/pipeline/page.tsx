@@ -48,7 +48,10 @@ function StatusBadge({ status }: { status: string }) {
 
 function HealthCard({ health }: { health: PipelineHealth }) {
   return (
-    <Card className="bg-slate-800/50 border-slate-700/50">
+    <Card className={cn(
+      "glass-card border-l-[3px] transition-all duration-300",
+      health.is_healthy ? "border-l-emerald-500" : "border-l-red-500"
+    )}>
       <CardContent className="flex items-start justify-between">
         <div className="space-y-2">
           <p className="text-sm font-medium text-slate-400">Job</p>
@@ -68,8 +71,10 @@ function HealthCard({ health }: { health: PipelineHealth }) {
         <div className="flex flex-col items-end gap-2">
           <span
             className={cn(
-              "inline-flex size-3 rounded-full",
-              health.is_healthy ? "bg-emerald-500" : "bg-red-500"
+              "inline-flex size-3 rounded-full transition-all duration-300",
+              health.is_healthy
+                ? "bg-emerald-500 animate-[pulse-dot_2s_infinite_ease-in-out] shadow-[0_0_8px_rgba(52,211,153,0.5)]"
+                : "bg-red-500"
             )}
           />
           {health.last_run_status && (
@@ -153,7 +158,7 @@ export default function PipelinePage() {
             ))}
           </div>
         ) : (
-          <Card className="bg-slate-800/50 border-slate-700/50">
+          <Card className="glass-card">
             <CardContent className="flex h-32 items-center justify-center text-slate-500">
               No pipeline health data available
             </CardContent>
@@ -162,7 +167,7 @@ export default function PipelinePage() {
       </div>
 
       {/* Runs Table */}
-      <Card className="bg-slate-800/50 border-slate-700/50">
+      <Card className="glass-card">
         <CardHeader>
           <CardTitle className="text-white">Pipeline Runs</CardTitle>
           <p className="text-xs text-slate-400">
@@ -180,7 +185,7 @@ export default function PipelinePage() {
           ) : runs && runs.length > 0 ? (
             <Table>
               <TableHeader>
-                <TableRow className="border-slate-700 hover:bg-transparent">
+                <TableRow className="border-slate-700 hover:bg-transparent bg-slate-800/30">
                   <TableHead>Job</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="hidden sm:table-cell">Start</TableHead>
@@ -193,7 +198,7 @@ export default function PipelinePage() {
                 {runs.map((run) => (
                   <TableRow
                     key={run.id}
-                    className="border-slate-800 hover:bg-slate-800/50"
+                    className="border-slate-800 hover:bg-slate-700/30 transition-colors duration-200"
                   >
                     <TableCell className="font-medium text-white">
                       {run.dag_id}

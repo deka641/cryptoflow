@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import {
   Table,
@@ -57,6 +57,35 @@ function formatPrice(price: number | null): string {
   }).format(price);
 }
 
+function PriceCell({ coin, livePrice }: { coin: Coin; livePrice?: number }) {
+  const displayPrice = livePrice ?? coin.price_usd;
+  const prevPriceRef = useRef(displayPrice);
+  const [flash, setFlash] = useState<"green" | "red" | null>(null);
+
+  useEffect(() => {
+    if (livePrice !== undefined && prevPriceRef.current !== null && livePrice !== prevPriceRef.current) {
+      setFlash(livePrice > prevPriceRef.current ? "green" : "red");
+      const timer = setTimeout(() => setFlash(null), 600);
+      prevPriceRef.current = livePrice;
+      return () => clearTimeout(timer);
+    }
+    prevPriceRef.current = displayPrice;
+  }, [livePrice, displayPrice]);
+
+  return (
+    <TableCell
+      className={cn(
+        "text-right font-medium text-white transition-colors duration-300",
+        flash === "green" && "animate-[flash-green_0.6s_ease-out]",
+        flash === "red" && "animate-[flash-red_0.6s_ease-out]"
+      )}
+      key={flash ? `${coin.id}-${Date.now()}` : coin.id}
+    >
+      {formatPrice(displayPrice)}
+    </TableCell>
+  );
+}
+
 export function MarketTable({ coins, livePrices }: MarketTableProps) {
   const [sortField, setSortField] = useState<SortField>("market_cap_rank");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
@@ -100,7 +129,7 @@ export function MarketTable({ coins, livePrices }: MarketTableProps) {
   return (
     <Table>
       <TableHeader>
-        <TableRow className="border-slate-700 hover:bg-transparent">
+        <TableRow className="border-slate-700 hover:bg-transparent bg-slate-800/30">
           <TableHead
             className="cursor-pointer select-none w-16"
             onClick={() => handleSort("market_cap_rank")}
@@ -154,13 +183,12 @@ export function MarketTable({ coins, livePrices }: MarketTableProps) {
       <TableBody>
         {sortedCoins.map((coin) => {
           const livePrice = livePrices?.[coin.symbol];
-          const displayPrice = livePrice ?? coin.price_usd;
           const change = coin.price_change_24h_pct;
 
           return (
             <TableRow
               key={coin.id}
-              className="border-slate-800 hover:bg-slate-800/50"
+              className="border-slate-800 hover:bg-slate-700/30 transition-colors duration-200"
             >
               <TableCell className="text-slate-400 font-medium">
                 {coin.market_cap_rank ?? "-"}
@@ -189,9 +217,7 @@ export function MarketTable({ coins, livePrices }: MarketTableProps) {
                   </div>
                 </Link>
               </TableCell>
-              <TableCell className="text-right font-medium text-white">
-                {formatPrice(displayPrice)}
-              </TableCell>
+              <PriceCell coin={coin} livePrice={livePrice} />
               <TableCell
                 className={cn(
                   "text-right font-medium",

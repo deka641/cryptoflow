@@ -50,7 +50,7 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 shadow-lg">
+    <div className="rounded-lg border border-slate-700/50 bg-slate-800/90 backdrop-blur-md px-3 py-2 shadow-xl shadow-black/20">
       <p className="text-xs text-slate-400">
         {label
           ? new Date(label).toLocaleDateString("en-US", {
@@ -89,7 +89,8 @@ export function PriceChart({ data, color = "#6366f1" }: PriceChartProps) {
         >
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={color} stopOpacity={0.3} />
+              <stop offset="0%" stopColor={color} stopOpacity={0.4} />
+              <stop offset="50%" stopColor={color} stopOpacity={0.15} />
               <stop offset="100%" stopColor={color} stopOpacity={0} />
             </linearGradient>
           </defs>
@@ -116,7 +117,7 @@ export function PriceChart({ data, color = "#6366f1" }: PriceChartProps) {
             type="monotone"
             dataKey="price"
             stroke={color}
-            strokeWidth={2}
+            strokeWidth={2.5}
             fill={`url(#${gradientId})`}
             isAnimationActive={true}
             animationDuration={500}

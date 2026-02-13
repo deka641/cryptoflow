@@ -67,13 +67,13 @@ export default function AnalyticsPage() {
       </div>
 
       <Tabs defaultValue="correlation">
-        <TabsList className="bg-slate-800 border border-slate-700">
-          <TabsTrigger value="correlation">Correlation</TabsTrigger>
-          <TabsTrigger value="volatility">Volatility</TabsTrigger>
+        <TabsList className="bg-slate-800/80 border border-slate-700/50 backdrop-blur-sm">
+          <TabsTrigger value="correlation" className="data-[state=active]:bg-indigo-600/20 data-[state=active]:text-white transition-all duration-200">Correlation</TabsTrigger>
+          <TabsTrigger value="volatility" className="data-[state=active]:bg-indigo-600/20 data-[state=active]:text-white transition-all duration-200">Volatility</TabsTrigger>
         </TabsList>
 
         <TabsContent value="correlation" className="mt-6">
-          <Card className="bg-slate-800/50 border-slate-700/50">
+          <Card className="glass-card">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-white">Price Correlation Matrix</CardTitle>
@@ -119,7 +119,7 @@ export default function AnalyticsPage() {
         </TabsContent>
 
         <TabsContent value="volatility" className="mt-6">
-          <Card className="bg-slate-800/50 border-slate-700/50">
+          <Card className="glass-card">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-white">Volatility Ranking</CardTitle>

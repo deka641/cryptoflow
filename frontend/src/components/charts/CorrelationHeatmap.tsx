@@ -7,14 +7,14 @@ interface CorrelationHeatmapProps {
   matrix: (number | null)[][];
 }
 
-// Dark-friendly diverging palette: blue (negative) → slate (zero) → emerald (positive)
+// Dark-friendly diverging palette: blue (negative) -> slate (zero) -> emerald (positive)
 // All cells use white text for consistent readability
 function getCorrelationColor(value: number | null): string {
   if (value === null) return "#1e293b";
   const clamped = Math.max(-1, Math.min(1, value));
 
   if (clamped >= 0) {
-    // 0 → +1: slate-700 → emerald-700
+    // 0 -> +1: slate-700 -> emerald-700
     // Interpolate from #334155 to #047857
     const t = clamped;
     const r = Math.round(0x33 + (0x04 - 0x33) * t);
@@ -22,7 +22,7 @@ function getCorrelationColor(value: number | null): string {
     const b = Math.round(0x55 + (0x57 - 0x55) * t);
     return `rgb(${r}, ${g}, ${b})`;
   } else {
-    // -1 → 0: rose-700 → slate-700
+    // -1 -> 0: rose-700 -> slate-700
     // Interpolate from #be123c to #334155
     const t = Math.abs(clamped);
     const r = Math.round(0x33 + (0xbe - 0x33) * t);
@@ -116,7 +116,7 @@ export function CorrelationHeatmap({ coins, matrix }: CorrelationHeatmapProps) {
       {/* Tooltip */}
       {tooltip && (
         <div
-          className="fixed z-50 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 shadow-lg pointer-events-none"
+          className="fixed z-50 rounded-lg border border-slate-700/50 bg-slate-800/90 backdrop-blur-md px-3 py-2 shadow-xl shadow-black/20 pointer-events-none"
           style={{
             left: tooltip.x,
             top: tooltip.y,

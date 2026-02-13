@@ -47,9 +47,11 @@ function ScoreRing({ score, size = 64 }: { score: number; size?: number }) {
     return "#f87171";
   };
 
+  const color = getColor(score);
+
   return (
     <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
+      <svg width={size} height={size} className="-rotate-90" style={{ filter: `drop-shadow(0 0 6px ${color}40)` }}>
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -63,11 +65,12 @@ function ScoreRing({ score, size = 64 }: { score: number; size?: number }) {
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke={getColor(score)}
+          stroke={color}
           strokeWidth={4}
           strokeDasharray={circumference}
           strokeDashoffset={progress}
           strokeLinecap="round"
+          className="transition-all duration-700 ease-out"
         />
       </svg>
       <span className="absolute text-sm font-bold text-white">{Math.round(score)}%</span>
@@ -77,7 +80,7 @@ function ScoreRing({ score, size = 64 }: { score: number; size?: number }) {
 
 function SummaryCard({ summary }: { summary: QualitySummary }) {
   return (
-    <Card className="bg-slate-800/50 border-slate-700/50">
+    <Card className="glass-card">
       <CardContent className="flex items-center gap-4">
         <ScoreRing score={summary.score} />
         <div className="flex-1 space-y-1">
@@ -180,7 +183,7 @@ export default function QualityPage() {
             ))}
           </div>
         ) : (
-          <Card className="bg-slate-800/50 border-slate-700/50">
+          <Card className="glass-card">
             <CardContent className="flex h-24 items-center justify-center text-slate-500">
               No quality summary data available
             </CardContent>
@@ -189,7 +192,7 @@ export default function QualityPage() {
       </div>
 
       {/* Checks Table */}
-      <Card className="bg-slate-800/50 border-slate-700/50">
+      <Card className="glass-card">
         <CardHeader>
           <CardTitle className="text-white">Quality Checks</CardTitle>
           <p className="text-xs text-slate-400">
@@ -206,7 +209,7 @@ export default function QualityPage() {
           ) : checks && checks.length > 0 ? (
             <Table>
               <TableHeader>
-                <TableRow className="border-slate-700 hover:bg-transparent">
+                <TableRow className="border-slate-700 hover:bg-transparent bg-slate-800/30">
                   <TableHead>Name</TableHead>
                   <TableHead>Table</TableHead>
                   <TableHead>Status</TableHead>
@@ -218,7 +221,7 @@ export default function QualityPage() {
                 {checks.map((check) => (
                   <TableRow
                     key={check.id}
-                    className="border-slate-800 hover:bg-slate-800/50"
+                    className="border-slate-800 hover:bg-slate-700/30 transition-colors duration-200"
                   >
                     <TableCell className="font-medium text-white">
                       {check.check_name}
