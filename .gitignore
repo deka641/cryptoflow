@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+*.egg
+
+# Node
+node_modules/
+.next/
+out/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Airflow
+airflow.db
+airflow.cfg
+webserver_config.py
+airflow-webserver.pid
+logs/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Database
+*.sql.bak
+
+# Temporary scripts
+frontend/screenshot_*.js
+frontend/test-results/
