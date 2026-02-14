@@ -2,11 +2,13 @@
 
 **Real-Time Crypto Data Pipeline & Analytics Platform**
 
-A full-stack application that ingests, processes, and visualizes cryptocurrency market data in real time. Built to demonstrate end-to-end data engineering and modern web development — from a star-schema data warehouse to interactive dashboards with live price streaming.
+A full-stack application that ingests, processes, and visualizes cryptocurrency market data in real time. Built to demonstrate end-to-end data engineering and modern web development, from a star-schema data warehouse to interactive dashboards with live price streaming.
 
 ### [Live Demo →](https://cryptoflow.deka-labs.dev)
 
 ![Dashboard](docs/dashboard.png)
+
+![Risk & Return Analytics](docs/analytics-risk-return.png)
 
 ---
 
@@ -16,9 +18,9 @@ CryptoFlow tracks the top 50 cryptocurrencies by market cap and provides:
 
 - **Real-time price streaming** via WebSocket (CoinCap → Redis Pub/Sub → Browser)
 - **Batch data ingestion** from CoinGecko API every 10 minutes
-- **Precomputed analytics** — correlation matrices and volatility metrics, computed daily
+- **Precomputed analytics**: correlation matrices, volatility metrics, and risk-return analysis, computed daily
 - **Automated data quality monitoring** with freshness, completeness, and anomaly checks
-- **Interactive visualizations** — price charts, correlation heatmaps, sortable market tables
+- **Interactive visualizations**: candlestick charts, risk-return scatter plots, correlation heatmaps, market treemaps, and sortable tables
 
 ---
 
@@ -93,11 +95,11 @@ CryptoFlow tracks the top 50 cryptocurrencies by market cap and provides:
 
 ### Star Schema Data Warehouse
 
-The PostgreSQL database uses a dimensional model with fact and dimension tables — the same approach used in production data warehouses. A materialized view (`mv_latest_market_data`) provides sub-millisecond dashboard queries.
+The PostgreSQL database uses a dimensional model with fact and dimension tables, the same approach used in production data warehouses. A materialized view (`mv_latest_market_data`) provides sub-millisecond dashboard queries.
 
 ### Batch Pipeline with Self-Monitoring
 
-Four cron-scheduled Python scripts handle all batch processing. Every run is tracked in `pipeline_runs` with status, duration, and record counts — visible in the Pipeline Monitor UI.
+Four cron-scheduled Python scripts handle all batch processing. Every run is tracked in `pipeline_runs` with status, duration, and record counts, all visible in the Pipeline Monitor UI.
 
 | Job | Schedule | What It Does |
 |---|---|---|
@@ -114,16 +116,27 @@ A standalone WebSocket consumer connects to CoinCap, publishes price updates to 
 
 Six automated checks run hourly and feed the Quality dashboard with pass/fail/warning scores per table:
 
-- **Freshness** — Is the latest data less than 30 minutes old?
-- **Completeness** — Are all 50 tracked coins present in the last snapshot?
-- **Schema validation** — No unexpected NULL prices?
-- **Anomaly detection** — Price change >50% between consecutive snapshots?
-- **Referential integrity** — All fact rows reference valid dimension records?
-- **OHLCV consistency** — High ≥ Low, Close within expected range?
+- **Freshness**: Is the latest data less than 30 minutes old?
+- **Completeness**: Are all 50 tracked coins present in the last snapshot?
+- **Schema validation**: No unexpected NULL prices?
+- **Anomaly detection**: Price change >50% between consecutive snapshots?
+- **Referential integrity**: All fact rows reference valid dimension records?
+- **OHLCV consistency**: High >= Low, Close within expected range?
 
 ### Precomputed Analytics
 
-Daily batch jobs compute Pearson correlation between the top 15 coins and volatility metrics (standard deviation, max drawdown, Sharpe ratio) for all tracked coins — demonstrating the batch vs. real-time tradeoff in data architecture.
+Daily batch jobs compute Pearson correlation between the top 15 coins and volatility metrics (standard deviation, max drawdown, Sharpe ratio) for all tracked coins, demonstrating the batch vs. real-time tradeoff in data architecture.
+
+### Interactive Chart Suite
+
+Every chart includes inline color legends so users can interpret the data without prior knowledge:
+
+- **Risk-Return Scatter**: Bubble chart mapping volatility (x) against Sharpe ratio (y), with bubble size encoding market cap. Five-tier Sharpe color scale, quadrant annotations, and a size legend.
+- **Candlestick Chart**: Daily OHLCV candles with wick/body rendering and a translucent volume overlay. Includes a mini candle anatomy diagram explaining wicks, bodies, and volume bars.
+- **Max Drawdown**: Horizontal bar chart of worst peak-to-trough declines, color-coded by severity across four tiers (mild to severe).
+- **Volatility Ranking**: Bar chart of return standard deviations, color-coded by a three-tier risk scale (low, medium, high) relative to the highest value in the set.
+- **Correlation Heatmap**: 15x15 matrix of Pearson correlations with a diverging color gradient.
+- **Market Treemap**: Area-weighted tile map of market capitalization, colored by 24h price change.
 
 ---
 
@@ -133,9 +146,13 @@ Daily batch jobs compute Pearson correlation between the top 15 coins and volati
 |---|---|
 | ![Dashboard](docs/dashboard.png) | ![Market](docs/market.png) |
 
-| Correlation Heatmap | Coin Detail |
+| Correlation Heatmap | Risk & Return Analytics |
 |---|---|
-| ![Analytics](docs/analytics.png) | ![Coin Detail](docs/coin-detail.png) |
+| ![Correlation](docs/analytics-correlation.png) | ![Risk & Return](docs/analytics-risk-return.png) |
+
+| Coin Detail (Candlestick) | Coin Detail (Line) |
+|---|---|
+| ![Candlestick](docs/coin-detail-candle.png) | ![Line Chart](docs/coin-detail-line.png) |
 
 | Pipeline Monitor | Data Quality |
 |---|---|
@@ -188,6 +205,7 @@ Interactive documentation available at [`/docs`](https://cryptoflow.deka-labs.de
 |---|---|
 | `GET /api/v1/coins` | Paginated coin list with current prices |
 | `GET /api/v1/coins/{id}/history` | Historical prices (7d / 30d / 90d) |
+| `GET /api/v1/coins/{id}/ohlcv` | Daily OHLCV candlestick data (1-365d) |
 | `GET /api/v1/market/overview` | Market KPIs, top gainers & losers |
 | `GET /api/v1/analytics/correlation` | Correlation matrix (30d / 90d) |
 | `GET /api/v1/analytics/volatility` | Volatility ranking with Sharpe ratio |
@@ -218,7 +236,7 @@ cd frontend && npm install && npm run build && cd ..
 ./scripts/start.sh
 ```
 
-Open `http://localhost:3000` — the dashboard loads with live data.
+Open `http://localhost:3000`. The dashboard loads with live data.
 
 ---
 
