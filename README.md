@@ -26,52 +26,50 @@ CryptoFlow tracks the top 50 cryptocurrencies by market cap and provides:
 
 ## Architecture
 
-```
-                         ┌─────────────────────────────────┐
-                         │          DATA SOURCES            │
-                         │                                  │
-                         │  CoinGecko REST    CoinCap WS    │
-                         │  (batch, /10min)   (real-time)   │
-                         └───────┬──────────────┬───────────┘
-                                 │              │
-                   ┌─────────────┘              └──────────────┐
-                   ▼                                           ▼
-         ┌──────────────────┐                      ┌────────────────────┐
-         │   Cron-Scheduled │                      │  Streaming         │
-         │   Batch Jobs     │                      │  Consumer          │
-         │                  │                      │                    │
-         │  • Ingestion     │                      │  CoinCap WebSocket │
-         │  • OHLCV Agg.    │                      │  → Redis Pub/Sub   │
-         │  • Analytics     │                      │                    │
-         │  • Quality Checks│                      └─────────┬──────────┘
-         └────────┬─────────┘                                │
-                  │                                          │
-                  ▼                                          ▼
-         ┌─────────────────────────────────────────────────────────────┐
-         │                    PostgreSQL (Star Schema)                  │
-         │                                                             │
-         │   dim_coin  ←──  fact_market_data  ──→  dim_time            │
-         │                  fact_daily_ohlcv                           │
-         │                  analytics_correlation / volatility          │
-         │                  mv_latest_market_data (materialized view)  │
-         └──────────────────────────┬──────────────────────────────────┘
-                                    │
-                           ┌────────┴────────┐
-                           ▼                 ▼
-                 ┌──────────────┐   ┌──────────────────┐
-                 │   FastAPI    │   │     Redis         │
-                 │   REST API   │   │   Pub/Sub Cache   │
-                 │   + WebSocket│◄──│                   │
-                 └───────┬──────┘   └───────────────────┘
-                         │
-                         ▼
-                 ┌──────────────────────┐
-                 │    Next.js Frontend  │
-                 │                      │
-                 │  Dashboard · Market  │
-                 │  Analytics · Pipeline│
-                 │  Quality · Auth      │
-                 └──────────────────────┘
+```mermaid
+flowchart TB
+    subgraph sources["Data Sources"]
+        coingecko["CoinGecko REST API\n(batch, every 10 min)"]
+        coincap["CoinCap WebSocket\n(real-time)"]
+    end
+
+    subgraph batch["Cron-Scheduled Batch Jobs"]
+        ingest["Ingestion"]
+        ohlcv["OHLCV Aggregation"]
+        analytics["Analytics Computation"]
+        quality["Quality Checks"]
+    end
+
+    subgraph consumer["Streaming Consumer"]
+        ws_consumer["CoinCap WebSocket\n-> Redis Pub/Sub"]
+    end
+
+    subgraph db["PostgreSQL (Star Schema)"]
+        dims["dim_coin, dim_time"]
+        facts["fact_market_data\nfact_daily_ohlcv"]
+        anal["analytics_correlation\nanalytics_volatility"]
+        mv["mv_latest_market_data\n(materialized view)"]
+    end
+
+    redis["Redis\nPub/Sub Cache"]
+
+    subgraph api["FastAPI Backend"]
+        rest["REST API"]
+        ws_server["WebSocket Server"]
+    end
+
+    subgraph frontend["Next.js Frontend"]
+        pages["Dashboard, Market, Analytics\nPipeline, Quality, Coin Detail"]
+    end
+
+    coingecko --> batch
+    coincap --> consumer
+    batch --> db
+    consumer --> redis
+    db --> api
+    redis --> ws_server
+    rest --> frontend
+    ws_server --> frontend
 ```
 
 ---
