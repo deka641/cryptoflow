@@ -5,6 +5,7 @@ import { useState } from "react";
 interface CorrelationHeatmapProps {
   coins: string[];
   matrix: (number | null)[][];
+  onCellClick?: (coinA: string, coinB: string) => void;
 }
 
 // Dark-friendly diverging palette: blue (negative) -> slate (zero) -> emerald (positive)
@@ -38,7 +39,7 @@ function getTextColor(value: number | null): string {
   return "#f1f5f9";
 }
 
-export function CorrelationHeatmap({ coins, matrix }: CorrelationHeatmapProps) {
+export function CorrelationHeatmap({ coins, matrix, onCellClick }: CorrelationHeatmapProps) {
   const [tooltip, setTooltip] = useState<{
     x: number;
     y: number;
@@ -105,6 +106,11 @@ export function CorrelationHeatmap({ coins, matrix }: CorrelationHeatmapProps) {
                   });
                 }}
                 onMouseLeave={() => setTooltip(null)}
+                onClick={() => {
+                  if (onCellClick && rowIdx !== colIdx) {
+                    onCellClick(coins[rowIdx], coins[colIdx]);
+                  }
+                }}
               >
                 {value !== null ? value.toFixed(2) : "-"}
               </div>
@@ -129,6 +135,9 @@ export function CorrelationHeatmap({ coins, matrix }: CorrelationHeatmapProps) {
           <p className="text-sm font-semibold text-white">
             {tooltip.value !== null ? tooltip.value.toFixed(4) : "N/A"}
           </p>
+          {onCellClick && tooltip.row !== tooltip.col && (
+            <p className="text-xs text-indigo-400 mt-0.5">Click to compare</p>
+          )}
         </div>
       )}
 

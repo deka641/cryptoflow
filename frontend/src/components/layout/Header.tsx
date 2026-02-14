@@ -19,9 +19,11 @@ import { SidebarNav } from "./Sidebar";
 const pageTitles: Record<string, string> = {
   "/": "Dashboard",
   "/market": "Market",
+  "/compare": "Compare",
   "/analytics": "Analytics",
   "/pipeline": "Pipeline",
   "/quality": "Quality",
+  "/how-it-works": "How It Works",
 };
 
 function getPageTitle(pathname: string): string {

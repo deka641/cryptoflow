@@ -5,18 +5,22 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   TrendingUp,
+  GitCompareArrows,
   BarChart3,
   GitBranch,
   ShieldCheck,
+  Lightbulb,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/market", label: "Market", icon: TrendingUp },
+  { href: "/compare", label: "Compare", icon: GitCompareArrows },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/pipeline", label: "Pipeline", icon: GitBranch },
   { href: "/quality", label: "Quality", icon: ShieldCheck },
+  { href: "/how-it-works", label: "How It Works", icon: Lightbulb },
 ];
 
 export function SidebarNav() {

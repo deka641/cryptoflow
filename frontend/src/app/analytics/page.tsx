@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import type { CorrelationMatrix, VolatilityEntry } from "@/types";
 import { CorrelationHeatmap } from "@/components/charts/CorrelationHeatmap";
@@ -18,6 +19,7 @@ const PERIODS = [
 ];
 
 export default function AnalyticsPage() {
+  const router = useRouter();
   const [correlationDays, setCorrelationDays] = useState(30);
   const [volatilityDays, setVolatilityDays] = useState(30);
   const [correlation, setCorrelation] = useState<CorrelationMatrix | null>(null);
@@ -118,6 +120,11 @@ export default function AnalyticsPage() {
                 <CorrelationHeatmap
                   coins={correlation.coins}
                   matrix={correlation.matrix}
+                  onCellClick={(coinA, coinB) => {
+                    router.push(
+                      `/compare?coins=${coinA},${coinB}&period=${correlationDays}`
+                    );
+                  }}
                 />
               ) : (
                 <div className="flex h-64 items-center justify-center text-slate-500">
