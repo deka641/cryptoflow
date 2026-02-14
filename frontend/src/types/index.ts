@@ -45,6 +45,22 @@ export interface CoinMover {
   price_change_24h_pct: number;
 }
 
+export interface OHLCVPoint {
+  date: string;
+  open: number | null;
+  high: number | null;
+  low: number | null;
+  close: number | null;
+  volume: number | null;
+}
+
+export interface CoinOHLCV {
+  coin_id: number;
+  symbol: string;
+  name: string;
+  candles: OHLCVPoint[];
+}
+
 export interface CorrelationMatrix {
   coins: string[];
   matrix: (number | null)[][];
@@ -60,6 +76,8 @@ export interface VolatilityEntry {
   max_drawdown: number | null;
   sharpe_ratio: number | null;
   period_days: number;
+  market_cap: number | null;
+  image_url: string | null;
 }
 
 export interface PipelineRun {

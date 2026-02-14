@@ -14,6 +14,7 @@ import type { VolatilityEntry } from "@/types";
 
 interface VolatilityChartProps {
   data: VolatilityEntry[];
+  compact?: boolean;
 }
 
 function getVolatilityColor(volatility: number, maxVol: number): string {
@@ -52,7 +53,7 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
   );
 }
 
-export function VolatilityChart({ data }: VolatilityChartProps) {
+export function VolatilityChart({ data, compact = false }: VolatilityChartProps) {
   if (!data || data.length === 0) {
     return (
       <div className="flex h-64 items-center justify-center text-slate-500">
@@ -71,7 +72,7 @@ export function VolatilityChart({ data }: VolatilityChartProps) {
   }));
 
   return (
-    <div style={{ height: Math.max(300, chartData.length * 40) }} className="w-full">
+    <div style={{ height: Math.max(300, chartData.length * (compact ? 28 : 40)) }} className="w-full">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={chartData}
@@ -97,7 +98,7 @@ export function VolatilityChart({ data }: VolatilityChartProps) {
             width={50}
           />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(148, 163, 184, 0.1)" }} />
-          <Bar dataKey="displayVol" radius={[0, 6, 6, 0]} barSize={24} isAnimationActive={true} animationDuration={600}>
+          <Bar dataKey="displayVol" radius={[0, 6, 6, 0]} barSize={compact ? 18 : 24} isAnimationActive={true} animationDuration={600}>
             {chartData.map((entry, index) => (
               <Cell
                 key={`cell-${index}`}
@@ -107,6 +108,22 @@ export function VolatilityChart({ data }: VolatilityChartProps) {
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+      {/* Legend */}
+      <div className="mt-3 flex items-center justify-center gap-4 text-xs text-slate-400">
+        <div className="flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "#34d399" }} />
+          <span>Low risk</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "#fbbf24" }} />
+          <span>Medium risk</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "#f87171" }} />
+          <span>High risk</span>
+        </div>
+        <span className="ml-2 text-slate-500">Relative to highest in set</span>
+      </div>
     </div>
   );
 }

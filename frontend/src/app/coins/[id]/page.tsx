@@ -4,13 +4,14 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import type { Coin, CoinHistory } from "@/types";
+import type { Coin, CoinHistory, CoinOHLCV } from "@/types";
 import { PriceChart } from "@/components/charts/PriceChart";
+import { CandlestickChart } from "@/components/charts/CandlestickChart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, DollarSign, BarChart3, Activity, Coins } from "lucide-react";
+import { ArrowLeft, DollarSign, BarChart3, Activity, Coins, LineChart } from "lucide-react";
 
 const TIME_PERIODS = [
   { label: "7d", days: 7 },
@@ -66,9 +67,12 @@ export default function CoinDetailPage() {
   const coinId = Number(params.id);
   const [coin, setCoin] = useState<Coin | null>(null);
   const [history, setHistory] = useState<CoinHistory | null>(null);
+  const [ohlcv, setOhlcv] = useState<CoinOHLCV | null>(null);
   const [days, setDays] = useState(30);
+  const [chartType, setChartType] = useState<"line" | "candle">("candle");
   const [loading, setLoading] = useState(true);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [ohlcvLoading, setOhlcvLoading] = useState(true);
 
   const fetchCoin = useCallback(async () => {
     try {
@@ -98,9 +102,25 @@ export default function CoinDetailPage() {
     fetchCoin();
   }, [fetchCoin]);
 
+  const fetchOHLCV = useCallback(async () => {
+    try {
+      setOhlcvLoading(true);
+      const result = await api.getCoinOHLCV(coinId, days);
+      setOhlcv(result);
+    } catch {
+      // handle error silently
+    } finally {
+      setOhlcvLoading(false);
+    }
+  }, [coinId, days]);
+
   useEffect(() => {
     fetchHistory();
   }, [fetchHistory]);
+
+  useEffect(() => {
+    fetchOHLCV();
+  }, [fetchOHLCV]);
 
   const chartData =
     history?.prices
@@ -223,29 +243,67 @@ export default function CoinDetailPage() {
           <div>
             <CardTitle className="text-white">Price History</CardTitle>
             <p className="text-xs text-slate-400 mt-1">
-              Historical price data from our PostgreSQL fact table. Select a timeframe to zoom in or out.
+              {chartType === "candle"
+                ? "Daily OHLCV candlestick data aggregated from our star-schema fact table."
+                : "Historical price data from our PostgreSQL fact table. Select a timeframe to zoom in or out."}
             </p>
           </div>
-          <div className="flex gap-1">
-            {TIME_PERIODS.map((period) => (
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-lg border border-slate-700/50 p-0.5">
               <Button
-                key={period.days}
-                variant={days === period.days ? "default" : "ghost"}
+                variant="ghost"
                 size="sm"
-                onClick={() => setDays(period.days)}
+                onClick={() => setChartType("candle")}
                 className={
-                  days === period.days
-                    ? "bg-indigo-600 text-white hover:bg-indigo-700"
-                    : "text-slate-400 hover:text-white hover:bg-slate-700"
+                  chartType === "candle"
+                    ? "bg-slate-700 text-white hover:bg-slate-600 h-7 px-2"
+                    : "text-slate-400 hover:text-white hover:bg-transparent h-7 px-2"
                 }
               >
-                {period.label}
+                <BarChart3 className="size-3.5 mr-1" />
+                Candle
               </Button>
-            ))}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setChartType("line")}
+                className={
+                  chartType === "line"
+                    ? "bg-slate-700 text-white hover:bg-slate-600 h-7 px-2"
+                    : "text-slate-400 hover:text-white hover:bg-transparent h-7 px-2"
+                }
+              >
+                <LineChart className="size-3.5 mr-1" />
+                Line
+              </Button>
+            </div>
+            <div className="flex gap-1">
+              {TIME_PERIODS.map((period) => (
+                <Button
+                  key={period.days}
+                  variant={days === period.days ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setDays(period.days)}
+                  className={
+                    days === period.days
+                      ? "bg-indigo-600 text-white hover:bg-indigo-700"
+                      : "text-slate-400 hover:text-white hover:bg-slate-700"
+                  }
+                >
+                  {period.label}
+                </Button>
+              ))}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          {historyLoading ? (
+          {chartType === "candle" ? (
+            ohlcvLoading ? (
+              <Skeleton className="h-96 w-full rounded-lg bg-slate-700" />
+            ) : (
+              <CandlestickChart data={ohlcv?.candles ?? []} />
+            )
+          ) : historyLoading ? (
             <Skeleton className="h-80 w-full rounded-lg bg-slate-700" />
           ) : (
             <PriceChart data={chartData} />

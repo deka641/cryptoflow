@@ -52,6 +52,10 @@ class ApiClient {
     return this.request<import("@/types").CoinHistory>(`/api/v1/coins/${id}/history?days=${days}`);
   }
 
+  async getCoinOHLCV(id: number, days = 30) {
+    return this.request<import("@/types").CoinOHLCV>(`/api/v1/coins/${id}/ohlcv?days=${days}`);
+  }
+
   // Market
   async getMarketOverview() {
     return this.request<import("@/types").MarketOverview>("/api/v1/market/overview");

@@ -5,8 +5,10 @@ import { api } from "@/lib/api";
 import type { CorrelationMatrix, VolatilityEntry } from "@/types";
 import { CorrelationHeatmap } from "@/components/charts/CorrelationHeatmap";
 import { VolatilityChart } from "@/components/charts/VolatilityChart";
+import { RiskReturnScatter } from "@/components/charts/RiskReturnScatter";
+import { DrawdownChart } from "@/components/charts/DrawdownChart";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -55,6 +57,14 @@ export default function AnalyticsPage() {
     fetchVolatility();
   }, [fetchVolatility]);
 
+  const volSkeleton = (
+    <div className="space-y-3">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <Skeleton key={i} className="h-8 w-full bg-slate-700" />
+      ))}
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       {/* Page Intro */}
@@ -69,7 +79,7 @@ export default function AnalyticsPage() {
       <Tabs defaultValue="correlation">
         <TabsList className="bg-slate-800/80 border border-slate-700/50 backdrop-blur-sm">
           <TabsTrigger value="correlation" className="data-[state=active]:bg-indigo-600/20 data-[state=active]:text-white transition-all duration-200">Correlation</TabsTrigger>
-          <TabsTrigger value="volatility" className="data-[state=active]:bg-indigo-600/20 data-[state=active]:text-white transition-all duration-200">Volatility</TabsTrigger>
+          <TabsTrigger value="risk-return" className="data-[state=active]:bg-indigo-600/20 data-[state=active]:text-white transition-all duration-200">Risk &amp; Return</TabsTrigger>
         </TabsList>
 
         <TabsContent value="correlation" className="mt-6">
@@ -118,14 +128,15 @@ export default function AnalyticsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="volatility" className="mt-6">
+        <TabsContent value="risk-return" className="mt-6 space-y-6">
+          {/* Period selector */}
           <Card className="glass-card">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle className="text-white">Volatility Ranking</CardTitle>
-                <p className="text-xs text-slate-400 mt-1">
-                  Standard deviation of daily returns — higher values mean more price fluctuation. Color-coded: green (low risk), yellow (moderate), red (high). Hover for Sharpe ratio and max drawdown.
-                </p>
+                <CardTitle className="text-white">Risk vs. Return</CardTitle>
+                <CardDescription className="text-slate-400 mt-1">
+                  Each bubble represents a coin. X-axis shows volatility (risk), Y-axis shows Sharpe ratio (risk-adjusted return), and bubble size reflects market cap. The dashed line at Sharpe = 0 separates profitable from unprofitable risk-adjusted returns.
+                </CardDescription>
               </div>
               <div className="flex gap-1">
                 {PERIODS.map((period) => (
@@ -147,20 +158,61 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               {volLoading ? (
-                <div className="space-y-3">
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <Skeleton key={i} className="h-8 w-full bg-slate-700" />
-                  ))}
+                <div className="flex items-center justify-center py-12">
+                  <Skeleton className="h-[480px] w-full bg-slate-700" />
                 </div>
               ) : volatility ? (
-                <VolatilityChart data={volatility} />
+                <RiskReturnScatter data={volatility} />
               ) : (
                 <div className="flex h-64 items-center justify-center text-slate-500">
-                  Failed to load volatility data
+                  Failed to load analytics data
                 </div>
               )}
             </CardContent>
           </Card>
+
+          {/* Two-column grid for drawdown + volatility */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="text-white">Max Drawdown</CardTitle>
+                <CardDescription className="text-slate-400">
+                  Worst peak-to-trough decline during the selected period. Larger drawdowns indicate higher tail risk.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {volLoading ? (
+                  volSkeleton
+                ) : volatility ? (
+                  <DrawdownChart data={volatility} />
+                ) : (
+                  <div className="flex h-64 items-center justify-center text-slate-500">
+                    Failed to load drawdown data
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="text-white">Volatility Ranking</CardTitle>
+                <CardDescription className="text-slate-400">
+                  Standard deviation of daily returns, ranked highest to lowest.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {volLoading ? (
+                  volSkeleton
+                ) : volatility ? (
+                  <VolatilityChart data={volatility} compact />
+                ) : (
+                  <div className="flex h-64 items-center justify-center text-slate-500">
+                    Failed to load volatility data
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
