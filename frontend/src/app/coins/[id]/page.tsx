@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import type { Coin, CoinHistory } from "@/types";
 import { PriceChart } from "@/components/charts/PriceChart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, DollarSign, BarChart3, Activity, Coins } from "lucide-react";
@@ -138,10 +139,10 @@ export default function CoinDetailPage() {
   }
 
   const stats = [
-    { label: "Price", value: formatPrice(coin.price_usd), icon: <DollarSign className="size-5" /> },
-    { label: "Market Cap", value: formatCompact(coin.market_cap), icon: <BarChart3 className="size-5" /> },
-    { label: "24h Volume", value: formatCompact(coin.total_volume), icon: <Activity className="size-5" /> },
-    { label: "Circulating Supply", value: formatSupply(coin.circulating_supply), icon: <Coins className="size-5" /> },
+    { label: "Price", value: formatPrice(coin.price_usd), icon: <DollarSign className="size-5" />, tooltip: "Current USD price from the latest 10-minute market data snapshot." },
+    { label: "Market Cap", value: formatCompact(coin.market_cap), icon: <BarChart3 className="size-5" />, tooltip: "Total market value: current price × circulating supply." },
+    { label: "24h Volume", value: formatCompact(coin.total_volume), icon: <Activity className="size-5" />, tooltip: "Total trading volume for this coin in the last 24 hours." },
+    { label: "Circulating Supply", value: formatSupply(coin.circulating_supply), icon: <Coins className="size-5" />, tooltip: "Number of coins currently available on the market." },
   ];
 
   return (
@@ -188,19 +189,30 @@ export default function CoinDetailPage() {
         {stats.map((stat, i) => {
           const accent = statCardAccents[i];
           return (
-            <Card key={stat.label} className={`glass-card border-l-[3px] ${accent.border}`}>
-              <CardContent className="flex items-center gap-3">
-                <div className={`flex size-10 items-center justify-center rounded-lg ${accent.iconBg}`}>
-                  {stat.icon}
-                </div>
-                <div>
-                  <p className="text-sm text-slate-400">{stat.label}</p>
-                  <p className="text-lg font-bold text-white">
-                    {stat.value}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <Tooltip key={stat.label}>
+              <TooltipTrigger asChild>
+                <Card className={`glass-card border-l-[3px] ${accent.border}`}>
+                  <CardContent className="flex items-center gap-3">
+                    <div className={`flex size-10 items-center justify-center rounded-lg ${accent.iconBg}`}>
+                      {stat.icon}
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-400">{stat.label}</p>
+                      <p className="text-lg font-bold text-white">
+                        {stat.value}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent
+                side="bottom"
+                sideOffset={6}
+                className="max-w-xs border border-slate-700/50 bg-slate-800/95 backdrop-blur-md text-slate-300 shadow-xl shadow-black/20"
+              >
+                {stat.tooltip}
+              </TooltipContent>
+            </Tooltip>
           );
         })}
       </div>

@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 type AccentColor = "indigo" | "emerald" | "amber" | "cyan";
@@ -29,12 +30,13 @@ interface KpiCardProps {
   change: number | null;
   icon: ReactNode;
   accentColor?: AccentColor;
+  tooltip?: string;
 }
 
-export function KpiCard({ title, value, change, icon, accentColor = "indigo" }: KpiCardProps) {
+export function KpiCard({ title, value, change, icon, accentColor = "indigo", tooltip }: KpiCardProps) {
   const accent = accentStyles[accentColor];
 
-  return (
+  const card = (
     <Card className={cn(
       "glass-card border-l-[3px] hover:shadow-xl hover:shadow-black/30 transition-all duration-300",
       accent.border
@@ -60,5 +62,20 @@ export function KpiCard({ title, value, change, icon, accentColor = "indigo" }: 
         </div>
       </CardContent>
     </Card>
+  );
+
+  if (!tooltip) return card;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{card}</TooltipTrigger>
+      <TooltipContent
+        side="bottom"
+        sideOffset={6}
+        className="max-w-xs border border-slate-700/50 bg-slate-800/95 backdrop-blur-md text-slate-300 shadow-xl shadow-black/20"
+      >
+        {tooltip}
+      </TooltipContent>
+    </Tooltip>
   );
 }

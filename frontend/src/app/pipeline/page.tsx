@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
 import type { PipelineHealth, PipelineRun } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -48,41 +49,52 @@ function StatusBadge({ status }: { status: string }) {
 
 function HealthCard({ health }: { health: PipelineHealth }) {
   return (
-    <Card className={cn(
-      "glass-card border-l-[3px] transition-all duration-300",
-      health.is_healthy ? "border-l-emerald-500" : "border-l-red-500"
-    )}>
-      <CardContent className="flex items-start justify-between">
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-slate-400">Job</p>
-          <p className="text-base font-semibold text-white">{health.dag_id}</p>
-          <div className="flex items-center gap-2 text-xs text-slate-400">
-            <Clock className="size-3" />
-            {health.last_run_time
-              ? formatDateTime(health.last_run_time)
-              : "Never run"}
-          </div>
-          {health.data_freshness_minutes !== null && (
-            <p className="text-xs text-slate-500">
-              Data freshness: {health.data_freshness_minutes} min
-            </p>
-          )}
-        </div>
-        <div className="flex flex-col items-end gap-2">
-          <span
-            className={cn(
-              "inline-flex size-3 rounded-full transition-all duration-300",
-              health.is_healthy
-                ? "bg-emerald-500 animate-[pulse-dot_2s_infinite_ease-in-out] shadow-[0_0_8px_rgba(52,211,153,0.5)]"
-                : "bg-red-500"
-            )}
-          />
-          {health.last_run_status && (
-            <StatusBadge status={health.last_run_status} />
-          )}
-        </div>
-      </CardContent>
-    </Card>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Card className={cn(
+          "glass-card border-l-[3px] transition-all duration-300",
+          health.is_healthy ? "border-l-emerald-500" : "border-l-red-500"
+        )}>
+          <CardContent className="flex items-start justify-between">
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-slate-400">Job</p>
+              <p className="text-base font-semibold text-white">{health.dag_id}</p>
+              <div className="flex items-center gap-2 text-xs text-slate-400">
+                <Clock className="size-3" />
+                {health.last_run_time
+                  ? formatDateTime(health.last_run_time)
+                  : "Never run"}
+              </div>
+              {health.data_freshness_minutes !== null && (
+                <p className="text-xs text-slate-500">
+                  Data freshness: {health.data_freshness_minutes} min
+                </p>
+              )}
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              <span
+                className={cn(
+                  "inline-flex size-3 rounded-full transition-all duration-300",
+                  health.is_healthy
+                    ? "bg-emerald-500 animate-[pulse-dot_2s_infinite_ease-in-out] shadow-[0_0_8px_rgba(52,211,153,0.5)]"
+                    : "bg-red-500"
+                )}
+              />
+              {health.last_run_status && (
+                <StatusBadge status={health.last_run_status} />
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </TooltipTrigger>
+      <TooltipContent
+        side="bottom"
+        sideOffset={6}
+        className="max-w-xs border border-slate-700/50 bg-slate-800/95 backdrop-blur-md text-slate-300 shadow-xl shadow-black/20"
+      >
+        Green = last run succeeded and data is fresh. Red = failed or stale. Data freshness shows minutes since the last successful update.
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

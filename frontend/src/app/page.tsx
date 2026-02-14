@@ -1,8 +1,10 @@
 "use client";
 
-import { useMarketOverview } from "@/hooks/use-market-data";
+import { useMarketOverview, useCoins } from "@/hooks/use-market-data";
+import { useLivePrices } from "@/hooks/use-live-prices";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { TopMovers } from "@/components/dashboard/TopMovers";
+import { MarketTreemap } from "@/components/dashboard/MarketTreemap";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -51,6 +53,8 @@ function MoversSkeleton() {
 
 export default function DashboardPage() {
   const { data, loading } = useMarketOverview();
+  const { data: coinsData, loading: coinsLoading } = useCoins(1, 50);
+  const { prices: livePrices } = useLivePrices();
 
   return (
     <div className="space-y-6">
@@ -80,6 +84,7 @@ export default function DashboardPage() {
               change={null}
               icon={<DollarSign className="size-5" />}
               accentColor="indigo"
+              tooltip="Combined value of all tracked cryptocurrencies — price × circulating supply, summed across the top 50 coins."
             />
             <KpiCard
               title="24h Volume"
@@ -87,6 +92,7 @@ export default function DashboardPage() {
               change={null}
               icon={<BarChart3 className="size-5" />}
               accentColor="emerald"
+              tooltip="Total trading volume across all tracked coins in the last 24 hours. High volume indicates strong market activity."
             />
             <KpiCard
               title="BTC Dominance"
@@ -94,6 +100,7 @@ export default function DashboardPage() {
               change={null}
               icon={<Bitcoin className="size-5" />}
               accentColor="amber"
+              tooltip="Bitcoin's share of total crypto market cap. A drop often signals capital flowing into altcoins."
             />
             <KpiCard
               title="Active Coins"
@@ -101,10 +108,36 @@ export default function DashboardPage() {
               change={null}
               icon={<Coins className="size-5" />}
               accentColor="cyan"
+              tooltip="Number of cryptocurrencies currently tracked in the CryptoFlow data pipeline."
             />
           </>
         )}
       </div>
+
+      {/* Market Map */}
+      <div>
+        <h3 className="text-lg font-semibold text-white">Market Map</h3>
+        <p className="mt-1 text-sm text-slate-400">
+          All tracked coins sized by market cap and colored by 24h price change. Click any tile to view details.
+        </p>
+      </div>
+      <Card className="glass-card">
+        <CardContent>
+          {coinsLoading || !coinsData ? (
+            <div className="space-y-3">
+              <Skeleton className="h-[400px] w-full rounded-lg bg-slate-700" />
+              <div className="flex items-center justify-center gap-2">
+                <Skeleton className="h-3 w-36 bg-slate-700" />
+              </div>
+            </div>
+          ) : (
+            <MarketTreemap
+              coins={coinsData.items}
+              livePrices={livePrices}
+            />
+          )}
+        </CardContent>
+      </Card>
 
       {/* Top Movers */}
       <div>

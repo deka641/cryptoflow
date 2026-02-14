@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
 import type { QualitySummary, QualityCheck } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -80,22 +81,33 @@ function ScoreRing({ score, size = 64 }: { score: number; size?: number }) {
 
 function SummaryCard({ summary }: { summary: QualitySummary }) {
   return (
-    <Card className="glass-card">
-      <CardContent className="flex items-center gap-4">
-        <ScoreRing score={summary.score} />
-        <div className="flex-1 space-y-1">
-          <p className="text-sm font-semibold text-white">{summary.table_name}</p>
-          <p className="text-xs text-slate-400">
-            {summary.total_checks} checks total
-          </p>
-          <div className="flex gap-3 text-xs">
-            <span className="text-emerald-400">{summary.passed} passed</span>
-            <span className="text-red-400">{summary.failed} failed</span>
-            <span className="text-yellow-400">{summary.warnings} warnings</span>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Card className="glass-card">
+          <CardContent className="flex items-center gap-4">
+            <ScoreRing score={summary.score} />
+            <div className="flex-1 space-y-1">
+              <p className="text-sm font-semibold text-white">{summary.table_name}</p>
+              <p className="text-xs text-slate-400">
+                {summary.total_checks} checks total
+              </p>
+              <div className="flex gap-3 text-xs">
+                <span className="text-emerald-400">{summary.passed} passed</span>
+                <span className="text-red-400">{summary.failed} failed</span>
+                <span className="text-yellow-400">{summary.warnings} warnings</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </TooltipTrigger>
+      <TooltipContent
+        side="bottom"
+        sideOffset={6}
+        className="max-w-xs border border-slate-700/50 bg-slate-800/95 backdrop-blur-md text-slate-300 shadow-xl shadow-black/20"
+      >
+        Quality score = percentage of checks passed. Checks cover freshness, completeness, schema validation, and anomaly detection (hourly).
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

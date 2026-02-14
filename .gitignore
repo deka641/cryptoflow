@@ -43,6 +43,13 @@ htmlcov/
 # Database
 *.sql.bak
 
+# pgAdmin
+.pgadmin-venv/
+pgadmin/data/
+
 # Temporary scripts
 frontend/screenshot_*.js
 frontend/test-results/
+
+# Claude Code
+CLAUDE.md
