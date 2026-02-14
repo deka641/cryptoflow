@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, date
 
 class CoinBase(BaseModel):
     coingecko_id: str
@@ -34,3 +34,17 @@ class CoinHistory(BaseModel):
     symbol: str
     name: str
     prices: list[PricePoint]
+
+class OHLCVPoint(BaseModel):
+    date: date
+    open: float | None
+    high: float | None
+    low: float | None
+    close: float | None
+    volume: float | None
+
+class CoinOHLCV(BaseModel):
+    coin_id: int
+    symbol: str
+    name: str
+    candles: list[OHLCVPoint]

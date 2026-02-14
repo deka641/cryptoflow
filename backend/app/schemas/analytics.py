@@ -23,6 +23,8 @@ class VolatilityEntry(BaseModel):
     max_drawdown: float | None
     sharpe_ratio: float | None
     period_days: int
+    market_cap: float | None = None
+    image_url: str | None = None
 
     class Config:
         from_attributes = True

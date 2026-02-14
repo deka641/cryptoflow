@@ -63,6 +63,9 @@ def get_volatility_ranking(db: Session, period_days: int = 30) -> list[dict]:
         .all()
     )
 
+    latest_rows = db.execute(text("SELECT coin_id, market_cap FROM mv_latest_market_data")).fetchall()
+    market_caps = {r.coin_id: float(r.market_cap) if r.market_cap else None for r in latest_rows}
+
     result = []
     for e in entries:
         coin = coins.get(e.coin_id)
@@ -75,6 +78,8 @@ def get_volatility_ranking(db: Session, period_days: int = 30) -> list[dict]:
                 "max_drawdown": float(e.max_drawdown) if e.max_drawdown else None,
                 "sharpe_ratio": float(e.sharpe_ratio) if e.sharpe_ratio else None,
                 "period_days": e.period_days,
+                "market_cap": market_caps.get(e.coin_id),
+                "image_url": coin.image_url,
             })
 
     return result

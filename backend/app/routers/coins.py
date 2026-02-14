@@ -1,5 +1,5 @@
 import math
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import text
@@ -7,8 +7,8 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.coin import DimCoin
-from app.models.market_data import FactMarketData
-from app.schemas.coin import CoinResponse, CoinDetail, CoinHistory, PricePoint
+from app.models.market_data import FactMarketData, FactDailyOHLCV
+from app.schemas.coin import CoinResponse, CoinDetail, CoinHistory, PricePoint, CoinOHLCV, OHLCVPoint
 from app.schemas.pagination import PaginatedResponse
 
 router = APIRouter()
@@ -152,4 +152,50 @@ def get_coin_history(
         symbol=coin.symbol,
         name=coin.name,
         prices=prices,
+    )
+
+
+@router.get("/{coin_id}/ohlcv", response_model=CoinOHLCV)
+def get_coin_ohlcv(
+    coin_id: int,
+    days: int = Query(30, ge=1, le=365, description="Number of days of OHLCV history"),
+    db: Session = Depends(get_db),
+):
+    """Get daily OHLCV candlestick data for a coin from fact_daily_ohlcv."""
+    coin = db.query(DimCoin).filter(DimCoin.id == coin_id).first()
+    if not coin:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Coin with id {coin_id} not found",
+        )
+
+    since = date.today() - timedelta(days=days)
+
+    rows = (
+        db.query(FactDailyOHLCV)
+        .filter(
+            FactDailyOHLCV.coin_id == coin_id,
+            FactDailyOHLCV.date >= since,
+        )
+        .order_by(FactDailyOHLCV.date.asc())
+        .all()
+    )
+
+    candles = [
+        OHLCVPoint(
+            date=row.date,
+            open=float(row.open_price) if row.open_price is not None else None,
+            high=float(row.high_price) if row.high_price is not None else None,
+            low=float(row.low_price) if row.low_price is not None else None,
+            close=float(row.close_price) if row.close_price is not None else None,
+            volume=float(row.volume) if row.volume is not None else None,
+        )
+        for row in rows
+    ]
+
+    return CoinOHLCV(
+        coin_id=coin.id,
+        symbol=coin.symbol,
+        name=coin.name,
+        candles=candles,
     )
