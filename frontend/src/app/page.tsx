@@ -1,7 +1,7 @@
 "use client";
 
 import { useMarketOverview, useCoins } from "@/hooks/use-market-data";
-import { useLivePrices } from "@/hooks/use-live-prices";
+import { useLivePricesContext } from "@/providers/live-prices-provider";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { TopMovers } from "@/components/dashboard/TopMovers";
 import { MarketTreemap } from "@/components/dashboard/MarketTreemap";
@@ -54,7 +54,7 @@ function MoversSkeleton() {
 export default function DashboardPage() {
   const { data, loading } = useMarketOverview();
   const { data: coinsData, loading: coinsLoading } = useCoins(1, 50);
-  const { prices: livePrices } = useLivePrices();
+  const { prices: livePrices } = useLivePricesContext();
 
   return (
     <div className="space-y-6">

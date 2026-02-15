@@ -51,6 +51,8 @@
   --animate-flash-green: flash-green 0.6s ease-out;
   --animate-flash-red: flash-red 0.6s ease-out;
   --animate-glow-border: glow-border 2s infinite ease-in-out;
+  --animate-flow-dot: flow-dot 2s infinite ease-in-out;
+  --animate-ticker-scroll: ticker-scroll 60s linear infinite;
 }
 
 @keyframes shimmer {
@@ -81,6 +83,26 @@
 @keyframes glow-border {
   0%, 100% { border-color: rgba(99, 102, 241, 0.3); }
   50% { border-color: rgba(99, 102, 241, 0.6); }
+}
+
+@keyframes flow-dot {
+  0% { left: 0%; opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { left: 100%; opacity: 0; }
+}
+
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-ticker-scroll {
+  animation: var(--animate-ticker-scroll);
+}
+
+.animate-ticker-scroll:hover {
+  animation-play-state: paused;
 }
 
 :root {

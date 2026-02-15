@@ -13,13 +13,14 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useAuth } from "@/providers/auth-provider";
-import { useLivePrices } from "@/hooks/use-live-prices";
+import { useLivePricesContext } from "@/providers/live-prices-provider";
 import { SidebarNav } from "./Sidebar";
 
 const pageTitles: Record<string, string> = {
   "/": "Dashboard",
   "/market": "Market",
   "/compare": "Compare",
+  "/portfolio": "Portfolio",
   "/analytics": "Analytics",
   "/pipeline": "Pipeline",
   "/quality": "Quality",
@@ -37,7 +38,7 @@ function getPageTitle(pathname: string): string {
 export function Header() {
   const pathname = usePathname();
   const { user } = useAuth();
-  const { connected } = useLivePrices();
+  const { connected } = useLivePricesContext();
   const title = getPageTitle(pathname);
 
   return (
