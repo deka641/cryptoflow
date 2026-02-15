@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import {
   Table,
@@ -11,12 +11,18 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { SparklineChart } from "@/components/charts/SparklineChart";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { Coin } from "@/types";
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, Star } from "lucide-react";
 
 interface MarketTableProps {
   coins: Coin[];
   livePrices?: Record<string, number>;
+  sparklines?: Record<number, number[]>;
+  sparklinesLoading?: boolean;
+  onToggleWatchlist?: (coinId: number) => void;
+  isWatched?: (coinId: number) => boolean;
 }
 
 type SortField =
@@ -59,18 +65,25 @@ function formatPrice(price: number | null): string {
 
 function PriceCell({ coin, livePrice }: { coin: Coin; livePrice?: number }) {
   const displayPrice = livePrice ?? coin.price_usd;
-  const prevPriceRef = useRef(displayPrice);
+  const [prevLivePrice, setPrevLivePrice] = useState(livePrice);
   const [flash, setFlash] = useState<"green" | "red" | null>(null);
+  const [flashKey, setFlashKey] = useState(0);
 
-  useEffect(() => {
-    if (livePrice !== undefined && prevPriceRef.current !== null && livePrice !== prevPriceRef.current) {
-      setFlash(livePrice > prevPriceRef.current ? "green" : "red");
-      const timer = setTimeout(() => setFlash(null), 600);
-      prevPriceRef.current = livePrice;
-      return () => clearTimeout(timer);
+  // Adjust state during render (React recommended pattern for prop-derived state)
+  if (livePrice !== prevLivePrice) {
+    setPrevLivePrice(livePrice);
+    if (livePrice !== undefined && prevLivePrice !== undefined) {
+      setFlash(livePrice > prevLivePrice ? "green" : "red");
+      setFlashKey((k) => k + 1);
     }
-    prevPriceRef.current = displayPrice;
-  }, [livePrice, displayPrice]);
+  }
+
+  // Clear flash after animation completes
+  useEffect(() => {
+    if (!flash) return;
+    const timer = setTimeout(() => setFlash(null), 600);
+    return () => clearTimeout(timer);
+  }, [flash]);
 
   return (
     <TableCell
@@ -79,14 +92,38 @@ function PriceCell({ coin, livePrice }: { coin: Coin; livePrice?: number }) {
         flash === "green" && "animate-[flash-green_0.6s_ease-out]",
         flash === "red" && "animate-[flash-red_0.6s_ease-out]"
       )}
-      key={flash ? `${coin.id}-${Date.now()}` : coin.id}
+      key={flash ? `${coin.id}-${flashKey}` : coin.id}
     >
       {formatPrice(displayPrice)}
     </TableCell>
   );
 }
 
-export function MarketTable({ coins, livePrices }: MarketTableProps) {
+function SortIcon({
+  field,
+  sortField,
+  sortDirection,
+}: {
+  field: SortField;
+  sortField: SortField;
+  sortDirection: SortDirection;
+}) {
+  if (sortField !== field) return <ArrowUpDown className="size-3.5 text-slate-500" />;
+  return sortDirection === "asc" ? (
+    <ArrowUp className="size-3.5 text-white" />
+  ) : (
+    <ArrowDown className="size-3.5 text-white" />
+  );
+}
+
+export function MarketTable({
+  coins,
+  livePrices,
+  sparklines,
+  sparklinesLoading,
+  onToggleWatchlist,
+  isWatched,
+}: MarketTableProps) {
   const [sortField, setSortField] = useState<SortField>("market_cap_rank");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
@@ -117,25 +154,19 @@ export function MarketTable({ coins, livePrices }: MarketTableProps) {
     });
   }, [coins, sortField, sortDirection]);
 
-  const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return <ArrowUpDown className="size-3.5 text-slate-500" />;
-    return sortDirection === "asc" ? (
-      <ArrowUp className="size-3.5 text-white" />
-    ) : (
-      <ArrowDown className="size-3.5 text-white" />
-    );
-  };
-
   return (
     <Table>
       <TableHeader>
         <TableRow className="border-slate-700 hover:bg-transparent bg-slate-800/30">
+          {onToggleWatchlist && (
+            <TableHead className="w-10" />
+          )}
           <TableHead
             className="cursor-pointer select-none w-16"
             onClick={() => handleSort("market_cap_rank")}
           >
             <span className="flex items-center gap-1">
-              # <SortIcon field="market_cap_rank" />
+              # <SortIcon field="market_cap_rank" sortField={sortField} sortDirection={sortDirection} />
             </span>
           </TableHead>
           <TableHead
@@ -143,7 +174,7 @@ export function MarketTable({ coins, livePrices }: MarketTableProps) {
             onClick={() => handleSort("name")}
           >
             <span className="flex items-center gap-1">
-              Coin <SortIcon field="name" />
+              Coin <SortIcon field="name" sortField={sortField} sortDirection={sortDirection} />
             </span>
           </TableHead>
           <TableHead
@@ -151,7 +182,7 @@ export function MarketTable({ coins, livePrices }: MarketTableProps) {
             onClick={() => handleSort("price_usd")}
           >
             <span className="flex items-center justify-end gap-1">
-              Price <SortIcon field="price_usd" />
+              Price <SortIcon field="price_usd" sortField={sortField} sortDirection={sortDirection} />
             </span>
           </TableHead>
           <TableHead
@@ -159,15 +190,18 @@ export function MarketTable({ coins, livePrices }: MarketTableProps) {
             onClick={() => handleSort("price_change_24h_pct")}
           >
             <span className="flex items-center justify-end gap-1">
-              24h% <SortIcon field="price_change_24h_pct" />
+              24h% <SortIcon field="price_change_24h_pct" sortField={sortField} sortDirection={sortDirection} />
             </span>
+          </TableHead>
+          <TableHead className="text-center hidden md:table-cell w-[140px]">
+            7d
           </TableHead>
           <TableHead
             className="cursor-pointer select-none text-right hidden md:table-cell"
             onClick={() => handleSort("market_cap")}
           >
             <span className="flex items-center justify-end gap-1">
-              Market Cap <SortIcon field="market_cap" />
+              Market Cap <SortIcon field="market_cap" sortField={sortField} sortDirection={sortDirection} />
             </span>
           </TableHead>
           <TableHead
@@ -175,21 +209,45 @@ export function MarketTable({ coins, livePrices }: MarketTableProps) {
             onClick={() => handleSort("total_volume")}
           >
             <span className="flex items-center justify-end gap-1">
-              Volume <SortIcon field="total_volume" />
+              Volume <SortIcon field="total_volume" sortField={sortField} sortDirection={sortDirection} />
             </span>
           </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {sortedCoins.map((coin) => {
-          const livePrice = livePrices?.[coin.symbol];
+          const livePrice = livePrices?.[coin.coingecko_id];
           const change = coin.price_change_24h_pct;
+          const sparkData = sparklines?.[coin.id];
+          const watched = isWatched?.(coin.id) ?? false;
 
           return (
             <TableRow
               key={coin.id}
               className="border-slate-800 hover:bg-slate-700/30 transition-colors duration-200"
             >
+              {onToggleWatchlist && (
+                <TableCell className="w-10 pr-0">
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onToggleWatchlist(coin.id);
+                    }}
+                    className="flex items-center justify-center hover:scale-110 transition-transform"
+                    aria-label={watched ? "Remove from watchlist" : "Add to watchlist"}
+                  >
+                    <Star
+                      className={cn(
+                        "size-4 transition-colors",
+                        watched
+                          ? "fill-yellow-400 text-yellow-400"
+                          : "text-slate-600 hover:text-slate-400"
+                      )}
+                    />
+                  </button>
+                </TableCell>
+              )}
               <TableCell className="text-slate-400 font-medium">
                 {coin.market_cap_rank ?? "-"}
               </TableCell>
@@ -229,6 +287,17 @@ export function MarketTable({ coins, livePrices }: MarketTableProps) {
                 {change !== null
                   ? `${change >= 0 ? "+" : ""}${change.toFixed(2)}%`
                   : "-"}
+              </TableCell>
+              <TableCell className="hidden md:table-cell">
+                <div className="flex justify-center">
+                  {sparklinesLoading ? (
+                    <Skeleton className="h-10 w-[120px] bg-slate-700" />
+                  ) : sparkData && sparkData.length > 0 ? (
+                    <SparklineChart data={sparkData} />
+                  ) : (
+                    <span className="text-slate-600 text-xs">-</span>
+                  )}
+                </div>
               </TableCell>
               <TableCell className="text-right text-slate-300 hidden md:table-cell">
                 {formatCompact(coin.market_cap)}

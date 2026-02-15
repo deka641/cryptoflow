@@ -2,13 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { useCoins } from "@/hooks/use-market-data";
-import { useLivePrices } from "@/hooks/use-live-prices";
+import { useLivePricesContext } from "@/providers/live-prices-provider";
+import { useWatchlist } from "@/hooks/use-watchlist";
+import { useAuth } from "@/providers/auth-provider";
+import { api } from "@/lib/api";
 import { MarketTable } from "@/components/market/MarketTable";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Search, ChevronLeft, ChevronRight, Star } from "lucide-react";
 
 export default function MarketPage() {
   const [page, setPage] = useState(1);
@@ -16,7 +20,12 @@ export default function MarketPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const perPage = 20;
   const { data, loading } = useCoins(page, perPage, debouncedSearch);
-  const { prices } = useLivePrices();
+  const { prices } = useLivePricesContext();
+  const { user } = useAuth();
+  const { watchlist, toggle, isWatched } = useWatchlist();
+  const [sparklines, setSparklines] = useState<Record<number, number[]>>({});
+  const [sparklinesLoading, setSparklinesLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("all");
 
   // Debounce search input
   useEffect(() => {
@@ -26,6 +35,39 @@ export default function MarketPage() {
     }, 400);
     return () => clearTimeout(timer);
   }, [search]);
+
+  // Fetch sparklines when coins load
+  useEffect(() => {
+    if (!data?.items.length) return;
+    const coinIds = data.items.map((c) => c.id);
+    let cancelled = false;
+    const fetchSparklines = async () => {
+      setSparklinesLoading(true);
+      try {
+        const result = await api.getSparklines(coinIds);
+        if (cancelled) return;
+        const map: Record<number, number[]> = {};
+        for (const item of result) {
+          map[item.coin_id] = item.prices;
+        }
+        setSparklines((prev) => ({ ...prev, ...map }));
+      } catch {
+        // ignore
+      } finally {
+        if (!cancelled) setSparklinesLoading(false);
+      }
+    };
+    fetchSparklines();
+    return () => { cancelled = true; };
+  }, [data?.items]);
+
+  // Filter coins for watchlist tab
+  const items = data?.items;
+  const watchlistCoins = items
+    ? items.filter((coin) => watchlist.has(coin.id))
+    : [];
+
+  const watchlistCount = watchlist.size;
 
   return (
     <div className="space-y-6">
@@ -50,60 +92,176 @@ export default function MarketPage() {
         />
       </div>
 
-      {/* Market Table */}
-      <Card className="glass-card">
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="space-y-3 p-6">
-              {Array.from({ length: 10 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full bg-slate-700" />
-              ))}
-            </div>
-          ) : data && data.items.length > 0 ? (
-            <MarketTable coins={data.items} livePrices={prices} />
-          ) : (
-            <div className="flex h-48 items-center justify-center text-slate-500">
-              {debouncedSearch
-                ? `No coins found matching "${debouncedSearch}"`
-                : "No coins available"}
+      {/* Tabs + Market Table */}
+      {user ? (
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList variant="line" className="border-b border-slate-700 pb-0">
+            <TabsTrigger value="all" className="text-slate-400 data-[state=active]:text-white">
+              All Coins
+            </TabsTrigger>
+            <TabsTrigger value="watchlist" className="text-slate-400 data-[state=active]:text-white">
+              <Star className="size-3.5 fill-yellow-400 text-yellow-400" />
+              Watchlist ({watchlistCount})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="all">
+            <Card className="glass-card">
+              <CardContent className="p-0">
+                {loading ? (
+                  <div className="space-y-3 p-6">
+                    {Array.from({ length: 10 }).map((_, i) => (
+                      <Skeleton key={i} className="h-12 w-full bg-slate-700" />
+                    ))}
+                  </div>
+                ) : data && data.items.length > 0 ? (
+                  <MarketTable
+                    coins={data.items}
+                    livePrices={prices}
+                    sparklines={sparklines}
+                    sparklinesLoading={sparklinesLoading}
+                    onToggleWatchlist={toggle}
+                    isWatched={isWatched}
+                  />
+                ) : (
+                  <div className="flex h-48 items-center justify-center text-slate-500">
+                    {debouncedSearch
+                      ? `No coins found matching "${debouncedSearch}"`
+                      : "No coins available"}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Pagination */}
+            {data && data.pages > 1 && (
+              <div className="flex items-center justify-between mt-6">
+                <p className="text-sm text-slate-400">
+                  Showing {(page - 1) * perPage + 1}-
+                  {Math.min(page * perPage, data.total)} of {data.total} coins
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page <= 1}
+                    className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white disabled:opacity-40"
+                  >
+                    <ChevronLeft className="size-4" />
+                    Previous
+                  </Button>
+                  <span className="text-sm text-slate-400">
+                    Page {page} of {data.pages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((p) => Math.min(data.pages, p + 1))}
+                    disabled={page >= data.pages}
+                    className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white disabled:opacity-40"
+                  >
+                    Next
+                    <ChevronRight className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="watchlist">
+            <Card className="glass-card">
+              <CardContent className="p-0">
+                {loading ? (
+                  <div className="space-y-3 p-6">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Skeleton key={i} className="h-12 w-full bg-slate-700" />
+                    ))}
+                  </div>
+                ) : watchlistCoins.length > 0 ? (
+                  <MarketTable
+                    coins={watchlistCoins}
+                    livePrices={prices}
+                    sparklines={sparklines}
+                    sparklinesLoading={sparklinesLoading}
+                    onToggleWatchlist={toggle}
+                    isWatched={isWatched}
+                  />
+                ) : (
+                  <div className="flex h-48 flex-col items-center justify-center gap-2 text-slate-500">
+                    <Star className="size-8 text-slate-600" />
+                    <p>Your watchlist is empty.</p>
+                    <p className="text-xs text-slate-600">Star a coin to add it!</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <>
+          <Card className="glass-card">
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="space-y-3 p-6">
+                  {Array.from({ length: 10 }).map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full bg-slate-700" />
+                  ))}
+                </div>
+              ) : data && data.items.length > 0 ? (
+                <MarketTable
+                  coins={data.items}
+                  livePrices={prices}
+                  sparklines={sparklines}
+                  sparklinesLoading={sparklinesLoading}
+                  onToggleWatchlist={toggle}
+                  isWatched={isWatched}
+                />
+              ) : (
+                <div className="flex h-48 items-center justify-center text-slate-500">
+                  {debouncedSearch
+                    ? `No coins found matching "${debouncedSearch}"`
+                    : "No coins available"}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Pagination */}
+          {data && data.pages > 1 && (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-slate-400">
+                Showing {(page - 1) * perPage + 1}-
+                {Math.min(page * perPage, data.total)} of {data.total} coins
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white disabled:opacity-40"
+                >
+                  <ChevronLeft className="size-4" />
+                  Previous
+                </Button>
+                <span className="text-sm text-slate-400">
+                  Page {page} of {data.pages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(data.pages, p + 1))}
+                  disabled={page >= data.pages}
+                  className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white disabled:opacity-40"
+                >
+                  Next
+                  <ChevronRight className="size-4" />
+                </Button>
+              </div>
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Pagination */}
-      {data && data.pages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-slate-400">
-            Showing {(page - 1) * perPage + 1}-
-            {Math.min(page * perPage, data.total)} of {data.total} coins
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1}
-              className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white disabled:opacity-40"
-            >
-              <ChevronLeft className="size-4" />
-              Previous
-            </Button>
-            <span className="text-sm text-slate-400">
-              Page {page} of {data.pages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.min(data.pages, p + 1))}
-              disabled={page >= data.pages}
-              className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white disabled:opacity-40"
-            >
-              Next
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
-        </div>
+        </>
       )}
     </div>
   );
