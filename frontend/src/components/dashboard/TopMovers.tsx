@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { CoinMover } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -28,9 +29,10 @@ export function TopMovers({ movers }: TopMoversProps) {
     <div className="space-y-3">
       <div className="space-y-2">
         {movers.slice(0, 5).map((mover, index) => (
-          <div
+          <Link
             key={mover.id}
-            className="flex items-center justify-between rounded-lg bg-slate-800/40 px-3 py-2.5 cursor-default transition-all duration-200 hover:bg-slate-700/40"
+            href={`/coins/${mover.id}`}
+            className="flex items-center justify-between rounded-lg bg-slate-800/40 px-3 py-2.5 transition-all duration-200 hover:bg-slate-700/40"
           >
             <div className="flex items-center gap-3">
               <span className="flex size-6 items-center justify-center rounded-full bg-slate-700/60 text-xs font-bold text-slate-400">
@@ -70,7 +72,7 @@ export function TopMovers({ movers }: TopMoversProps) {
                 {mover.price_change_24h_pct.toFixed(2)}%
               </p>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </div>

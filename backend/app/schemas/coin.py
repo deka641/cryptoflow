@@ -48,3 +48,28 @@ class CoinOHLCV(BaseModel):
     symbol: str
     name: str
     candles: list[OHLCVPoint]
+
+
+class SparklineData(BaseModel):
+    coin_id: int
+    prices: list[float]
+
+
+class CorrelatedCoin(BaseModel):
+    coin_id: int
+    symbol: str
+    name: str
+    image_url: str | None = None
+    correlation: float
+
+
+class CoinAnalytics(BaseModel):
+    coin_id: int
+    symbol: str
+    name: str
+    volatility: float | None = None
+    max_drawdown: float | None = None
+    sharpe_ratio: float | None = None
+    period_days: int
+    most_correlated: list[CorrelatedCoin]
+    least_correlated: list[CorrelatedCoin]

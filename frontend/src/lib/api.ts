@@ -56,6 +56,10 @@ class ApiClient {
     return this.request<import("@/types").CoinOHLCV>(`/api/v1/coins/${id}/ohlcv?days=${days}`);
   }
 
+  async getCoinAnalytics(id: number, periodDays = 30) {
+    return this.request<import("@/types").CoinAnalytics>(`/api/v1/coins/${id}/analytics?period_days=${periodDays}`);
+  }
+
   // Market
   async getMarketOverview() {
     return this.request<import("@/types").MarketOverview>("/api/v1/market/overview");
@@ -94,6 +98,58 @@ class ApiClient {
 
   async getQualitySummary() {
     return this.request<import("@/types").QualitySummary[]>("/api/v1/quality/summary");
+  }
+
+  // Sparklines
+  async getSparklines(coinIds: number[]) {
+    const ids = coinIds.join(",");
+    return this.request<import("@/types").SparklineData[]>(
+      `/api/v1/coins/sparklines?ids=${ids}`
+    );
+  }
+
+  // Watchlist
+  async getWatchlist() {
+    return this.request<import("@/types").WatchlistResponse>("/api/v1/watchlist");
+  }
+
+  async addToWatchlist(coinId: number) {
+    return this.request<void>(`/api/v1/watchlist/${coinId}`, { method: "POST" });
+  }
+
+  async removeFromWatchlist(coinId: number) {
+    return this.request<void>(`/api/v1/watchlist/${coinId}`, { method: "DELETE" });
+  }
+
+  // Portfolio
+  async getPortfolioSummary() {
+    return this.request<import("@/types").PortfolioSummary>("/api/v1/portfolio");
+  }
+
+  async getPortfolioHoldings() {
+    return this.request<import("@/types").PortfolioHolding[]>("/api/v1/portfolio/holdings");
+  }
+
+  async addPortfolioHolding(data: { coin_id: number; quantity: number; buy_price_usd: number; notes?: string }) {
+    return this.request<import("@/types").PortfolioHolding>("/api/v1/portfolio/holdings", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updatePortfolioHolding(id: number, data: { quantity?: number; buy_price_usd?: number; notes?: string }) {
+    return this.request<import("@/types").PortfolioHolding>(`/api/v1/portfolio/holdings/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deletePortfolioHolding(id: number) {
+    return this.request<void>(`/api/v1/portfolio/holdings/${id}`, { method: "DELETE" });
+  }
+
+  async getPortfolioPerformance(days = 30) {
+    return this.request<import("@/types").PortfolioPerformance>(`/api/v1/portfolio/performance?days=${days}`);
   }
 
   // Auth

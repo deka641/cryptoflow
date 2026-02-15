@@ -124,10 +124,77 @@ export interface User {
   is_active: boolean;
 }
 
+export interface SparklineData {
+  coin_id: number;
+  prices: number[];
+}
+
+export interface WatchlistResponse {
+  coin_ids: number[];
+}
+
+export interface CorrelatedCoin {
+  coin_id: number;
+  symbol: string;
+  name: string;
+  image_url: string | null;
+  correlation: number;
+}
+
+export interface CoinAnalytics {
+  coin_id: number;
+  symbol: string;
+  name: string;
+  volatility: number | null;
+  max_drawdown: number | null;
+  sharpe_ratio: number | null;
+  period_days: number;
+  most_correlated: CorrelatedCoin[];
+  least_correlated: CorrelatedCoin[];
+}
+
 export interface PaginatedResponse<T> {
   items: T[];
   total: number;
   page: number;
   per_page: number;
   pages: number;
+}
+
+export interface PortfolioHolding {
+  id: number;
+  coin_id: number;
+  coingecko_id: string;
+  symbol: string;
+  name: string;
+  image_url: string | null;
+  quantity: number;
+  buy_price_usd: number;
+  current_price_usd: number | null;
+  current_value_usd: number | null;
+  cost_basis_usd: number;
+  pnl_usd: number | null;
+  pnl_pct: number | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PortfolioSummary {
+  total_value_usd: number;
+  total_cost_basis_usd: number;
+  total_pnl_usd: number;
+  total_pnl_pct: number | null;
+  holdings_count: number;
+  unique_coins: number;
+}
+
+export interface PerformancePoint {
+  timestamp: string;
+  value_usd: number;
+}
+
+export interface PortfolioPerformance {
+  days: number;
+  data_points: PerformancePoint[];
 }
