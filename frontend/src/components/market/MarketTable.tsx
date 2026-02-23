@@ -15,6 +15,7 @@ import { SparklineChart } from "@/components/charts/SparklineChart";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Coin } from "@/types";
 import { ArrowUpDown, ArrowUp, ArrowDown, Star } from "lucide-react";
+import { formatCompactCurrency, formatCurrency } from "@/lib/formatters";
 
 interface MarketTableProps {
   coins: Coin[];
@@ -34,34 +35,6 @@ type SortField =
   | "total_volume";
 
 type SortDirection = "asc" | "desc";
-
-function formatCompact(value: number | null): string {
-  if (value === null) return "-";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    notation: "compact",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-function formatPrice(price: number | null): string {
-  if (price === null) return "-";
-  if (price >= 1) {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(price);
-  }
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 6,
-  }).format(price);
-}
 
 function PriceCell({ coin, livePrice }: { coin: Coin; livePrice?: number }) {
   const displayPrice = livePrice ?? coin.price_usd;
@@ -94,7 +67,7 @@ function PriceCell({ coin, livePrice }: { coin: Coin; livePrice?: number }) {
       )}
       key={flash ? `${coin.id}-${flashKey}` : coin.id}
     >
-      {formatPrice(displayPrice)}
+      {formatCurrency(displayPrice)}
     </TableCell>
   );
 }
@@ -300,10 +273,10 @@ export function MarketTable({
                 </div>
               </TableCell>
               <TableCell className="text-right text-slate-300 hidden md:table-cell">
-                {formatCompact(coin.market_cap)}
+                {formatCompactCurrency(coin.market_cap)}
               </TableCell>
               <TableCell className="text-right text-slate-300 hidden lg:table-cell">
-                {formatCompact(coin.total_volume)}
+                {formatCompactCurrency(coin.total_volume)}
               </TableCell>
             </TableRow>
           );

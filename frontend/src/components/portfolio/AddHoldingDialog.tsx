@@ -19,9 +19,10 @@ interface AddHoldingDialogProps {
   onAdd: (data: { coin_id: number; quantity: number; buy_price_usd: number; notes?: string }) => Promise<void>;
   onEdit?: (id: number, data: { quantity?: number; buy_price_usd?: number; notes?: string }) => Promise<void>;
   editHolding?: PortfolioHolding | null;
+  preselectedCoin?: { id: number; name: string; symbol: string; image_url?: string | null };
 }
 
-export function AddHoldingDialog({ open, onOpenChange, onAdd, onEdit, editHolding }: AddHoldingDialogProps) {
+export function AddHoldingDialog({ open, onOpenChange, onAdd, onEdit, editHolding, preselectedCoin }: AddHoldingDialogProps) {
   const [coins, setCoins] = useState<Coin[]>([]);
   const [coinId, setCoinId] = useState<number | "">("");
   const [quantity, setQuantity] = useState("");
@@ -30,13 +31,13 @@ export function AddHoldingDialog({ open, onOpenChange, onAdd, onEdit, editHoldin
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || preselectedCoin) return;
     let cancelled = false;
     api.getCoins(1, 50).then((res) => {
       if (!cancelled) setCoins(res.items);
     }).catch(() => {});
     return () => { cancelled = true; };
-  }, [open]);
+  }, [open, preselectedCoin]);
 
   useEffect(() => {
     if (editHolding) {
@@ -45,12 +46,12 @@ export function AddHoldingDialog({ open, onOpenChange, onAdd, onEdit, editHoldin
       setBuyPrice(String(editHolding.buy_price_usd));
       setNotes(editHolding.notes ?? "");
     } else {
-      setCoinId("");
+      setCoinId(preselectedCoin ? preselectedCoin.id : "");
       setQuantity("");
       setBuyPrice("");
       setNotes("");
     }
-  }, [editHolding, open]);
+  }, [editHolding, open, preselectedCoin]);
 
   const handleCoinChange = (newCoinId: number) => {
     setCoinId(newCoinId);
@@ -102,7 +103,20 @@ export function AddHoldingDialog({ open, onOpenChange, onAdd, onEdit, editHoldin
           <DialogTitle>{isEdit ? "Edit Holding" : "Add Holding"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {!isEdit && (
+          {!isEdit && preselectedCoin && (
+            <div className="space-y-2">
+              <Label className="text-slate-300">Coin</Label>
+              <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-800 px-3 py-2">
+                {preselectedCoin.image_url && (
+                  <img src={preselectedCoin.image_url} alt={preselectedCoin.name} className="size-5 rounded-full" />
+                )}
+                <span className="text-sm text-white">
+                  {preselectedCoin.name} ({preselectedCoin.symbol.toUpperCase()})
+                </span>
+              </div>
+            </div>
+          )}
+          {!isEdit && !preselectedCoin && (
             <div className="space-y-2">
               <Label htmlFor="coin" className="text-slate-300">Coin</Label>
               <select

@@ -12,6 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/ui/error-state";
+import { FadeIn } from "@/components/ui/fade-in";
 
 const PERIODS = [
   { label: "30d", days: 30 },
@@ -33,7 +35,7 @@ export default function AnalyticsPage() {
       const result = await api.getCorrelation(correlationDays);
       setCorrelation(result);
     } catch {
-      // handle error silently
+      setCorrelation(null);
     } finally {
       setCorrLoading(false);
     }
@@ -45,7 +47,7 @@ export default function AnalyticsPage() {
       const result = await api.getVolatility(volatilityDays);
       setVolatility(result);
     } catch {
-      // handle error silently
+      setVolatility(null);
     } finally {
       setVolLoading(false);
     }
@@ -117,19 +119,19 @@ export default function AnalyticsPage() {
                   <Skeleton className="h-64 w-full max-w-xl bg-slate-700" />
                 </div>
               ) : correlation ? (
-                <CorrelationHeatmap
-                  coins={correlation.coins}
-                  matrix={correlation.matrix}
-                  onCellClick={(coinA, coinB) => {
-                    router.push(
-                      `/compare?coins=${coinA},${coinB}&period=${correlationDays}`
-                    );
-                  }}
-                />
+                <FadeIn>
+                  <CorrelationHeatmap
+                    coins={correlation.coins}
+                    matrix={correlation.matrix}
+                    onCellClick={(coinA, coinB) => {
+                      router.push(
+                        `/compare?coins=${coinA},${coinB}&period=${correlationDays}`
+                      );
+                    }}
+                  />
+                </FadeIn>
               ) : (
-                <div className="flex h-64 items-center justify-center text-slate-500">
-                  Failed to load correlation data
-                </div>
+                <ErrorState message="Failed to load correlation data" onRetry={fetchCorrelation} />
               )}
             </CardContent>
           </Card>
@@ -169,11 +171,11 @@ export default function AnalyticsPage() {
                   <Skeleton className="h-[480px] w-full bg-slate-700" />
                 </div>
               ) : volatility ? (
-                <RiskReturnScatter data={volatility} />
+                <FadeIn>
+                  <RiskReturnScatter data={volatility} />
+                </FadeIn>
               ) : (
-                <div className="flex h-64 items-center justify-center text-slate-500">
-                  Failed to load analytics data
-                </div>
+                <ErrorState message="Failed to load analytics data" onRetry={fetchVolatility} />
               )}
             </CardContent>
           </Card>
@@ -191,11 +193,11 @@ export default function AnalyticsPage() {
                 {volLoading ? (
                   volSkeleton
                 ) : volatility ? (
-                  <DrawdownChart data={volatility} />
+                  <FadeIn>
+                    <DrawdownChart data={volatility} />
+                  </FadeIn>
                 ) : (
-                  <div className="flex h-64 items-center justify-center text-slate-500">
-                    Failed to load drawdown data
-                  </div>
+                  <ErrorState message="Failed to load drawdown data" onRetry={fetchVolatility} />
                 )}
               </CardContent>
             </Card>
@@ -211,11 +213,11 @@ export default function AnalyticsPage() {
                 {volLoading ? (
                   volSkeleton
                 ) : volatility ? (
-                  <VolatilityChart data={volatility} compact />
+                  <FadeIn>
+                    <VolatilityChart data={volatility} compact />
+                  </FadeIn>
                 ) : (
-                  <div className="flex h-64 items-center justify-center text-slate-500">
-                    Failed to load volatility data
-                  </div>
+                  <ErrorState message="Failed to load volatility data" onRetry={fetchVolatility} />
                 )}
               </CardContent>
             </Card>

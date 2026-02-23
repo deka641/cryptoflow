@@ -60,7 +60,7 @@ def pipeline_health(db: Session = Depends(get_db)):
 
     # Most recent data timestamp for freshness calculation
     latest_data_ts = db.query(func.max(FactMarketData.timestamp)).scalar()
-    now = datetime.now()  # Use local time since DB timestamps are timezone-naive local
+    now = datetime.now(timezone.utc)
 
     results = []
     for dag in dag_ids:
@@ -73,8 +73,8 @@ def pipeline_health(db: Session = Depends(get_db)):
 
         freshness_minutes = None
         if latest_data_ts:
-            naive_ts = latest_data_ts.replace(tzinfo=None) if latest_data_ts.tzinfo else latest_data_ts
-            freshness_minutes = round((now - naive_ts).total_seconds() / 60, 1)
+            aware_ts = latest_data_ts if latest_data_ts.tzinfo else latest_data_ts.replace(tzinfo=timezone.utc)
+            freshness_minutes = round((now - aware_ts).total_seconds() / 60, 1)
 
         last_status = last_run.status if last_run else None
         last_time = last_run.end_time or last_run.start_time if last_run else None

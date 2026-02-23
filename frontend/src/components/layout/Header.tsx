@@ -1,8 +1,8 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Menu, User } from "lucide-react";
+import { Menu, User, LogOut, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -12,6 +12,14 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/providers/auth-provider";
 import { useLivePricesContext } from "@/providers/live-prices-provider";
 import { SidebarNav } from "./Sidebar";
@@ -37,7 +45,8 @@ function getPageTitle(pathname: string): string {
 
 export function Header() {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const router = useRouter();
+  const { user, logout } = useAuth();
   const { connected } = useLivePricesContext();
   const title = getPageTitle(pathname);
 
@@ -61,8 +70,25 @@ export function Header() {
               </SheetTitle>
             </div>
           </SheetHeader>
-          <div className="py-4">
-            <SidebarNav />
+          <div className="flex flex-col h-[calc(100%-4rem)]">
+            <div className="py-4 flex-1">
+              <SidebarNav />
+            </div>
+            {user && (
+              <div className="p-4 border-t border-slate-800">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-slate-400 hover:text-white hover:bg-slate-800"
+                  onClick={() => {
+                    logout();
+                    router.push("/");
+                  }}
+                >
+                  <LogOut className="size-4 mr-2" />
+                  Sign Out
+                </Button>
+              </div>
+            )}
           </div>
         </SheetContent>
       </Sheet>
@@ -84,17 +110,56 @@ export function Header() {
         </div>
 
         {user ? (
-          <Avatar size="sm">
-            <AvatarFallback className="bg-indigo-600 text-white text-xs">
-              {user.full_name
-                ? user.full_name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .toUpperCase()
-                : user.email[0].toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                <Avatar size="sm">
+                  <AvatarFallback className="bg-indigo-600 text-white text-xs">
+                    {user.full_name
+                      ? user.full_name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .toUpperCase()
+                      : user.email[0].toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="w-56 bg-slate-800/95 border-slate-700/50 backdrop-blur-md text-slate-300"
+            >
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm font-medium text-white">
+                    {user.full_name || user.email}
+                  </p>
+                  {user.full_name && (
+                    <p className="text-xs text-slate-400">{user.email}</p>
+                  )}
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator className="bg-slate-700/50" />
+              <DropdownMenuItem asChild className="cursor-pointer hover:bg-slate-700/50 focus:bg-slate-700/50 focus:text-white">
+                <Link href="/portfolio">
+                  <Briefcase className="size-4 mr-2" />
+                  Portfolio
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-slate-700/50" />
+              <DropdownMenuItem
+                className="cursor-pointer hover:bg-slate-700/50 focus:bg-slate-700/50 focus:text-white"
+                onClick={() => {
+                  logout();
+                  router.push("/");
+                }}
+              >
+                <LogOut className="size-4 mr-2" />
+                Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ) : (
           <Button variant="ghost" size="sm" asChild>
             <Link href="/auth/login" className="text-slate-400 hover:text-white">

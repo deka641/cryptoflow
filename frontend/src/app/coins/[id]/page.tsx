@@ -5,7 +5,10 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useLivePricesContext } from "@/providers/live-prices-provider";
+import { useAuth } from "@/providers/auth-provider";
 import { useWatchlist } from "@/hooks/use-watchlist";
+import { usePortfolio } from "@/hooks/use-portfolio";
+import { AddHoldingDialog } from "@/components/portfolio/AddHoldingDialog";
 import type { Coin, CoinHistory, CoinOHLCV, CoinAnalytics } from "@/types";
 import { PriceChart } from "@/components/charts/PriceChart";
 import { CandlestickChart } from "@/components/charts/CandlestickChart";
@@ -16,6 +19,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/ui/error-state";
+import { FadeIn } from "@/components/ui/fade-in";
 import {
   ArrowLeft,
   DollarSign,
@@ -27,8 +32,10 @@ import {
   ChevronRight,
   Star,
   GitCompareArrows,
+  Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatCompactCurrency, formatCurrency, formatSupply } from "@/lib/formatters";
 
 const TIME_PERIODS = [
   { label: "7d", days: 7 },
@@ -37,42 +44,6 @@ const TIME_PERIODS = [
   { label: "180d", days: 180 },
   { label: "1y", days: 365 },
 ];
-
-function formatCompact(value: number | null): string {
-  if (value === null) return "-";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    notation: "compact",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-function formatPrice(price: number | null): string {
-  if (price === null) return "-";
-  if (price >= 1) {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(price);
-  }
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 6,
-  }).format(price);
-}
-
-function formatSupply(value: number | null | undefined): string {
-  if (value === null || value === undefined) return "-";
-  return new Intl.NumberFormat("en-US", {
-    notation: "compact",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
 
 const statCardAccents = [
   { border: "border-l-indigo-500", iconBg: "bg-indigo-500/15 text-indigo-400" },
@@ -113,7 +84,7 @@ function LivePriceDisplay({ coin, livePrice }: { coin: Coin; livePrice?: number 
         flash === "red" && "animate-[flash-red_0.6s_ease-out]"
       )}
     >
-      {formatPrice(displayPrice)}
+      {formatCurrency(displayPrice)}
     </p>
   );
 }
@@ -132,17 +103,24 @@ export default function CoinDetailPage() {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [ohlcvLoading, setOhlcvLoading] = useState(true);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [coinError, setCoinError] = useState(false);
+  const [historyError, setHistoryError] = useState(false);
+  const [ohlcvError, setOhlcvError] = useState(false);
 
   const { prices } = useLivePricesContext();
+  const { user } = useAuth();
   const { toggle, isWatched } = useWatchlist();
+  const { addHolding } = usePortfolio();
+  const [portfolioDialogOpen, setPortfolioDialogOpen] = useState(false);
 
   const fetchCoin = useCallback(async () => {
     try {
       setLoading(true);
       const result = await api.getCoin(coinId);
       setCoin(result);
+      setCoinError(false);
     } catch {
-      // handle error silently
+      setCoinError(true);
     } finally {
       setLoading(false);
     }
@@ -153,8 +131,9 @@ export default function CoinDetailPage() {
       setHistoryLoading(true);
       const result = await api.getCoinHistory(coinId, days);
       setHistory(result);
+      setHistoryError(false);
     } catch {
-      // handle error silently
+      setHistoryError(true);
     } finally {
       setHistoryLoading(false);
     }
@@ -165,8 +144,9 @@ export default function CoinDetailPage() {
       setOhlcvLoading(true);
       const result = await api.getCoinOHLCV(coinId, days);
       setOhlcv(result);
+      setOhlcvError(false);
     } catch {
-      // handle error silently
+      setOhlcvError(true);
     } finally {
       setOhlcvLoading(false);
     }
@@ -244,6 +224,20 @@ export default function CoinDetailPage() {
     );
   }
 
+  if (coinError && !loading) {
+    return (
+      <div className="space-y-6">
+        <Button variant="ghost" size="sm" asChild className="text-slate-400 hover:text-white">
+          <Link href="/market">
+            <ArrowLeft className="size-4 mr-1" />
+            Back to Market
+          </Link>
+        </Button>
+        <ErrorState message="Failed to load coin data" onRetry={fetchCoin} />
+      </div>
+    );
+  }
+
   if (!coin) {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-4 text-slate-500">
@@ -260,8 +254,8 @@ export default function CoinDetailPage() {
 
   const stats = [
     { label: "Price", value: null, icon: <DollarSign className="size-5" />, tooltip: "Current USD price from the latest 10-minute market data snapshot. Updates live via WebSocket.", isPrice: true },
-    { label: "Market Cap", value: formatCompact(coin.market_cap), icon: <BarChart3 className="size-5" />, tooltip: "Total market value: current price x circulating supply.", isPrice: false },
-    { label: "24h Volume", value: formatCompact(coin.total_volume), icon: <Activity className="size-5" />, tooltip: "Total trading volume for this coin in the last 24 hours.", isPrice: false },
+    { label: "Market Cap", value: formatCompactCurrency(coin.market_cap), icon: <BarChart3 className="size-5" />, tooltip: "Total market value: current price x circulating supply.", isPrice: false },
+    { label: "24h Volume", value: formatCompactCurrency(coin.total_volume), icon: <Activity className="size-5" />, tooltip: "Total trading volume for this coin in the last 24 hours.", isPrice: false },
     { label: "Circulating Supply", value: formatSupply(coin.circulating_supply), icon: <Coins className="size-5" />, tooltip: "Number of coins currently available on the market.", isPrice: false },
   ];
 
@@ -364,6 +358,17 @@ export default function CoinDetailPage() {
               {isWatched(coin.id) ? "Remove from watchlist" : "Add to watchlist"}
             </TooltipContent>
           </Tooltip>
+          {user && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPortfolioDialogOpen(true)}
+              className="border-slate-700 text-slate-300 hover:text-white"
+            >
+              <Briefcase className="size-4 mr-1" />
+              Add to Portfolio
+            </Button>
+          )}
           <Button variant="outline" size="sm" asChild className="border-slate-700 text-slate-300 hover:text-white">
             <Link href={`/compare?coins=${coin.symbol.toUpperCase()}`}>
               <GitCompareArrows className="size-4 mr-1" />
@@ -471,34 +476,78 @@ export default function CoinDetailPage() {
           {chartType === "candle" ? (
             ohlcvLoading ? (
               <Skeleton className="h-96 w-full rounded-lg bg-slate-700" />
+            ) : ohlcvError ? (
+              <ErrorState message="Failed to load OHLCV data" onRetry={fetchOHLCV} />
             ) : (
-              <CandlestickChart data={ohlcv?.candles ?? []} />
+              <FadeIn>
+                <CandlestickChart data={ohlcv?.candles ?? []} />
+              </FadeIn>
             )
           ) : historyLoading ? (
             <Skeleton className="h-80 w-full rounded-lg bg-slate-700" />
+          ) : historyError ? (
+            <ErrorState message="Failed to load price history" onRetry={fetchHistory} />
           ) : (
-            <PriceChart data={chartData} />
+            <FadeIn>
+              <PriceChart data={chartData} />
+            </FadeIn>
           )}
         </CardContent>
       </Card>
 
       {/* Risk Metrics */}
-      <RiskMetrics
-        volatility={analytics?.volatility}
-        maxDrawdown={analytics?.max_drawdown}
-        sharpeRatio={analytics?.sharpe_ratio}
-        loading={analyticsLoading}
-      />
+      {analyticsLoading ? (
+        <RiskMetrics
+          volatility={analytics?.volatility}
+          maxDrawdown={analytics?.max_drawdown}
+          sharpeRatio={analytics?.sharpe_ratio}
+          loading={true}
+        />
+      ) : (
+        <FadeIn>
+          <RiskMetrics
+            volatility={analytics?.volatility}
+            maxDrawdown={analytics?.max_drawdown}
+            sharpeRatio={analytics?.sharpe_ratio}
+            loading={false}
+          />
+        </FadeIn>
+      )}
 
       {/* Correlation Insights */}
-      <CorrelationInsights
-        mostCorrelated={analytics?.most_correlated ?? []}
-        leastCorrelated={analytics?.least_correlated ?? []}
-        loading={analyticsLoading}
-      />
+      {analyticsLoading ? (
+        <CorrelationInsights
+          mostCorrelated={analytics?.most_correlated ?? []}
+          leastCorrelated={analytics?.least_correlated ?? []}
+          loading={true}
+        />
+      ) : (
+        <FadeIn>
+          <CorrelationInsights
+            mostCorrelated={analytics?.most_correlated ?? []}
+            leastCorrelated={analytics?.least_correlated ?? []}
+            loading={false}
+          />
+        </FadeIn>
+      )}
 
       {/* Coin Description */}
       <CoinDescription description={coin.description} />
+
+      {/* Add to Portfolio Dialog */}
+      {user && coin && (
+        <AddHoldingDialog
+          open={portfolioDialogOpen}
+          onOpenChange={setPortfolioDialogOpen}
+          onAdd={addHolding}
+          preselectedCoin={{
+            id: coin.id,
+            name: coin.name,
+            symbol: coin.symbol,
+            image_url: coin.image_url,
+          }}
+        />
+      )}
     </div>
   );
 }

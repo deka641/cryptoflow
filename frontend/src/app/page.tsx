@@ -7,21 +7,15 @@ import { TopMovers } from "@/components/dashboard/TopMovers";
 import { MarketTreemap } from "@/components/dashboard/MarketTreemap";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/ui/error-state";
+import { FadeIn } from "@/components/ui/fade-in";
 import {
   DollarSign,
   BarChart3,
   Bitcoin,
   Coins,
 } from "lucide-react";
-
-function formatCompact(value: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    notation: "compact",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
+import { formatCompactCurrency } from "@/lib/formatters";
 
 function KpiSkeleton() {
   return (
@@ -52,7 +46,7 @@ function MoversSkeleton() {
 }
 
 export default function DashboardPage() {
-  const { data, loading } = useMarketOverview();
+  const { data, loading, error, refetch } = useMarketOverview();
   const { data: coinsData, loading: coinsLoading } = useCoins(1, 50);
   const { prices: livePrices } = useLivePricesContext();
 
@@ -68,6 +62,9 @@ export default function DashboardPage() {
       </div>
 
       {/* KPI Cards */}
+      {error && !data ? (
+        <ErrorState message="Failed to load market data" onRetry={refetch} />
+      ) : (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {loading || !data ? (
           <>
@@ -77,19 +74,19 @@ export default function DashboardPage() {
             <KpiSkeleton />
           </>
         ) : (
-          <>
+          <FadeIn className="contents">
             <KpiCard
               title="Total Market Cap"
-              value={formatCompact(data.total_market_cap)}
-              change={null}
+              value={formatCompactCurrency(data.total_market_cap)}
+              change={data.market_cap_change_24h_pct ?? null}
               icon={<DollarSign className="size-5" />}
               accentColor="indigo"
               tooltip="Combined value of all tracked cryptocurrencies — price × circulating supply, summed across the top 50 coins."
             />
             <KpiCard
               title="24h Volume"
-              value={formatCompact(data.total_volume_24h)}
-              change={null}
+              value={formatCompactCurrency(data.total_volume_24h)}
+              change={data.volume_change_24h_pct ?? null}
               icon={<BarChart3 className="size-5" />}
               accentColor="emerald"
               tooltip="Total trading volume across all tracked coins in the last 24 hours. High volume indicates strong market activity."
@@ -110,9 +107,10 @@ export default function DashboardPage() {
               accentColor="cyan"
               tooltip="Number of cryptocurrencies currently tracked in the CryptoFlow data pipeline."
             />
-          </>
+          </FadeIn>
         )}
       </div>
+      )}
 
       {/* Market Map */}
       <div>
@@ -131,10 +129,12 @@ export default function DashboardPage() {
               </div>
             </div>
           ) : (
-            <MarketTreemap
-              coins={coinsData.items}
-              livePrices={livePrices}
-            />
+            <FadeIn>
+              <MarketTreemap
+                coins={coinsData.items}
+                livePrices={livePrices}
+              />
+            </FadeIn>
           )}
         </CardContent>
       </Card>
@@ -166,7 +166,7 @@ export default function DashboardPage() {
             </Card>
           </>
         ) : (
-          <>
+          <FadeIn className="contents">
             <Card className="glass-card">
               <CardHeader>
                 <CardTitle className="text-white">Top Gainers</CardTitle>
@@ -183,7 +183,7 @@ export default function DashboardPage() {
                 <TopMovers title="Top Losers" movers={data.top_losers} />
               </CardContent>
             </Card>
-          </>
+          </FadeIn>
         )}
       </div>
     </div>

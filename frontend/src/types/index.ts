@@ -34,6 +34,8 @@ export interface MarketOverview {
   active_coins: number;
   top_gainers: CoinMover[];
   top_losers: CoinMover[];
+  market_cap_change_24h_pct: number | null;
+  volume_change_24h_pct: number | null;
 }
 
 export interface CoinMover {

@@ -264,15 +264,29 @@ def get_portfolio_performance(
         ts_prices[ts][coin_id] = float(price)
 
     # Calculate portfolio value at each timestamp
+    # Sort holdings by created_at so we can use a pointer to track active holdings
+    # instead of checking every holding against every timestamp (O(n+m) vs O(n×m))
+    sorted_holdings = sorted(
+        holdings,
+        key=lambda h: h.created_at.replace(tzinfo=None) if h.created_at else datetime.min,
+    )
     sorted_timestamps = sorted(ts_prices.keys())
     data_points = []
+    active_holdings: list[PortfolioHolding] = []
+    h_ptr = 0
     for ts in sorted_timestamps:
+        ts_naive = ts.replace(tzinfo=None)
+        # Advance pointer: add holdings whose created_at <= current timestamp
+        while h_ptr < len(sorted_holdings):
+            h = sorted_holdings[h_ptr]
+            h_created = h.created_at.replace(tzinfo=None) if h.created_at else datetime.min
+            if h_created > ts_naive:
+                break
+            active_holdings.append(h)
+            h_ptr += 1
         prices_at_ts = ts_prices[ts]
         value = 0.0
-        for h in holdings:
-            # Only include holdings created before this timestamp
-            if h.created_at and h.created_at.replace(tzinfo=None) > ts.replace(tzinfo=None):
-                continue
+        for h in active_holdings:
             price = prices_at_ts.get(h.coin_id)
             if price is not None:
                 value += float(h.quantity) * price

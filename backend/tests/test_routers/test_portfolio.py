@@ -262,3 +262,63 @@ def test_portfolio_performance_empty(client):
     data = resp.json()
     assert data["days"] == 30
     assert data["data_points"] == []
+
+
+def _insert_orphan_coin(db):
+    """Insert a coin that exists in dim_coin but has no price data in mv_latest_market_data."""
+    db.execute(text(
+        "INSERT INTO dim_coin (coingecko_id, symbol, name) "
+        "VALUES ('test-orphan-coin', 'ORPHAN', 'Orphan Test Coin') "
+        "RETURNING id"
+    ))
+    row = db.execute(text(
+        "SELECT id FROM dim_coin WHERE coingecko_id = 'test-orphan-coin'"
+    )).fetchone()
+    db.flush()
+    return row[0]
+
+
+def test_portfolio_summary_no_prices(client, db):
+    """Summary returns correctly when a holding's coin has no entry in mv_latest_market_data."""
+    token = _register_and_get_token(client, "no-prices@example.com")
+    coin_id = _insert_orphan_coin(db)
+
+    # Add a holding for this price-less coin
+    resp = client.post("/api/v1/portfolio/holdings", json={
+        "coin_id": coin_id, "quantity": 5.0, "buy_price_usd": 200.0,
+    }, headers=_auth_header(token))
+    assert resp.status_code == 201
+
+    # Portfolio summary should still return without error
+    resp = client.get("/api/v1/portfolio", headers=_auth_header(token))
+    assert resp.status_code == 200
+    summary = resp.json()
+
+    # Cost basis should be correctly computed (quantity * buy_price)
+    assert summary["total_cost_basis_usd"] == 5.0 * 200.0
+    assert summary["holdings_count"] == 1
+    assert summary["unique_coins"] == 1
+
+    # With no price data, current value should be zero and P&L should reflect that
+    assert summary["total_value_usd"] == 0
+    assert summary["total_pnl_usd"] == 0
+    assert summary["total_pnl_pct"] is None
+
+
+def test_portfolio_performance_empty_range(client, db):
+    """Performance returns empty data_points when no price data exists for the holding's coin."""
+    token = _register_and_get_token(client, "perf-empty-range@example.com")
+    coin_id = _insert_orphan_coin(db)
+
+    # Add a holding for a coin with no historical price data
+    resp = client.post("/api/v1/portfolio/holdings", json={
+        "coin_id": coin_id, "quantity": 1.0, "buy_price_usd": 100.0,
+    }, headers=_auth_header(token))
+    assert resp.status_code == 201
+
+    # Request performance — no fact_market_data rows exist for this coin
+    resp = client.get("/api/v1/portfolio/performance?days=1", headers=_auth_header(token))
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["days"] == 1
+    assert data["data_points"] == []
