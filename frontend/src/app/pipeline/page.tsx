@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { api } from "@/lib/api";
 import type { PipelineHealth, PipelineRun } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,8 +14,16 @@ import {
   TableRow,
   TableCell,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/ui/error-state";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -106,15 +114,20 @@ export default function PipelinePage() {
   const [page, setPage] = useState(1);
   const [healthLoading, setHealthLoading] = useState(true);
   const [runsLoading, setRunsLoading] = useState(true);
+  const [healthError, setHealthError] = useState(false);
+  const [runsError, setRunsError] = useState(false);
+  const [dagFilter, setDagFilter] = useState<string>("all");
   const perPage = 15;
+  const refreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchHealth = useCallback(async () => {
     try {
       setHealthLoading(true);
+      setHealthError(false);
       const result = await api.getPipelineHealth();
       setHealth(result);
     } catch {
-      // handle error silently
+      setHealthError(true);
     } finally {
       setHealthLoading(false);
     }
@@ -123,16 +136,17 @@ export default function PipelinePage() {
   const fetchRuns = useCallback(async () => {
     try {
       setRunsLoading(true);
-      const result = await api.getPipelineRuns(page, perPage);
+      setRunsError(false);
+      const result = await api.getPipelineRuns(page, perPage, dagFilter === "all" ? undefined : dagFilter);
       setRuns(result.items);
       setRunsTotal(result.total);
       setRunsPages(result.pages);
     } catch {
-      // handle error silently
+      setRunsError(true);
     } finally {
       setRunsLoading(false);
     }
-  }, [page]);
+  }, [page, dagFilter]);
 
   useEffect(() => {
     fetchHealth();
@@ -141,6 +155,20 @@ export default function PipelinePage() {
   useEffect(() => {
     fetchRuns();
   }, [fetchRuns]);
+
+  // Auto-refresh every 60 seconds
+  useEffect(() => {
+    refreshRef.current = setInterval(() => {
+      fetchHealth();
+      fetchRuns();
+    }, 60000);
+    return () => {
+      if (refreshRef.current) clearInterval(refreshRef.current);
+    };
+  }, [fetchHealth, fetchRuns]);
+
+  // Get unique dag_ids for filter dropdown
+  const dagIds = health ? [...new Set(health.map((h) => h.dag_id))] : [];
 
   return (
     <div className="space-y-6">
@@ -163,6 +191,8 @@ export default function PipelinePage() {
               <Skeleton key={i} className="h-32 w-full rounded-xl bg-slate-700" />
             ))}
           </div>
+        ) : healthError ? (
+          <ErrorState message="Failed to load pipeline health data." onRetry={fetchHealth} compact />
         ) : health && health.length > 0 ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {health.map((h) => (
@@ -181,11 +211,25 @@ export default function PipelinePage() {
       {/* Runs Table */}
       <Card className="glass-card">
         <CardHeader>
-          <CardTitle className="text-white">Pipeline Runs</CardTitle>
-          <p className="text-xs text-slate-400">
-            Execution history of all pipeline runs, including start/end times, records processed, and any error messages.
-            Failed runs typically indicate API rate limits or transient connectivity issues.
-          </p>
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <CardTitle className="text-white">Pipeline Runs</CardTitle>
+              <p className="text-xs text-slate-400 mt-1">
+                Execution history of all pipeline runs, including start/end times, records processed, and any error messages.
+              </p>
+            </div>
+            <Select value={dagFilter} onValueChange={(v) => { setDagFilter(v); setPage(1); }}>
+              <SelectTrigger className="w-[200px] bg-slate-800/50 border-slate-700 text-slate-300">
+                <SelectValue placeholder="Filter by job" />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-800 border-slate-700">
+                <SelectItem value="all" className="text-slate-300">All Jobs</SelectItem>
+                {dagIds.map((dag) => (
+                  <SelectItem key={dag} value={dag} className="text-slate-300">{dag}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           {runsLoading ? (
@@ -193,6 +237,10 @@ export default function PipelinePage() {
               {Array.from({ length: 8 }).map((_, i) => (
                 <Skeleton key={i} className="h-10 w-full bg-slate-700" />
               ))}
+            </div>
+          ) : runsError ? (
+            <div className="p-6">
+              <ErrorState message="Failed to load pipeline runs." onRetry={fetchRuns} compact />
             </div>
           ) : runs && runs.length > 0 ? (
             <Table>

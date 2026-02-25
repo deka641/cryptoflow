@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { formatCurrency } from "@/lib/formatters";
 
 interface PriceChartProps {
   data: { timestamp: string; price: number }[];
@@ -21,23 +22,6 @@ function formatTimestamp(timestamp: string): string {
     month: "short",
     day: "numeric",
   });
-}
-
-function formatPrice(value: number): string {
-  if (value >= 1000) {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  }
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 4,
-  }).format(value);
 }
 
 interface CustomTooltipProps {
@@ -63,7 +47,7 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
           : ""}
       </p>
       <p className="text-sm font-semibold text-white">
-        {formatPrice(payload[0].value)}
+        {formatCurrency(payload[0].value)}
       </p>
     </div>
   );
@@ -104,7 +88,7 @@ export function PriceChart({ data, color = "#6366f1" }: PriceChartProps) {
             axisLine={false}
           />
           <YAxis
-            tickFormatter={(v: number) => formatPrice(v)}
+            tickFormatter={(v: number) => formatCurrency(v)}
             stroke="#64748b"
             fontSize={12}
             tickLine={false}

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Integer, Numeric, Text, DateTime, ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column
@@ -15,8 +15,8 @@ class PortfolioHolding(Base):
     quantity: Mapped[float] = mapped_column(Numeric(24, 8), nullable=False)
     buy_price_usd: Mapped[float] = mapped_column(Numeric(20, 8), nullable=False)
     notes: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
         Index("idx_portfolio_user", "user_id"),

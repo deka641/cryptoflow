@@ -21,8 +21,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const token = localStorage.getItem("access_token");
     if (token) {
-      api.getMe().then(setUser).catch(() => {
-        localStorage.removeItem("access_token");
+      api.getMe().then(setUser).catch((err: Error & { status?: number }) => {
+        if (err.status === 401) {
+          localStorage.removeItem("access_token");
+        }
       }).finally(() => setLoading(false));
     } else {
       setLoading(false);

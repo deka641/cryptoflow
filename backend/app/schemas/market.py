@@ -5,5 +5,7 @@ class MarketOverview(BaseModel):
     total_volume_24h: float
     btc_dominance: float
     active_coins: int
+    market_cap_change_24h_pct: float | None = None
+    volume_change_24h_pct: float | None = None
     top_gainers: list[dict]  # [{id, symbol, name, price_change_24h_pct}]
     top_losers: list[dict]

@@ -4,25 +4,9 @@ import { useState, useSyncExternalStore, useCallback } from "react";
 import { X, TrendingUp, TrendingDown } from "lucide-react";
 import { useLivePricesContext } from "@/providers/live-prices-provider";
 import { useCoins } from "@/hooks/use-market-data";
+import { formatCurrency } from "@/lib/formatters";
 
 const STORAGE_KEY = "cryptoflow-ticker-dismissed";
-
-function formatTickerPrice(price: number): string {
-  if (price >= 1) {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(price);
-  }
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 4,
-  }).format(price);
-}
 
 function getSnapshot() {
   return localStorage.getItem(STORAGE_KEY) === "true";
@@ -68,7 +52,7 @@ export function PriceTicker() {
           <img src={coin.image_url} alt="" className="size-4 rounded-full" />
         )}
         <span className="font-medium text-slate-200">{coin.symbol.toUpperCase()}</span>
-        <span className="text-white">{price !== null ? formatTickerPrice(price) : "-"}</span>
+        <span className="text-white">{formatCurrency(price)}</span>
         {change !== null && (
           <span
             className={`flex items-center gap-0.5 text-xs font-medium ${

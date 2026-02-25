@@ -12,6 +12,7 @@ import {
   Cell,
 } from "recharts";
 import type { OHLCVPoint } from "@/types";
+import { formatCurrency, formatCompactCurrency } from "@/lib/formatters";
 
 interface CandlestickChartProps {
   data: OHLCVPoint[];
@@ -124,31 +125,6 @@ function CandleShape(props: {
   );
 }
 
-function formatPrice(value: number): string {
-  if (value >= 1000) {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  }
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 4,
-  }).format(value);
-}
-
-function formatVolume(value: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    notation: "compact",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
 
 interface CandleTooltipProps {
   active?: boolean;
@@ -172,15 +148,15 @@ function CandleTooltip({ active, payload }: CandleTooltipProps) {
       <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs">
         <span className="text-slate-400">Open</span>
         <span className="text-white font-medium text-right">
-          {formatPrice(data.open)}
+          {formatCurrency(data.open)}
         </span>
         <span className="text-slate-400">High</span>
         <span className="text-white font-medium text-right">
-          {formatPrice(data.high)}
+          {formatCurrency(data.high)}
         </span>
         <span className="text-slate-400">Low</span>
         <span className="text-white font-medium text-right">
-          {formatPrice(data.low)}
+          {formatCurrency(data.low)}
         </span>
         <span className="text-slate-400">Close</span>
         <span
@@ -188,11 +164,11 @@ function CandleTooltip({ active, payload }: CandleTooltipProps) {
             data.isUp ? "text-emerald-400" : "text-red-400"
           }`}
         >
-          {formatPrice(data.close)}
+          {formatCurrency(data.close)}
         </span>
         <span className="text-slate-400">Volume</span>
         <span className="text-white font-medium text-right">
-          {formatVolume(data.volume)}
+          {formatCompactCurrency(data.volume)}
         </span>
       </div>
     </div>
@@ -251,7 +227,7 @@ export function CandlestickChart({ data }: CandlestickChartProps) {
               minPrice - pricePadding,
               maxPrice + pricePadding,
             ]}
-            tickFormatter={formatPrice}
+            tickFormatter={(v: number) => formatCurrency(v)}
             stroke="#64748b"
             fontSize={12}
             tickLine={false}

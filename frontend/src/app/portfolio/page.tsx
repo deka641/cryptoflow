@@ -9,6 +9,7 @@ import { usePortfolio } from "@/hooks/use-portfolio";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/ui/error-state";
 import { PortfolioSummaryCards } from "@/components/portfolio/PortfolioSummaryCards";
 import { HoldingsTable } from "@/components/portfolio/HoldingsTable";
 import { AllocationChart } from "@/components/portfolio/AllocationChart";
@@ -19,7 +20,7 @@ import type { PortfolioHolding } from "@/types";
 export default function PortfolioPage() {
   const { user } = useAuth();
   const { prices } = useLivePricesContext();
-  const { holdings, summary, loading, addHolding, updateHolding, deleteHolding } = usePortfolio();
+  const { holdings, summary, loading, error, addHolding, updateHolding, deleteHolding, refetch } = usePortfolio();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editHolding, setEditHolding] = useState<PortfolioHolding | null>(null);
 
@@ -67,6 +68,13 @@ export default function PortfolioPage() {
     );
   }
 
+  // Error state
+  if (error && holdings.length === 0) {
+    return (
+      <ErrorState message="Failed to load portfolio data." onRetry={refetch} />
+    );
+  }
+
   // State 2: No holdings
   if (holdings.length === 0 && !loading) {
     return (
@@ -96,12 +104,17 @@ export default function PortfolioPage() {
   // State 3: Has holdings
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-white">Portfolio Overview</h2>
-        <Button onClick={handleOpenAdd} size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white">
-          <Plus className="size-4 mr-1" />
-          Add Holding
-        </Button>
+      <div>
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-white">Portfolio</h2>
+          <Button onClick={handleOpenAdd} size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white">
+            <Plus className="size-4 mr-1" />
+            Add Holding
+          </Button>
+        </div>
+        <p className="mt-1 text-sm text-slate-400">
+          Track your crypto holdings, monitor real-time P&L, and analyze your portfolio allocation.
+        </p>
       </div>
 
       <PortfolioSummaryCards summary={summary} holdings={holdings} prices={prices} />

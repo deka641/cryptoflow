@@ -51,3 +51,12 @@ export function formatPercentage(value: number | null): string {
   if (value === null) return "-";
   return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
 }
+
+/**
+ * Format a quantity with appropriate decimal places.
+ * Quantities >= 1 show up to 4 decimals; quantities < 1 show up to 8 decimals.
+ */
+export function formatQuantity(qty: number): string {
+  if (qty >= 1) return qty.toLocaleString("en-US", { maximumFractionDigits: 4 });
+  return qty.toLocaleString("en-US", { maximumFractionDigits: 8 });
+}

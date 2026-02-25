@@ -9,6 +9,7 @@ import {
   Tooltip,
 } from "recharts";
 import type { PortfolioHolding } from "@/types";
+import { formatCurrency } from "@/lib/formatters";
 
 interface AllocationChartProps {
   holdings: PortfolioHolding[];
@@ -28,15 +29,6 @@ const COLORS = [
   "#ec4899",
 ];
 
-function formatUsd(value: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-    notation: value >= 1_000_000 ? "compact" : "standard",
-  }).format(value);
-}
 
 interface ChartEntry {
   name: string;
@@ -56,7 +48,7 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
   return (
     <div className="rounded-lg border border-slate-700/50 bg-slate-800/90 backdrop-blur-md px-3 py-2 shadow-xl shadow-black/20">
       <p className="text-sm font-semibold text-white">{d.name} ({d.symbol})</p>
-      <p className="text-sm text-slate-300">{formatUsd(d.value)}</p>
+      <p className="text-sm text-slate-300">{formatCurrency(d.value)}</p>
       <p className="text-xs text-slate-400">{d.pct.toFixed(1)}%</p>
     </div>
   );
@@ -123,7 +115,7 @@ export function AllocationChart({ holdings, prices }: AllocationChartProps) {
               dominantBaseline="central"
               className="fill-white text-lg font-bold"
             >
-              {formatUsd(total)}
+              {formatCurrency(total)}
             </text>
             <text
               x="50%"
@@ -149,7 +141,7 @@ export function AllocationChart({ holdings, prices }: AllocationChartProps) {
             </div>
             <div className="flex items-center gap-3">
               <span className="text-slate-400">{entry.pct.toFixed(1)}%</span>
-              <span className="text-white font-medium">{formatUsd(entry.value)}</span>
+              <span className="text-white font-medium">{formatCurrency(entry.value)}</span>
             </div>
           </div>
         ))}

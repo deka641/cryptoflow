@@ -11,10 +11,12 @@ export function usePortfolio() {
   const [holdings, setHoldings] = useState<PortfolioHolding[]>([]);
   const [summary, setSummary] = useState<PortfolioSummary | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
+    setError(false);
     try {
       const [h, s] = await Promise.all([
         api.getPortfolioHoldings(),
@@ -23,8 +25,7 @@ export function usePortfolio() {
       setHoldings(h);
       setSummary(s);
     } catch {
-      setHoldings([]);
-      setSummary(null);
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -50,8 +51,7 @@ export function usePortfolio() {
         }
       } catch {
         if (!cancelled) {
-          setHoldings([]);
-          setSummary(null);
+          setError(true);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -95,5 +95,5 @@ export function usePortfolio() {
     }
   }, [holdings, fetchData]);
 
-  return { holdings, summary, loading, addHolding, updateHolding, deleteHolding, refetch: fetchData };
+  return { holdings, summary, loading, error, addHolding, updateHolding, deleteHolding, refetch: fetchData };
 }

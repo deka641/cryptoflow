@@ -336,28 +336,30 @@ export default function CoinDetailPage() {
         <div className="flex-1" />
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => toggle(coin.id)}
-                className={cn(
-                  "text-slate-400 hover:text-white",
-                  isWatched(coin.id) && "text-amber-400 hover:text-amber-300"
-                )}
+        <div className="flex items-center gap-2 flex-wrap">
+          {user && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => toggle(coin.id)}
+                  className={cn(
+                    "text-slate-400 hover:text-white",
+                    isWatched(coin.id) && "text-amber-400 hover:text-amber-300"
+                  )}
+                >
+                  <Star className={cn("size-5", isWatched(coin.id) && "fill-current")} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent
+                side="bottom"
+                className="border border-slate-700/50 bg-slate-800/95 backdrop-blur-md text-slate-300"
               >
-                <Star className={cn("size-5", isWatched(coin.id) && "fill-current")} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent
-              side="bottom"
-              className="border border-slate-700/50 bg-slate-800/95 backdrop-blur-md text-slate-300"
-            >
-              {isWatched(coin.id) ? "Remove from watchlist" : "Add to watchlist"}
-            </TooltipContent>
-          </Tooltip>
+                {isWatched(coin.id) ? "Remove from watchlist" : "Add to watchlist"}
+              </TooltipContent>
+            </Tooltip>
+          )}
           {user && (
             <Button
               variant="outline"
@@ -415,7 +417,7 @@ export default function CoinDetailPage() {
 
       {/* Price Chart */}
       <Card className="glass-card">
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-4">
           <div>
             <CardTitle className="text-white">Price History</CardTitle>
             <p className="text-xs text-slate-400 mt-1">

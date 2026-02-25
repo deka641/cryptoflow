@@ -55,6 +55,7 @@ def run():
     records_processed = 0
     error_message = None
 
+    conn = None
     try:
         conn = psycopg2.connect(DB_DSN)
         cur = conn.cursor()
@@ -194,11 +195,13 @@ def run():
             logger.info(f"  {period_days}d: {len(corr_rows)} correlation + {len(vol_rows)} volatility rows")
 
         cur.close()
-        conn.close()
 
     except Exception as e:
         error_message = str(e)[:500]
         logger.error(f"Job failed: {e}")
+    finally:
+        if conn:
+            conn.close()
 
     # Log pipeline run
     end_time = datetime.now(timezone.utc)

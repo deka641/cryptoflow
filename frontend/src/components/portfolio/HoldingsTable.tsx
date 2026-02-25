@@ -11,7 +11,19 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { formatCurrency, formatQuantity } from "@/lib/formatters";
 import { Pencil, Trash2 } from "lucide-react";
 import type { PortfolioHolding } from "@/types";
 
@@ -22,28 +34,6 @@ interface HoldingsTableProps {
   onDelete: (id: number) => void;
 }
 
-function formatPrice(price: number | null): string {
-  if (price === null) return "-";
-  if (price >= 1) {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(price);
-  }
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 6,
-  }).format(price);
-}
-
-function formatQuantity(qty: number): string {
-  if (qty >= 1) return qty.toLocaleString("en-US", { maximumFractionDigits: 4 });
-  return qty.toLocaleString("en-US", { maximumFractionDigits: 8 });
-}
 
 function PriceCell({ holding, livePrice }: { holding: PortfolioHolding; livePrice?: number }) {
   const displayPrice = livePrice ?? holding.current_price_usd;
@@ -74,7 +64,7 @@ function PriceCell({ holding, livePrice }: { holding: PortfolioHolding; livePric
       )}
       key={flash ? `${holding.id}-${flashKey}` : holding.id}
     >
-      {formatPrice(displayPrice)}
+      {formatCurrency(displayPrice)}
     </TableCell>
   );
 }
@@ -131,14 +121,14 @@ export function HoldingsTable({ holdings, livePrices, onEdit, onDelete }: Holdin
                 {formatQuantity(holding.quantity)}
               </TableCell>
               <TableCell className="text-right text-slate-300 hidden md:table-cell">
-                {formatPrice(holding.buy_price_usd)}
+                {formatCurrency(holding.buy_price_usd)}
               </TableCell>
               <PriceCell holding={holding} livePrice={livePrice} />
               <TableCell className="text-right font-medium text-white">
-                {currentValue != null ? formatPrice(currentValue) : "-"}
+                {currentValue != null ? formatCurrency(currentValue) : "-"}
               </TableCell>
               <TableCell className={cn("text-right font-medium", isPositive ? "text-emerald-400" : "text-red-400")}>
-                {pnl != null ? `${isPositive ? "+" : ""}${formatPrice(pnl)}` : "-"}
+                {pnl != null ? `${isPositive ? "+" : ""}${formatCurrency(pnl)}` : "-"}
               </TableCell>
               <TableCell className={cn("text-right font-medium hidden sm:table-cell", isPositive ? "text-emerald-400" : "text-red-400")}>
                 {pnlPct != null ? `${pnlPct >= 0 ? "+" : ""}${pnlPct.toFixed(2)}%` : "-"}
@@ -150,17 +140,39 @@ export function HoldingsTable({ holdings, livePrices, onEdit, onDelete }: Holdin
                     size="icon"
                     className="size-7 text-slate-400 hover:text-white"
                     onClick={() => onEdit(holding)}
+                    aria-label="Edit holding"
                   >
                     <Pencil className="size-3.5" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-7 text-slate-400 hover:text-red-400"
-                    onClick={() => onDelete(holding.id)}
-                  >
-                    <Trash2 className="size-3.5" />
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-7 text-slate-400 hover:text-red-400"
+                        aria-label="Delete holding"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="bg-slate-900 border-slate-700">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-white">Remove {holding.name}?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-slate-400">
+                          This will permanently remove this holding from your portfolio. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white">Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => onDelete(holding.id)}
+                          className="bg-red-600 text-white hover:bg-red-700"
+                        >
+                          Remove
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </TableCell>
             </TableRow>

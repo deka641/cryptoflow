@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useCoins } from "@/hooks/use-market-data";
 import { useLivePricesContext } from "@/providers/live-prices-provider";
 import { useWatchlist } from "@/hooks/use-watchlist";
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Search, ChevronLeft, ChevronRight, Star } from "lucide-react";
+import type { Coin } from "@/types";
 
 export default function MarketPage() {
   const [page, setPage] = useState(1);
@@ -61,11 +62,31 @@ export default function MarketPage() {
     return () => { cancelled = true; };
   }, [data?.items]);
 
-  // Filter coins for watchlist tab
-  const items = data?.items;
-  const watchlistCoins = items
-    ? items.filter((coin) => watchlist.has(coin.id))
-    : [];
+  // Fetch all watchlist coins across all pages
+  const [watchlistCoins, setWatchlistCoins] = useState<Coin[]>([]);
+  const [watchlistLoading, setWatchlistLoading] = useState(false);
+
+  const fetchWatchlistCoins = useCallback(async () => {
+    if (!user || watchlist.size === 0) {
+      setWatchlistCoins([]);
+      return;
+    }
+    setWatchlistLoading(true);
+    try {
+      const result = await api.getCoins(1, 50);
+      setWatchlistCoins(result.items.filter((coin) => watchlist.has(coin.id)));
+    } catch {
+      setWatchlistCoins([]);
+    } finally {
+      setWatchlistLoading(false);
+    }
+  }, [user, watchlist]);
+
+  useEffect(() => {
+    if (activeTab === "watchlist") {
+      fetchWatchlistCoins();
+    }
+  }, [activeTab, fetchWatchlistCoins]);
 
   const watchlistCount = watchlist.size;
 
@@ -172,7 +193,7 @@ export default function MarketPage() {
           <TabsContent value="watchlist">
             <Card className="glass-card">
               <CardContent className="p-0">
-                {loading ? (
+                {watchlistLoading ? (
                   <div className="space-y-3 p-6">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <Skeleton key={i} className="h-12 w-full bg-slate-700" />

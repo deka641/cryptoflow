@@ -29,7 +29,13 @@ class ApiClient {
 
     if (!res.ok) {
       const error = await res.json().catch(() => ({ detail: res.statusText }));
-      throw new Error(error.detail || `HTTP ${res.status}`);
+      const err = new Error(error.detail || `HTTP ${res.status}`);
+      (err as Error & { status: number }).status = res.status;
+      throw err;
+    }
+
+    if (res.status === 204 || res.headers.get("content-length") === "0") {
+      return undefined as T;
     }
 
     return res.json();
@@ -79,9 +85,11 @@ class ApiClient {
   }
 
   // Pipeline
-  async getPipelineRuns(page = 1, perPage = 20) {
+  async getPipelineRuns(page = 1, perPage = 20, dagId?: string) {
+    const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
+    if (dagId) params.set("dag_id", dagId);
     return this.request<import("@/types").PaginatedResponse<import("@/types").PipelineRun>>(
-      `/api/v1/pipeline/runs?page=${page}&per_page=${perPage}`
+      `/api/v1/pipeline/runs?${params}`
     );
   }
 
@@ -90,9 +98,12 @@ class ApiClient {
   }
 
   // Quality
-  async getQualityChecks(page = 1, perPage = 20) {
+  async getQualityChecks(page = 1, perPage = 20, status?: string, tableName?: string) {
+    const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
+    if (status) params.set("status", status);
+    if (tableName) params.set("table_name", tableName);
     return this.request<import("@/types").PaginatedResponse<import("@/types").QualityCheck>>(
-      `/api/v1/quality/checks?page=${page}&per_page=${perPage}`
+      `/api/v1/quality/checks?${params}`
     );
   }
 

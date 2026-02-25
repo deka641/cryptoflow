@@ -4,6 +4,7 @@ import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { Treemap } from "recharts";
 import { useRouter } from "next/navigation";
 import type { Coin } from "@/types";
+import { formatCurrency, formatCompactCurrency } from "@/lib/formatters";
 
 interface MarketTreemapProps {
   coins: Coin[];
@@ -43,31 +44,6 @@ function getChangeColor(change: number): string {
   }
 }
 
-function formatPrice(price: number): string {
-  if (price >= 1) {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(price);
-  }
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 6,
-  }).format(price);
-}
-
-function formatMarketCap(value: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    notation: "compact",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
 
 interface CustomTileProps {
   x: number;
@@ -162,7 +138,7 @@ function CustomTile({
           fontSize={priceFontSize}
           style={{ pointerEvents: "none" }}
         >
-          {formatPrice(price)}
+          {formatCurrency(price)}
         </text>
       )}
       {showChange && (
@@ -294,7 +270,7 @@ export function MarketTreemap({ coins, livePrices }: MarketTreemapProps) {
             <div>
               <p className="text-xs text-slate-400">{tooltip.node.name}</p>
               <p className="text-sm font-semibold text-white">
-                {formatPrice(tooltip.node.price)}
+                {formatCurrency(tooltip.node.price)}
               </p>
             </div>
             <div className="text-right">
@@ -307,7 +283,7 @@ export function MarketTreemap({ coins, livePrices }: MarketTreemapProps) {
                 {tooltip.node.change.toFixed(2)}%
               </span>
               <p className="text-xs text-slate-400">
-                MCap {formatMarketCap(tooltip.node.marketCap)}
+                MCap {formatCompactCurrency(tooltip.node.marketCap)}
               </p>
             </div>
           </div>

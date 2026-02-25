@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { api } from "@/lib/api";
 import type { QualitySummary, QualityCheck } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,8 +14,16 @@ import {
   TableRow,
   TableCell,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/ui/error-state";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -128,15 +136,21 @@ export default function QualityPage() {
   const [page, setPage] = useState(1);
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [checksLoading, setChecksLoading] = useState(true);
+  const [summaryError, setSummaryError] = useState(false);
+  const [checksError, setChecksError] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [tableFilter, setTableFilter] = useState<string>("all");
   const perPage = 15;
+  const refreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchSummary = useCallback(async () => {
     try {
       setSummaryLoading(true);
+      setSummaryError(false);
       const result = await api.getQualitySummary();
       setSummaries(result);
     } catch {
-      // handle error silently
+      setSummaryError(true);
     } finally {
       setSummaryLoading(false);
     }
@@ -145,16 +159,22 @@ export default function QualityPage() {
   const fetchChecks = useCallback(async () => {
     try {
       setChecksLoading(true);
-      const result = await api.getQualityChecks(page, perPage);
+      setChecksError(false);
+      const result = await api.getQualityChecks(
+        page,
+        perPage,
+        statusFilter === "all" ? undefined : statusFilter,
+        tableFilter === "all" ? undefined : tableFilter,
+      );
       setChecks(result.items);
       setChecksTotal(result.total);
       setChecksPages(result.pages);
     } catch {
-      // handle error silently
+      setChecksError(true);
     } finally {
       setChecksLoading(false);
     }
-  }, [page]);
+  }, [page, statusFilter, tableFilter]);
 
   useEffect(() => {
     fetchSummary();
@@ -163,6 +183,20 @@ export default function QualityPage() {
   useEffect(() => {
     fetchChecks();
   }, [fetchChecks]);
+
+  // Auto-refresh every 60 seconds
+  useEffect(() => {
+    refreshRef.current = setInterval(() => {
+      fetchSummary();
+      fetchChecks();
+    }, 60000);
+    return () => {
+      if (refreshRef.current) clearInterval(refreshRef.current);
+    };
+  }, [fetchSummary, fetchChecks]);
+
+  // Get unique table names for filter dropdown
+  const tableNames = summaries ? [...new Set(summaries.map((s) => s.table_name))] : [];
 
   return (
     <div className="space-y-6">
@@ -188,6 +222,8 @@ export default function QualityPage() {
               <Skeleton key={i} className="h-24 w-full rounded-xl bg-slate-700" />
             ))}
           </div>
+        ) : summaryError ? (
+          <ErrorState message="Failed to load quality summary." onRetry={fetchSummary} compact />
         ) : summaries && summaries.length > 0 ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {summaries.map((s) => (
@@ -206,10 +242,38 @@ export default function QualityPage() {
       {/* Checks Table */}
       <Card className="glass-card">
         <CardHeader>
-          <CardTitle className="text-white">Quality Checks</CardTitle>
-          <p className="text-xs text-slate-400">
-            Individual check results with timestamps and details. Each row represents a single quality assertion — passed, warning, or failed.
-          </p>
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <CardTitle className="text-white">Quality Checks</CardTitle>
+              <p className="text-xs text-slate-400 mt-1">
+                Individual check results with timestamps and details. Each row represents a single quality assertion.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+                <SelectTrigger className="w-[140px] bg-slate-800/50 border-slate-700 text-slate-300">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-700">
+                  <SelectItem value="all" className="text-slate-300">All Status</SelectItem>
+                  <SelectItem value="passed" className="text-slate-300">Passed</SelectItem>
+                  <SelectItem value="failed" className="text-slate-300">Failed</SelectItem>
+                  <SelectItem value="warning" className="text-slate-300">Warning</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={tableFilter} onValueChange={(v) => { setTableFilter(v); setPage(1); }}>
+                <SelectTrigger className="w-[180px] bg-slate-800/50 border-slate-700 text-slate-300">
+                  <SelectValue placeholder="Table" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-700">
+                  <SelectItem value="all" className="text-slate-300">All Tables</SelectItem>
+                  {tableNames.map((name) => (
+                    <SelectItem key={name} value={name} className="text-slate-300">{name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           {checksLoading ? (
@@ -217,6 +281,10 @@ export default function QualityPage() {
               {Array.from({ length: 8 }).map((_, i) => (
                 <Skeleton key={i} className="h-10 w-full bg-slate-700" />
               ))}
+            </div>
+          ) : checksError ? (
+            <div className="p-6">
+              <ErrorState message="Failed to load quality checks." onRetry={fetchChecks} compact />
             </div>
           ) : checks && checks.length > 0 ? (
             <Table>

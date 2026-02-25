@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Integer, String, DateTime, JSON
 from sqlalchemy.orm import Mapped, mapped_column
@@ -14,4 +14,4 @@ class DataQualityCheck(Base):
     table_name: Mapped[str] = mapped_column(String(100), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False)  # passed, failed, warning
     details: Mapped[dict | None] = mapped_column(JSON)
-    executed_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    executed_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))

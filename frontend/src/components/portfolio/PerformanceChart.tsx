@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
+import { formatCurrency, formatCompactCurrency } from "@/lib/formatters";
 import type { PortfolioPerformance } from "@/types";
 
 const PERIODS = [
@@ -29,22 +30,6 @@ function formatTimestamp(timestamp: string): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function formatUsd(value: number): string {
-  if (value >= 1000) {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  }
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-}
 
 interface CustomTooltipProps {
   active?: boolean;
@@ -67,7 +52,7 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
             })
           : ""}
       </p>
-      <p className="text-sm font-semibold text-white">{formatUsd(payload[0].value)}</p>
+      <p className="text-sm font-semibold text-white">{formatCurrency(payload[0].value)}</p>
     </div>
   );
 }
@@ -159,7 +144,7 @@ export function PerformanceChart({ hasHoldings }: PerformanceChartProps) {
                 axisLine={false}
               />
               <YAxis
-                tickFormatter={formatUsd}
+                tickFormatter={(v: number) => formatCompactCurrency(v)}
                 stroke="#64748b"
                 fontSize={12}
                 tickLine={false}

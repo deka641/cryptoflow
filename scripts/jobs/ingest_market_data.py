@@ -62,6 +62,7 @@ def run():
     records_processed = 0
     error_message = None
 
+    conn = None
     try:
         logger.info("Fetching top 50 coins from CoinGecko...")
         coins = fetch_coins_markets(50)
@@ -124,11 +125,13 @@ def run():
         logger.info("Materialized view refreshed")
 
         cur.close()
-        conn.close()
 
     except Exception as e:
         error_message = str(e)[:500]
         logger.error(f"Job failed: {e}")
+    finally:
+        if conn:
+            conn.close()
 
     # Log pipeline run
     end_time = datetime.now(timezone.utc)

@@ -1,27 +1,11 @@
 import Link from "next/link";
 import type { CoinMover } from "@/types";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/formatters";
 
 interface TopMoversProps {
   title: string;
   movers: CoinMover[];
-}
-
-function formatPrice(price: number): string {
-  if (price >= 1) {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(price);
-  }
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 6,
-  }).format(price);
 }
 
 export function TopMovers({ movers }: TopMoversProps) {
@@ -58,7 +42,7 @@ export function TopMovers({ movers }: TopMoversProps) {
             </div>
             <div className="text-right">
               <p className="text-sm font-medium text-white">
-                {formatPrice(mover.price_usd)}
+                {formatCurrency(mover.price_usd)}
               </p>
               <p
                 className={cn(

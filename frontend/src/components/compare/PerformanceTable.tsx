@@ -9,6 +9,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { formatCurrency, formatPercentage } from "@/lib/formatters";
 
 export interface CoinMetrics {
   coinId: number;
@@ -27,34 +28,6 @@ interface PerformanceTableProps {
   metrics: CoinMetrics[];
 }
 
-function formatPrice(price: number | null): string {
-  if (price === null) return "N/A";
-  if (price >= 1) {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(price);
-  }
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 6,
-  }).format(price);
-}
-
-function formatPct(value: number | null, showSign = true): string {
-  if (value === null) return "N/A";
-  const sign = showSign && value >= 0 ? "+" : "";
-  return `${sign}${value.toFixed(2)}%`;
-}
-
-function formatNumber(value: number | null): string {
-  if (value === null) return "N/A";
-  return value.toFixed(2);
-}
 
 export function PerformanceTable({ metrics }: PerformanceTableProps) {
   if (!metrics.length) return null;
@@ -109,7 +82,7 @@ export function PerformanceTable({ metrics }: PerformanceTableProps) {
               </div>
             </TableCell>
             <TableCell className="text-right font-medium text-white">
-              {formatPrice(m.currentPrice)}
+              {formatCurrency(m.currentPrice)}
             </TableCell>
             <TableCell
               className={cn(
@@ -119,16 +92,16 @@ export function PerformanceTable({ metrics }: PerformanceTableProps) {
                   : "text-red-400"
               )}
             >
-              {formatPct(m.totalReturnPct)}
+              {formatPercentage(m.totalReturnPct)}
             </TableCell>
             <TableCell className="text-right text-slate-300 hidden md:table-cell">
-              {formatPct(m.annualizedVolatility, false)}
+              {m.annualizedVolatility !== null ? `${m.annualizedVolatility.toFixed(2)}%` : "-"}
             </TableCell>
             <TableCell className="text-right text-red-400 hidden md:table-cell">
-              {m.maxDrawdown !== null ? formatPct(m.maxDrawdown) : "N/A"}
+              {formatPercentage(m.maxDrawdown)}
             </TableCell>
             <TableCell className="text-right text-slate-300 hidden lg:table-cell">
-              {formatNumber(m.sharpeRatio)}
+              {m.sharpeRatio !== null ? m.sharpeRatio.toFixed(2) : "-"}
             </TableCell>
           </TableRow>
         ))}

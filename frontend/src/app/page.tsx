@@ -16,6 +16,7 @@ import {
   Coins,
 } from "lucide-react";
 import { formatCompactCurrency } from "@/lib/formatters";
+import { useCountUp } from "@/hooks/use-count-up";
 
 function KpiSkeleton() {
   return (
@@ -50,6 +51,11 @@ export default function DashboardPage() {
   const { data: coinsData, loading: coinsLoading } = useCoins(1, 50);
   const { prices: livePrices } = useLivePricesContext();
 
+  const animatedMarketCap = useCountUp(data?.total_market_cap ?? null);
+  const animatedVolume = useCountUp(data?.total_volume_24h ?? null);
+  const animatedDominance = useCountUp(data?.btc_dominance ?? null);
+  const animatedCoins = useCountUp(data?.active_coins ?? null);
+
   return (
     <div className="space-y-6">
       {/* Page Intro */}
@@ -77,7 +83,7 @@ export default function DashboardPage() {
           <FadeIn className="contents">
             <KpiCard
               title="Total Market Cap"
-              value={formatCompactCurrency(data.total_market_cap)}
+              value={formatCompactCurrency(animatedMarketCap ?? data.total_market_cap)}
               change={data.market_cap_change_24h_pct ?? null}
               icon={<DollarSign className="size-5" />}
               accentColor="indigo"
@@ -85,7 +91,7 @@ export default function DashboardPage() {
             />
             <KpiCard
               title="24h Volume"
-              value={formatCompactCurrency(data.total_volume_24h)}
+              value={formatCompactCurrency(animatedVolume ?? data.total_volume_24h)}
               change={data.volume_change_24h_pct ?? null}
               icon={<BarChart3 className="size-5" />}
               accentColor="emerald"
@@ -93,7 +99,7 @@ export default function DashboardPage() {
             />
             <KpiCard
               title="BTC Dominance"
-              value={`${data.btc_dominance.toFixed(1)}%`}
+              value={`${(animatedDominance ?? data.btc_dominance).toFixed(1)}%`}
               change={null}
               icon={<Bitcoin className="size-5" />}
               accentColor="amber"
@@ -101,7 +107,7 @@ export default function DashboardPage() {
             />
             <KpiCard
               title="Active Coins"
-              value={new Intl.NumberFormat("en-US").format(data.active_coins)}
+              value={new Intl.NumberFormat("en-US").format(Math.round(animatedCoins ?? data.active_coins))}
               change={null}
               icon={<Coins className="size-5" />}
               accentColor="cyan"
@@ -141,7 +147,8 @@ export default function DashboardPage() {
 
       {/* Top Movers */}
       <div>
-        <p className="text-sm text-slate-400 mb-4">
+        <h3 className="text-lg font-semibold text-white">Top Movers</h3>
+        <p className="mt-1 text-sm text-slate-400 mb-4">
           Biggest price movements in the last 24 hours. Gainers and losers are ranked by their percentage price change, helping identify momentum shifts across the market.
         </p>
       </div>

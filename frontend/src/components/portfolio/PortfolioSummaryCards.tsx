@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { DollarSign, TrendingUp, TrendingDown, Percent, Coins } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/formatters";
 import type { PortfolioHolding, PortfolioSummary } from "@/types";
 
 interface PortfolioSummaryCardsProps {
@@ -12,15 +13,6 @@ interface PortfolioSummaryCardsProps {
   prices: Record<string, number>;
 }
 
-function formatUsd(value: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-    notation: value >= 1_000_000 ? "compact" : "standard",
-  }).format(value);
-}
 
 export function PortfolioSummaryCards({ summary, holdings, prices }: PortfolioSummaryCardsProps) {
   const liveTotal = useMemo(() => {
@@ -41,13 +33,13 @@ export function PortfolioSummaryCards({ summary, holdings, prices }: PortfolioSu
   const cards = [
     {
       title: "Total Value",
-      value: formatUsd(displayValue),
+      value: formatCurrency(displayValue),
       icon: <DollarSign className="size-5" />,
       accent: "indigo" as const,
     },
     {
       title: "Total P&L",
-      value: `${isPositive ? "+" : ""}${formatUsd(pnlUsd)}`,
+      value: `${isPositive ? "+" : ""}${formatCurrency(pnlUsd)}`,
       icon: isPositive ? <TrendingUp className="size-5" /> : <TrendingDown className="size-5" />,
       accent: (isPositive ? "emerald" : "red") as "emerald" | "red",
     },
