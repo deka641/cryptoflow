@@ -24,11 +24,14 @@ export function useLivePrices() {
         if (data.type === "price_update" && data.prices) {
           setPrices((prev) => ({ ...prev, ...data.prices }));
         }
-      } catch {}
+      } catch (e) {
+        console.warn("Failed to parse WebSocket message:", e);
+      }
     };
 
     ws.onclose = () => {
       setConnected(false);
+      clearTimeout(reconnectTimer.current);
       reconnectTimer.current = setTimeout(connect, 3000);
     };
 

@@ -12,6 +12,7 @@ import { PairwiseCorrelation } from "@/components/compare/PairwiseCorrelation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/ui/error-state";
 import { GitCompareArrows, TrendingUp } from "lucide-react";
 
 const PERIODS = [
@@ -56,6 +57,8 @@ function CompareContent() {
     useState<CorrelationMatrix | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [historyError, setHistoryError] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
   // Parse URL params on mount
@@ -105,6 +108,7 @@ function CompareContent() {
     }
     try {
       setHistoryLoading(true);
+      setHistoryError(false);
       const results = await Promise.all(
         selectedCoins.map((c) => api.getCoinHistory(c.id, periodDays))
       );
@@ -112,7 +116,7 @@ function CompareContent() {
       results.forEach((r) => map.set(r.coin_id, r));
       setHistories(map);
     } catch {
-      // partial failure is ok
+      setHistoryError(true);
     } finally {
       setHistoryLoading(false);
     }
@@ -122,6 +126,7 @@ function CompareContent() {
   const fetchAnalytics = useCallback(async () => {
     try {
       setAnalyticsLoading(true);
+      setAnalyticsError(false);
       const [vol, corr] = await Promise.all([
         api.getVolatility(periodDays),
         api.getCorrelation(periodDays),
@@ -129,7 +134,7 @@ function CompareContent() {
       setVolatilityData(vol);
       setCorrelationData(corr);
     } catch {
-      // silent
+      setAnalyticsError(true);
     } finally {
       setAnalyticsLoading(false);
     }
@@ -359,6 +364,8 @@ function CompareContent() {
           <CardContent>
             {historyLoading ? (
               <Skeleton className="h-[400px] w-full bg-slate-700" />
+            ) : historyError ? (
+              <ErrorState message="Failed to load price history" onRetry={fetchHistories} compact />
             ) : (
               <NormalizedChart chartData={chartData} coins={coinInfos} />
             )}

@@ -37,7 +37,7 @@ class ConnectionManager:
         self._last_broadcast_time = time.time()
         self._message_count += 1
         disconnected = []
-        for connection in self.active_connections:
+        for connection in list(self.active_connections):
             try:
                 await connection.send_json(message)
             except Exception:

@@ -87,17 +87,28 @@ function ScoreRing({ score, size = 64 }: { score: number; size?: number }) {
   );
 }
 
+function scoreLabel(score: number): { text: string; color: string } {
+  if (score >= 90) return { text: "Excellent", color: "text-emerald-400" };
+  if (score >= 70) return { text: "Good", color: "text-emerald-400" };
+  if (score >= 50) return { text: "Warning", color: "text-yellow-400" };
+  return { text: "Critical", color: "text-red-400" };
+}
+
 function SummaryCard({ summary }: { summary: QualitySummary }) {
+  const label = scoreLabel(summary.score);
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <Card className="glass-card">
           <CardContent className="flex items-center gap-4">
-            <ScoreRing score={summary.score} />
+            <div className="flex flex-col items-center gap-1">
+              <ScoreRing score={summary.score} />
+              <span className={cn("text-xs font-medium", label.color)}>{label.text}</span>
+            </div>
             <div className="flex-1 space-y-1">
               <p className="text-sm font-semibold text-white">{summary.table_name}</p>
               <p className="text-xs text-slate-400">
-                {summary.total_checks} checks total
+                {summary.passed} / {summary.total_checks} checks passed
               </p>
               <div className="flex gap-3 text-xs">
                 <span className="text-emerald-400">{summary.passed} passed</span>
@@ -113,7 +124,7 @@ function SummaryCard({ summary }: { summary: QualitySummary }) {
         sideOffset={6}
         className="max-w-xs border border-slate-700/50 bg-slate-800/95 backdrop-blur-md text-slate-300 shadow-xl shadow-black/20"
       >
-        Quality score = percentage of checks passed. Checks cover freshness, completeness, schema validation, and anomaly detection (hourly).
+        Quality score = passed checks / total checks. Excellent (&ge;90%), Good (&ge;70%), Warning (&ge;50%), Critical (&lt;50%).
       </TooltipContent>
     </Tooltip>
   );

@@ -1,8 +1,12 @@
+function isInvalidNumber(v: number): boolean {
+  return !Number.isFinite(v);
+}
+
 /**
  * Format a number as compact USD currency (e.g. "$1.23T", "$456B").
  */
 export function formatCompactCurrency(value: number | null): string {
-  if (value === null) return "-";
+  if (value === null || isInvalidNumber(value)) return "-";
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
@@ -16,7 +20,7 @@ export function formatCompactCurrency(value: number | null): string {
  * Prices >= $1 show 2 decimals; prices < $1 show up to 6 decimals.
  */
 export function formatCurrency(price: number | null): string {
-  if (price === null) return "-";
+  if (price === null || isInvalidNumber(price)) return "-";
   if (price >= 1) {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -37,7 +41,7 @@ export function formatCurrency(price: number | null): string {
  * Format a supply number in compact notation (e.g. "19.5M").
  */
 export function formatSupply(value: number | null | undefined): string {
-  if (value === null || value === undefined) return "-";
+  if (value === null || value === undefined || isInvalidNumber(value)) return "-";
   return new Intl.NumberFormat("en-US", {
     notation: "compact",
     maximumFractionDigits: 2,
@@ -48,7 +52,7 @@ export function formatSupply(value: number | null | undefined): string {
  * Format a percentage value with sign and 2 decimal places.
  */
 export function formatPercentage(value: number | null): string {
-  if (value === null) return "-";
+  if (value === null || isInvalidNumber(value)) return "-";
   return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
 }
 
@@ -57,6 +61,7 @@ export function formatPercentage(value: number | null): string {
  * Quantities >= 1 show up to 4 decimals; quantities < 1 show up to 8 decimals.
  */
 export function formatQuantity(qty: number): string {
+  if (isInvalidNumber(qty)) return "-";
   if (qty >= 1) return qty.toLocaleString("en-US", { maximumFractionDigits: 4 });
   return qty.toLocaleString("en-US", { maximumFractionDigits: 8 });
 }

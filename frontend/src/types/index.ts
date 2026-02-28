@@ -12,6 +12,14 @@ export interface Coin {
   price_change_24h_pct: number | null;
   description?: string | null;
   circulating_supply?: number | null;
+  ath?: number | null;
+  ath_date?: string | null;
+  atl?: number | null;
+  atl_date?: string | null;
+  total_supply?: number | null;
+  max_supply?: number | null;
+  high_24h?: number | null;
+  low_24h?: number | null;
   created_at: string;
 }
 

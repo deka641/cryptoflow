@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, useMemo, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/providers/auth-provider";
@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Check, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function RegisterPage() {
   const [fullName, setFullName] = useState("");
@@ -18,6 +19,23 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const router = useRouter();
+
+  const pwChecks = useMemo(() => {
+    const hasLength = password.length >= 8;
+    const hasLetter = /[a-zA-Z]/.test(password);
+    const hasDigit = /[0-9]/.test(password);
+    const allMet = hasLength && hasLetter && hasDigit;
+    const hasSpecial = /[^a-zA-Z0-9]/.test(password);
+
+    let strength: "none" | "weak" | "medium" | "strong" = "none";
+    if (password.length === 0) strength = "none";
+    else if (!allMet) strength = "weak";
+    else if (password.length >= 16 && hasSpecial) strength = "strong";
+    else if (password.length >= 12) strength = "medium";
+    else strength = "weak";
+
+    return { hasLength, hasLetter, hasDigit, allMet, strength };
+  }, [password]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -113,12 +131,57 @@ export default function RegisterPage() {
                 autoComplete="new-password"
                 required
               />
+              {password.length > 0 && (
+                <div className="space-y-2 pt-1">
+                  <div className="space-y-1">
+                    {[
+                      { met: pwChecks.hasLength, label: "8+ characters" },
+                      { met: pwChecks.hasLetter, label: "Contains a letter" },
+                      { met: pwChecks.hasDigit, label: "Contains a digit" },
+                    ].map((rule) => (
+                      <div key={rule.label} className="flex items-center gap-1.5 text-xs">
+                        {rule.met ? (
+                          <Check className="size-3.5 text-emerald-400" />
+                        ) : (
+                          <X className="size-3.5 text-red-400" />
+                        )}
+                        <span className={rule.met ? "text-emerald-400" : "text-red-400"}>
+                          {rule.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 rounded-full bg-slate-700 overflow-hidden">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all duration-300",
+                          pwChecks.strength === "none" && "w-0",
+                          pwChecks.strength === "weak" && "w-1/3 bg-red-500",
+                          pwChecks.strength === "medium" && "w-2/3 bg-yellow-500",
+                          pwChecks.strength === "strong" && "w-full bg-emerald-500",
+                        )}
+                      />
+                    </div>
+                    <span className={cn(
+                      "text-xs font-medium",
+                      pwChecks.strength === "weak" && "text-red-400",
+                      pwChecks.strength === "medium" && "text-yellow-400",
+                      pwChecks.strength === "strong" && "text-emerald-400",
+                    )}>
+                      {pwChecks.strength === "weak" && "Weak"}
+                      {pwChecks.strength === "medium" && "Medium"}
+                      {pwChecks.strength === "strong" && "Strong"}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <Button
               type="submit"
               className="w-full bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:brightness-110"
-              disabled={loading}
+              disabled={loading || !pwChecks.allMet}
             >
               {loading ? "Creating account..." : "Create account"}
             </Button>

@@ -24,7 +24,7 @@ function subscribe(callback: () => void) {
 export function PriceTicker() {
   const dismissed = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const [localDismissed, setLocalDismissed] = useState(false);
-  const { prices: livePrices } = useLivePricesContext();
+  const { prices: livePrices, connected } = useLivePricesContext();
   const { data } = useCoins(1, 20);
 
   const handleDismiss = useCallback(() => {
@@ -78,8 +78,19 @@ export function PriceTicker() {
       <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-slate-950/90 to-transparent" />
       <div className="pointer-events-none absolute inset-y-0 right-8 z-10 w-12 bg-gradient-to-l from-slate-950/90 to-transparent" />
 
+      {/* Live connection indicator */}
+      <div className="absolute left-2 top-1/2 -translate-y-1/2 z-20" title={connected ? "Live prices connected" : "Reconnecting..."}>
+        <span
+          className={`inline-flex size-2 rounded-full ${
+            connected
+              ? "bg-emerald-500 animate-[pulse-live_2s_ease-in-out_infinite] shadow-[0_0_6px_rgba(52,211,153,0.6)]"
+              : "bg-red-500"
+          }`}
+        />
+      </div>
+
       {/* Scrolling content */}
-      <div className="inline-flex items-center h-8 text-xs animate-ticker-scroll w-max">
+      <div className="inline-flex items-center h-8 text-xs animate-ticker-scroll w-max pl-5">
         <div className="flex shrink-0">
           {tickerItems}
         </div>

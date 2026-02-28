@@ -74,16 +74,27 @@ def run():
         # Upsert dim_coin
         for c in coins:
             cur.execute("""
-                INSERT INTO dim_coin (coingecko_id, symbol, name, image_url, market_cap_rank, updated_at)
-                VALUES (%s, %s, %s, %s, %s, NOW())
+                INSERT INTO dim_coin (coingecko_id, symbol, name, image_url, market_cap_rank,
+                    ath, ath_date, atl, atl_date, total_supply, max_supply, high_24h, low_24h, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
                 ON CONFLICT (coingecko_id) DO UPDATE SET
                     symbol = EXCLUDED.symbol,
                     name = EXCLUDED.name,
                     image_url = EXCLUDED.image_url,
                     market_cap_rank = EXCLUDED.market_cap_rank,
+                    ath = EXCLUDED.ath,
+                    ath_date = EXCLUDED.ath_date,
+                    atl = EXCLUDED.atl,
+                    atl_date = EXCLUDED.atl_date,
+                    total_supply = EXCLUDED.total_supply,
+                    max_supply = EXCLUDED.max_supply,
+                    high_24h = EXCLUDED.high_24h,
+                    low_24h = EXCLUDED.low_24h,
                     updated_at = NOW()
                 RETURNING id
-            """, (c["id"], c["symbol"], c["name"], c.get("image"), c.get("market_cap_rank")))
+            """, (c["id"], c["symbol"], c["name"], c.get("image"), c.get("market_cap_rank"),
+                  c.get("ath"), c.get("ath_date"), c.get("atl"), c.get("atl_date"),
+                  c.get("total_supply"), c.get("max_supply"), c.get("high_24h"), c.get("low_24h")))
         conn.commit()
         logger.info("dim_coin upserted")
 

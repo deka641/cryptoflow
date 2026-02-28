@@ -24,6 +24,14 @@ class CoinResponse(CoinBase):
 class CoinDetail(CoinResponse):
     description: str | None = None
     circulating_supply: float | None = None
+    ath: float | None = None
+    ath_date: datetime | None = None
+    atl: float | None = None
+    atl_date: datetime | None = None
+    total_supply: float | None = None
+    max_supply: float | None = None
+    high_24h: float | None = None
+    low_24h: float | None = None
 
 class PricePoint(BaseModel):
     timestamp: datetime

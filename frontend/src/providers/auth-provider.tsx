@@ -31,6 +31,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Listen for global 401 logout events (e.g. expired token during API calls)
+  useEffect(() => {
+    const handleLogout = () => setUser(null);
+    window.addEventListener("auth:logout", handleLogout);
+    return () => window.removeEventListener("auth:logout", handleLogout);
+  }, []);
+
   const login = async (email: string, password: string) => {
     await api.login(email, password);
     const me = await api.getMe();

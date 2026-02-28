@@ -24,6 +24,7 @@ interface AddHoldingDialogProps {
 
 export function AddHoldingDialog({ open, onOpenChange, onAdd, onEdit, editHolding, preselectedCoin }: AddHoldingDialogProps) {
   const [coins, setCoins] = useState<Coin[]>([]);
+  const [coinsError, setCoinsError] = useState(false);
   const [coinId, setCoinId] = useState<number | "">("");
   const [quantity, setQuantity] = useState("");
   const [buyPrice, setBuyPrice] = useState("");
@@ -33,9 +34,12 @@ export function AddHoldingDialog({ open, onOpenChange, onAdd, onEdit, editHoldin
   useEffect(() => {
     if (!open || preselectedCoin) return;
     let cancelled = false;
+    setCoinsError(false);
     api.getCoins(1, 50).then((res) => {
       if (!cancelled) setCoins(res.items);
-    }).catch(() => {});
+    }).catch(() => {
+      if (!cancelled) setCoinsError(true);
+    });
     return () => { cancelled = true; };
   }, [open, preselectedCoin]);
 
@@ -119,20 +123,24 @@ export function AddHoldingDialog({ open, onOpenChange, onAdd, onEdit, editHoldin
           {!isEdit && !preselectedCoin && (
             <div className="space-y-2">
               <Label htmlFor="coin" className="text-slate-300">Coin</Label>
-              <select
-                id="coin"
-                value={coinId}
-                onChange={(e) => handleCoinChange(Number(e.target.value))}
-                required
-                className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="">Select a coin...</option>
-                {coins.map((coin) => (
-                  <option key={coin.id} value={coin.id}>
-                    {coin.name} ({coin.symbol.toUpperCase()})
-                  </option>
-                ))}
-              </select>
+              {coinsError ? (
+                <p className="text-sm text-red-400">Failed to load coins. Please close and try again.</p>
+              ) : (
+                <select
+                  id="coin"
+                  value={coinId}
+                  onChange={(e) => handleCoinChange(Number(e.target.value))}
+                  required
+                  className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">Select a coin...</option>
+                  {coins.map((coin) => (
+                    <option key={coin.id} value={coin.id}>
+                      {coin.name} ({coin.symbol.toUpperCase()})
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           )}
 

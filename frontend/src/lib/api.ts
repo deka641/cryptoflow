@@ -29,6 +29,11 @@ class ApiClient {
 
     if (!res.ok) {
       const error = await res.json().catch(() => ({ detail: res.statusText }));
+      // Auto-logout on 401 (expired or invalid token)
+      if (res.status === 401 && typeof window !== "undefined") {
+        localStorage.removeItem("access_token");
+        window.dispatchEvent(new Event("auth:logout"));
+      }
       const err = new Error(error.detail || `HTTP ${res.status}`);
       (err as Error & { status: number }).status = res.status;
       throw err;

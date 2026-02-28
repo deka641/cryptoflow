@@ -75,19 +75,29 @@ function HealthCard({ health }: { health: PipelineHealth }) {
               </div>
               {health.data_freshness_minutes !== null && (
                 <p className="text-xs text-slate-500">
-                  Data freshness: {health.data_freshness_minutes} min
+                  Data freshness: {health.data_freshness_minutes < 60
+                    ? `${health.data_freshness_minutes} min ago`
+                    : `${Math.floor(health.data_freshness_minutes / 60)}h ${health.data_freshness_minutes % 60}min ago`}
                 </p>
               )}
             </div>
             <div className="flex flex-col items-end gap-2">
-              <span
-                className={cn(
-                  "inline-flex size-3 rounded-full transition-all duration-300",
-                  health.is_healthy
-                    ? "bg-emerald-500 animate-[pulse-dot_2s_infinite_ease-in-out] shadow-[0_0_8px_rgba(52,211,153,0.5)]"
-                    : "bg-red-500"
-                )}
-              />
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={cn(
+                    "inline-flex size-3 rounded-full transition-all duration-300",
+                    health.is_healthy
+                      ? "bg-emerald-500 animate-[pulse-dot_2s_infinite_ease-in-out] shadow-[0_0_8px_rgba(52,211,153,0.5)]"
+                      : "bg-red-500"
+                  )}
+                />
+                <span className={cn(
+                  "text-xs font-medium",
+                  health.is_healthy ? "text-emerald-400" : "text-red-400"
+                )}>
+                  {health.is_healthy ? "Healthy" : "Unhealthy"}
+                </span>
+              </div>
               {health.last_run_status && (
                 <StatusBadge status={health.last_run_status} />
               )}
@@ -249,7 +259,7 @@ export default function PipelinePage() {
                   <TableHead>Job</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="hidden sm:table-cell">Start</TableHead>
-                  <TableHead className="hidden sm:table-cell">End</TableHead>
+                  <TableHead className="hidden sm:table-cell">Duration</TableHead>
                   <TableHead className="text-right hidden md:table-cell">Records</TableHead>
                   <TableHead className="hidden lg:table-cell">Error</TableHead>
                 </TableRow>
@@ -270,7 +280,9 @@ export default function PipelinePage() {
                       {formatDateTime(run.start_time)}
                     </TableCell>
                     <TableCell className="text-slate-400 hidden sm:table-cell">
-                      {formatDateTime(run.end_time)}
+                      {run.start_time && run.end_time
+                        ? `${((new Date(run.end_time).getTime() - new Date(run.start_time).getTime()) / 1000).toFixed(1)}s`
+                        : "-"}
                     </TableCell>
                     <TableCell className="text-right text-slate-300 hidden md:table-cell">
                       {run.records_processed.toLocaleString()}

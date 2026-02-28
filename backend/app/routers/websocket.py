@@ -1,9 +1,12 @@
 import asyncio
+import logging
 import time
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.websocket.manager import manager
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -22,6 +25,7 @@ async def websocket_prices(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
     except Exception:
+        logger.exception("Unexpected WebSocket error, disconnecting client")
         manager.disconnect(websocket)
 
 

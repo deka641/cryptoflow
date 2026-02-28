@@ -161,6 +161,14 @@ def get_coin(coin_id: int, db: Session = Depends(get_db)):
         total_volume=float(latest_row.total_volume) if latest_row and latest_row.total_volume else None,
         price_change_24h_pct=float(latest_row.price_change_24h_pct) if latest_row and latest_row.price_change_24h_pct else None,
         circulating_supply=float(latest_row.circulating_supply) if latest_row and latest_row.circulating_supply else None,
+        ath=float(coin.ath) if coin.ath is not None else None,
+        ath_date=coin.ath_date,
+        atl=float(coin.atl) if coin.atl is not None else None,
+        atl_date=coin.atl_date,
+        total_supply=float(coin.total_supply) if coin.total_supply is not None else None,
+        max_supply=float(coin.max_supply) if coin.max_supply is not None else None,
+        high_24h=float(coin.high_24h) if coin.high_24h is not None else None,
+        low_24h=float(coin.low_24h) if coin.low_24h is not None else None,
     )
 
 

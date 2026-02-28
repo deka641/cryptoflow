@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { DollarSign, TrendingUp, TrendingDown, Percent, Coins } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Percent, Coins, Wallet } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatters";
@@ -30,12 +30,33 @@ export function PortfolioSummaryCards({ summary, holdings, prices }: PortfolioSu
   const pnlPct = costBasis > 0 ? (pnlUsd / costBasis) * 100 : null;
   const isPositive = pnlUsd >= 0;
 
+  // Compute per-holding P&L% for best/worst performer
+  const { best, worst } = useMemo(() => {
+    let bestH: { symbol: string; pnlPct: number } | null = null;
+    let worstH: { symbol: string; pnlPct: number } | null = null;
+
+    for (const h of holdings) {
+      const liveP = prices[h.coingecko_id] ?? h.current_price_usd;
+      if (liveP == null || h.buy_price_usd <= 0) continue;
+      const pct = ((liveP - h.buy_price_usd) / h.buy_price_usd) * 100;
+      if (bestH === null || pct > bestH.pnlPct) bestH = { symbol: h.symbol, pnlPct: pct };
+      if (worstH === null || pct < worstH.pnlPct) worstH = { symbol: h.symbol, pnlPct: pct };
+    }
+    return { best: bestH, worst: worstH };
+  }, [holdings, prices]);
+
   const cards = [
     {
       title: "Total Value",
       value: formatCurrency(displayValue),
       icon: <DollarSign className="size-5" />,
       accent: "indigo" as const,
+    },
+    {
+      title: "Cost Basis",
+      value: formatCurrency(costBasis),
+      icon: <Wallet className="size-5" />,
+      accent: "slate" as const,
     },
     {
       title: "Total P&L",
@@ -50,10 +71,16 @@ export function PortfolioSummaryCards({ summary, holdings, prices }: PortfolioSu
       accent: "amber" as const,
     },
     {
-      title: "Holdings",
-      value: `${summary?.holdings_count ?? 0} lots / ${summary?.unique_coins ?? 0} coins`,
-      icon: <Coins className="size-5" />,
-      accent: "cyan" as const,
+      title: "Best Performer",
+      value: best ? `${best.symbol.toUpperCase()} ${best.pnlPct >= 0 ? "+" : ""}${best.pnlPct.toFixed(1)}%` : "-",
+      icon: <TrendingUp className="size-5" />,
+      accent: "emerald" as const,
+    },
+    {
+      title: "Worst Performer",
+      value: worst ? `${worst.symbol.toUpperCase()} ${worst.pnlPct >= 0 ? "+" : ""}${worst.pnlPct.toFixed(1)}%` : "-",
+      icon: <TrendingDown className="size-5" />,
+      accent: "red" as const,
     },
   ];
 
@@ -63,10 +90,11 @@ export function PortfolioSummaryCards({ summary, holdings, prices }: PortfolioSu
     red: { border: "border-l-red-500", iconBg: "bg-red-500/15 text-red-400" },
     amber: { border: "border-l-amber-500", iconBg: "bg-amber-500/15 text-amber-400" },
     cyan: { border: "border-l-cyan-500", iconBg: "bg-cyan-500/15 text-cyan-400" },
+    slate: { border: "border-l-slate-500", iconBg: "bg-slate-500/15 text-slate-400" },
   };
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {cards.map((card) => {
         const a = accentStyles[card.accent];
         return (

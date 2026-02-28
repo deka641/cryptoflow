@@ -33,6 +33,10 @@ import {
   Star,
   GitCompareArrows,
   Briefcase,
+  TrendingUp,
+  TrendingDown,
+  ArrowUpDown,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCompactCurrency, formatCurrency, formatSupply } from "@/lib/formatters";
@@ -50,6 +54,13 @@ const statCardAccents = [
   { border: "border-l-emerald-500", iconBg: "bg-emerald-500/15 text-emerald-400" },
   { border: "border-l-amber-500", iconBg: "bg-amber-500/15 text-amber-400" },
   { border: "border-l-cyan-500", iconBg: "bg-cyan-500/15 text-cyan-400" },
+];
+
+const extendedStatAccents = [
+  { border: "border-l-emerald-500", iconBg: "bg-emerald-500/15 text-emerald-400" },
+  { border: "border-l-red-500", iconBg: "bg-red-500/15 text-red-400" },
+  { border: "border-l-violet-500", iconBg: "bg-violet-500/15 text-violet-400" },
+  { border: "border-l-sky-500", iconBg: "bg-sky-500/15 text-sky-400" },
 ];
 
 // Live price cell with flash animation (same pattern as MarketTable PriceCell)
@@ -106,6 +117,7 @@ export default function CoinDetailPage() {
   const [coinError, setCoinError] = useState(false);
   const [historyError, setHistoryError] = useState(false);
   const [ohlcvError, setOhlcvError] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState(false);
 
   const { prices } = useLivePricesContext();
   const { user } = useAuth();
@@ -155,10 +167,11 @@ export default function CoinDetailPage() {
   const fetchAnalytics = useCallback(async () => {
     try {
       setAnalyticsLoading(true);
+      setAnalyticsError(false);
       const result = await api.getCoinAnalytics(coinId, 30);
       setAnalytics(result);
     } catch {
-      // handle error silently
+      setAnalyticsError(true);
     } finally {
       setAnalyticsLoading(false);
     }
@@ -415,6 +428,83 @@ export default function CoinDetailPage() {
         })}
       </div>
 
+      {/* Extended Market Stats */}
+      {(coin.ath != null || coin.high_24h != null || coin.total_supply != null) && (() => {
+        const athPctFromAth = coin.ath && coin.price_usd
+          ? ((coin.price_usd - coin.ath) / coin.ath) * 100
+          : null;
+        const extendedStats = [
+          {
+            label: "All-Time High",
+            value: formatCurrency(coin.ath ?? null),
+            sub: athPctFromAth != null ? `${athPctFromAth > 0 ? "+" : ""}${athPctFromAth.toFixed(1)}% from ATH` : coin.ath_date ? new Date(coin.ath_date).toLocaleDateString() : null,
+            subColor: athPctFromAth != null ? (athPctFromAth >= 0 ? "text-emerald-400" : "text-red-400") : "text-slate-500",
+            icon: <TrendingUp className="size-5" />,
+            tooltip: "The highest price ever recorded for this coin, with percentage distance from current price.",
+          },
+          {
+            label: "All-Time Low",
+            value: formatCurrency(coin.atl ?? null),
+            sub: coin.atl_date ? new Date(coin.atl_date).toLocaleDateString() : null,
+            subColor: "text-slate-500",
+            icon: <TrendingDown className="size-5" />,
+            tooltip: "The lowest price ever recorded for this coin.",
+          },
+          {
+            label: "24h Range",
+            value: coin.high_24h != null && coin.low_24h != null
+              ? `${formatCurrency(coin.low_24h)} — ${formatCurrency(coin.high_24h)}`
+              : "-",
+            sub: null,
+            subColor: "text-slate-500",
+            icon: <ArrowUpDown className="size-5" />,
+            tooltip: "Price range for the last 24 hours (low — high).",
+          },
+          {
+            label: "Supply",
+            value: formatSupply(coin.circulating_supply ?? null),
+            sub: coin.max_supply ? `Max: ${formatSupply(coin.max_supply)}` : coin.total_supply ? `Total: ${formatSupply(coin.total_supply)}` : null,
+            subColor: "text-slate-500",
+            icon: <Layers className="size-5" />,
+            tooltip: "Circulating supply vs. total or maximum supply. Circulating = coins currently available on the market.",
+          },
+        ];
+        return (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {extendedStats.map((stat, i) => {
+              const accent = extendedStatAccents[i];
+              return (
+                <Tooltip key={stat.label}>
+                  <TooltipTrigger asChild>
+                    <Card className={`glass-card border-l-[3px] ${accent.border}`}>
+                      <CardContent className="flex items-center gap-3">
+                        <div className={`flex size-10 shrink-0 items-center justify-center rounded-lg ${accent.iconBg}`}>
+                          {stat.icon}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm text-slate-400">{stat.label}</p>
+                          <p className="text-lg font-bold text-white truncate">{stat.value}</p>
+                          {stat.sub && (
+                            <p className={`text-xs ${stat.subColor} truncate`}>{stat.sub}</p>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="bottom"
+                    sideOffset={6}
+                    className="max-w-xs border border-slate-700/50 bg-slate-800/95 backdrop-blur-md text-slate-300 shadow-xl shadow-black/20"
+                  >
+                    {stat.tooltip}
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
+          </div>
+        );
+      })()}
+
       {/* Price Chart */}
       <Card className="glass-card">
         <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-4">
@@ -498,7 +588,9 @@ export default function CoinDetailPage() {
       </Card>
 
       {/* Risk Metrics */}
-      {analyticsLoading ? (
+      {analyticsError ? (
+        <ErrorState message="Failed to load analytics data" onRetry={fetchAnalytics} compact />
+      ) : analyticsLoading ? (
         <RiskMetrics
           volatility={analytics?.volatility}
           maxDrawdown={analytics?.max_drawdown}
@@ -517,7 +609,7 @@ export default function CoinDetailPage() {
       )}
 
       {/* Correlation Insights */}
-      {analyticsLoading ? (
+      {analyticsError ? null : analyticsLoading ? (
         <CorrelationInsights
           mostCorrelated={analytics?.most_correlated ?? []}
           leastCorrelated={analytics?.least_correlated ?? []}
