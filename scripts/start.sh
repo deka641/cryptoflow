@@ -190,7 +190,7 @@ fi
 echo -e "${B}${C}──────────────────────────────────────────${N}"
 echo -e "  ${B}Endpoints${N}"
 echo -e "    API:        ${C}http://localhost:8000${N}"
-echo -e "    API Docs:   ${C}http://localhost:8000/docs${N}"
+echo -e "    API Docs:   ${C}http://localhost:8000/api/docs${N}"
 echo -e "    Frontend:   ${C}http://localhost:3000${N}"
 echo -e "    pgAdmin:    ${C}http://localhost:5050${N}"
 echo -e ""
