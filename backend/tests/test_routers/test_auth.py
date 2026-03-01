@@ -110,6 +110,61 @@ def test_me_malformed_token(client):
     assert resp.status_code == 401
 
 
+def test_me_deactivated_user(client, db):
+    """A deactivated user's valid JWT should be rejected with 403."""
+    from app.models.user import User
+
+    client.post("/api/v1/auth/register", json={
+        "email": "deactivated@example.com",
+        "password": "pass1234",
+        "full_name": "Deactivated",
+    })
+    login_resp = client.post("/api/v1/auth/login", json={
+        "email": "deactivated@example.com",
+        "password": "pass1234",
+    })
+    token = login_resp.json()["access_token"]
+
+    # Deactivate the user directly in the DB
+    user = db.query(User).filter(User.email == "deactivated@example.com").first()
+    user.is_active = False
+    db.flush()
+
+    resp = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 403
+    assert "deactivated" in resp.json()["detail"].lower()
+
+
+def test_login_rate_limiting(client):
+    """Login should be rate-limited after too many attempts."""
+    # Register a user first
+    client.post("/api/v1/auth/register", json={
+        "email": "ratelimit@example.com",
+        "password": "pass1234",
+    })
+
+    # Clear any existing rate limit state for test isolation
+    from app.routers.auth import _login_attempts
+    _login_attempts.clear()
+
+    # Make 10 failed login attempts (the limit)
+    for _ in range(10):
+        client.post("/api/v1/auth/login", json={
+            "email": "ratelimit@example.com",
+            "password": "wrong_password",
+        })
+
+    # The 11th attempt should be rate-limited
+    resp = client.post("/api/v1/auth/login", json={
+        "email": "ratelimit@example.com",
+        "password": "pass1234",
+    })
+    assert resp.status_code == 429
+
+    # Clean up
+    _login_attempts.clear()
+
+
 def test_me_expired_token(client):
     """An expired token should be rejected."""
     from unittest.mock import patch

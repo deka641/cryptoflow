@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Table,
@@ -10,6 +9,7 @@ import {
   TableRow,
   TableCell,
 } from "@/components/ui/table";
+import { PriceCell } from "@/components/ui/price-cell";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -23,7 +23,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import { formatCurrency, formatQuantity } from "@/lib/formatters";
+import { formatCurrency, formatQuantity, formatPercentage } from "@/lib/formatters";
 import { Pencil, Trash2 } from "lucide-react";
 import type { PortfolioHolding } from "@/types";
 
@@ -32,41 +32,6 @@ interface HoldingsTableProps {
   livePrices: Record<string, number>;
   onEdit: (holding: PortfolioHolding) => void;
   onDelete: (id: number) => void;
-}
-
-
-function PriceCell({ holding, livePrice }: { holding: PortfolioHolding; livePrice?: number }) {
-  const displayPrice = livePrice ?? holding.current_price_usd;
-  const [prevLivePrice, setPrevLivePrice] = useState(livePrice);
-  const [flash, setFlash] = useState<"green" | "red" | null>(null);
-  const [flashKey, setFlashKey] = useState(0);
-
-  if (livePrice !== prevLivePrice) {
-    setPrevLivePrice(livePrice);
-    if (livePrice !== undefined && prevLivePrice !== undefined) {
-      setFlash(livePrice > prevLivePrice ? "green" : "red");
-      setFlashKey((k) => k + 1);
-    }
-  }
-
-  useEffect(() => {
-    if (!flash) return;
-    const timer = setTimeout(() => setFlash(null), 600);
-    return () => clearTimeout(timer);
-  }, [flash]);
-
-  return (
-    <TableCell
-      className={cn(
-        "text-right font-medium text-white transition-colors duration-300",
-        flash === "green" && "animate-[flash-green_0.6s_ease-out]",
-        flash === "red" && "animate-[flash-red_0.6s_ease-out]"
-      )}
-      key={flash ? `${holding.id}-${flashKey}` : holding.id}
-    >
-      {formatCurrency(displayPrice)}
-    </TableCell>
-  );
 }
 
 export function HoldingsTable({ holdings, livePrices, onEdit, onDelete }: HoldingsTableProps) {
@@ -123,15 +88,17 @@ export function HoldingsTable({ holdings, livePrices, onEdit, onDelete }: Holdin
               <TableCell className="text-right text-slate-300 hidden md:table-cell">
                 {formatCurrency(holding.buy_price_usd)}
               </TableCell>
-              <PriceCell holding={holding} livePrice={livePrice} />
+              <PriceCell id={holding.id} livePrice={livePrice} fallbackPrice={holding.current_price_usd} />
               <TableCell className="text-right font-medium text-white">
                 {currentValue != null ? formatCurrency(currentValue) : "-"}
               </TableCell>
               <TableCell className={cn("text-right font-medium", isPositive ? "text-emerald-400" : "text-red-400")}>
-                {pnl != null ? `${isPositive ? "+" : ""}${formatCurrency(pnl)}` : "-"}
+                {pnl != null
+                  ? `${isPositive ? "+" : "-"}${formatCurrency(Math.abs(pnl))}`
+                  : "-"}
               </TableCell>
               <TableCell className={cn("text-right font-medium hidden sm:table-cell", isPositive ? "text-emerald-400" : "text-red-400")}>
-                {pnlPct != null ? `${pnlPct >= 0 ? "+" : ""}${pnlPct.toFixed(2)}%` : "-"}
+                {formatPercentage(pnlPct)}
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-1">

@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/ui/error-state";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Search, ChevronLeft, ChevronRight, Star } from "lucide-react";
 import type { Coin } from "@/types";
@@ -20,7 +21,7 @@ export default function MarketPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const perPage = 20;
-  const { data, loading } = useCoins(page, perPage, debouncedSearch);
+  const { data, loading, error, refetch } = useCoins(page, perPage, debouncedSearch);
   const { prices } = useLivePricesContext();
   const { user } = useAuth();
   const { watchlist, toggle, isWatched } = useWatchlist();
@@ -114,19 +115,9 @@ export default function MarketPage() {
       </div>
 
       {/* Tabs + Market Table */}
-      {user ? (
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList variant="line" className="border-b border-slate-700 pb-0">
-            <TabsTrigger value="all" className="text-slate-400 data-[state=active]:text-white">
-              All Coins
-            </TabsTrigger>
-            <TabsTrigger value="watchlist" className="text-slate-400 data-[state=active]:text-white">
-              <Star className="size-3.5 fill-yellow-400 text-yellow-400" />
-              Watchlist ({watchlistCount})
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="all">
+      {(() => {
+        const allCoinsTable = (
+          <>
             <Card className="glass-card">
               <CardContent className="p-0">
                 {loading ? (
@@ -134,6 +125,10 @@ export default function MarketPage() {
                     {Array.from({ length: 10 }).map((_, i) => (
                       <Skeleton key={i} className="h-12 w-full bg-slate-700" />
                     ))}
+                  </div>
+                ) : error && !data ? (
+                  <div className="p-6">
+                    <ErrorState message="Failed to load coins" onRetry={refetch} compact />
                   </div>
                 ) : data && data.items.length > 0 ? (
                   <MarketTable
@@ -154,7 +149,6 @@ export default function MarketPage() {
               </CardContent>
             </Card>
 
-            {/* Pagination */}
             {data && data.pages > 1 && (
               <div className="flex items-center justify-between mt-6">
                 <p className="text-sm text-slate-400">
@@ -188,102 +182,56 @@ export default function MarketPage() {
                 </div>
               </div>
             )}
-          </TabsContent>
+          </>
+        );
 
-          <TabsContent value="watchlist">
-            <Card className="glass-card">
-              <CardContent className="p-0">
-                {watchlistLoading ? (
-                  <div className="space-y-3 p-6">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Skeleton key={i} className="h-12 w-full bg-slate-700" />
-                    ))}
-                  </div>
-                ) : watchlistCoins.length > 0 ? (
-                  <MarketTable
-                    coins={watchlistCoins}
-                    livePrices={prices}
-                    sparklines={sparklines}
-                    sparklinesLoading={sparklinesLoading}
-                    onToggleWatchlist={toggle}
-                    isWatched={isWatched}
-                  />
-                ) : (
-                  <div className="flex h-48 flex-col items-center justify-center gap-2 text-slate-500">
-                    <Star className="size-8 text-slate-600" />
-                    <p>Your watchlist is empty.</p>
-                    <p className="text-xs text-slate-600">Star a coin to add it!</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      ) : (
-        <>
-          <Card className="glass-card">
-            <CardContent className="p-0">
-              {loading ? (
-                <div className="space-y-3 p-6">
-                  {Array.from({ length: 10 }).map((_, i) => (
-                    <Skeleton key={i} className="h-12 w-full bg-slate-700" />
-                  ))}
-                </div>
-              ) : data && data.items.length > 0 ? (
-                <MarketTable
-                  coins={data.items}
-                  livePrices={prices}
-                  sparklines={sparklines}
-                  sparklinesLoading={sparklinesLoading}
-                  onToggleWatchlist={toggle}
-                  isWatched={isWatched}
-                />
-              ) : (
-                <div className="flex h-48 items-center justify-center text-slate-500">
-                  {debouncedSearch
-                    ? `No coins found matching "${debouncedSearch}"`
-                    : "No coins available"}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        return user ? (
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList variant="line" className="border-b border-slate-700 pb-0">
+              <TabsTrigger value="all" className="text-slate-400 data-[state=active]:text-white">
+                All Coins
+              </TabsTrigger>
+              <TabsTrigger value="watchlist" className="text-slate-400 data-[state=active]:text-white">
+                <Star className="size-3.5 fill-yellow-400 text-yellow-400" />
+                Watchlist ({watchlistCount})
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Pagination */}
-          {data && data.pages > 1 && (
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-slate-400">
-                Showing {(page - 1) * perPage + 1}-
-                {Math.min(page * perPage, data.total)} of {data.total} coins
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page <= 1}
-                  className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white disabled:opacity-40"
-                >
-                  <ChevronLeft className="size-4" />
-                  Previous
-                </Button>
-                <span className="text-sm text-slate-400">
-                  Page {page} of {data.pages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((p) => Math.min(data.pages, p + 1))}
-                  disabled={page >= data.pages}
-                  className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white disabled:opacity-40"
-                >
-                  Next
-                  <ChevronRight className="size-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-        </>
-      )}
+            <TabsContent value="all">
+              {allCoinsTable}
+            </TabsContent>
+
+            <TabsContent value="watchlist">
+              <Card className="glass-card">
+                <CardContent className="p-0">
+                  {watchlistLoading ? (
+                    <div className="space-y-3 p-6">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Skeleton key={i} className="h-12 w-full bg-slate-700" />
+                      ))}
+                    </div>
+                  ) : watchlistCoins.length > 0 ? (
+                    <MarketTable
+                      coins={watchlistCoins}
+                      livePrices={prices}
+                      sparklines={sparklines}
+                      sparklinesLoading={sparklinesLoading}
+                      onToggleWatchlist={toggle}
+                      isWatched={isWatched}
+                    />
+                  ) : (
+                    <div className="flex h-48 flex-col items-center justify-center gap-2 text-slate-500">
+                      <Star className="size-8 text-slate-600" />
+                      <p>Your watchlist is empty.</p>
+                      <p className="text-xs text-slate-600">Star a coin to add it!</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        ) : allCoinsTable;
+      })()}
     </div>
   );
 }

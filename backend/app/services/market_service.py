@@ -1,8 +1,7 @@
-from sqlalchemy import text, func, desc
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.models.coin import DimCoin
-from app.models.market_data import FactMarketData
 
 
 def get_market_overview(db: Session) -> dict:
@@ -87,4 +86,45 @@ def get_market_overview(db: Session) -> dict:
         "top_losers": movers[-5:][::-1],
         "market_cap_change_24h_pct": market_cap_change_pct,
         "volume_change_24h_pct": volume_change_pct,
+    }
+
+
+def get_kpi_sparklines(db: Session) -> dict:
+    """Get 7-day sparkline data for KPI cards: market cap, volume, BTC dominance.
+
+    Returns ~28 data points (every 6 hours, sampled from 10-min snapshots).
+    """
+    btc_coin = db.query(DimCoin).filter(DimCoin.symbol == "btc").first()
+    btc_id = btc_coin.id if btc_coin else -1
+
+    rows = db.execute(text("""
+        WITH bucketed AS (
+            SELECT
+                date_trunc('hour', timestamp) +
+                    (EXTRACT(hour FROM timestamp)::int / 6) * INTERVAL '6 hours'
+                    - (EXTRACT(hour FROM date_trunc('hour', timestamp))::int % 6) * INTERVAL '1 hour'
+                AS bucket,
+                SUM(market_cap) AS total_market_cap,
+                SUM(total_volume) AS total_volume,
+                SUM(CASE WHEN coin_id = :btc_id THEN market_cap ELSE 0 END) AS btc_market_cap
+            FROM fact_market_data
+            WHERE timestamp >= NOW() - INTERVAL '7 days'
+              AND price_usd IS NOT NULL
+            GROUP BY bucket
+        )
+        SELECT
+            bucket,
+            total_market_cap,
+            total_volume,
+            CASE WHEN total_market_cap > 0
+                 THEN (btc_market_cap / total_market_cap * 100)
+                 ELSE 0 END AS btc_dominance
+        FROM bucketed
+        ORDER BY bucket
+    """), {"btc_id": btc_id}).fetchall()
+
+    return {
+        "market_cap": [float(r.total_market_cap or 0) for r in rows],
+        "volume": [float(r.total_volume or 0) for r in rows],
+        "btc_dominance": [round(float(r.btc_dominance or 0), 2) for r in rows],
     }

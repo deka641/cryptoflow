@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import { DollarSign, TrendingUp, TrendingDown, Percent, Coins, Wallet } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Percent, Wallet } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { formatCurrency } from "@/lib/formatters";
+import { formatCurrency, formatPercentage } from "@/lib/formatters";
 import type { PortfolioHolding, PortfolioSummary } from "@/types";
 
 interface PortfolioSummaryCardsProps {
@@ -60,13 +60,13 @@ export function PortfolioSummaryCards({ summary, holdings, prices }: PortfolioSu
     },
     {
       title: "Total P&L",
-      value: `${isPositive ? "+" : ""}${formatCurrency(pnlUsd)}`,
+      value: pnlUsd !== 0 ? `${isPositive ? "+" : "-"}${formatCurrency(Math.abs(pnlUsd))}` : formatCurrency(0),
       icon: isPositive ? <TrendingUp className="size-5" /> : <TrendingDown className="size-5" />,
       accent: (isPositive ? "emerald" : "red") as "emerald" | "red",
     },
     {
       title: "P&L %",
-      value: pnlPct !== null ? `${pnlPct >= 0 ? "+" : ""}${pnlPct.toFixed(2)}%` : "-",
+      value: formatPercentage(pnlPct),
       icon: <Percent className="size-5" />,
       accent: "amber" as const,
     },

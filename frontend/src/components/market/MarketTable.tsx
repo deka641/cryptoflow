@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
   Table,
@@ -10,12 +10,13 @@ import {
   TableRow,
   TableCell,
 } from "@/components/ui/table";
+import { PriceCell } from "@/components/ui/price-cell";
 import { cn } from "@/lib/utils";
 import { SparklineChart } from "@/components/charts/SparklineChart";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Coin } from "@/types";
 import { ArrowUpDown, ArrowUp, ArrowDown, Star } from "lucide-react";
-import { formatCompactCurrency, formatCurrency } from "@/lib/formatters";
+import { formatCompactCurrency, formatPercentage } from "@/lib/formatters";
 
 interface MarketTableProps {
   coins: Coin[];
@@ -35,42 +36,6 @@ type SortField =
   | "total_volume";
 
 type SortDirection = "asc" | "desc";
-
-function PriceCell({ coin, livePrice }: { coin: Coin; livePrice?: number }) {
-  const displayPrice = livePrice ?? coin.price_usd;
-  const [prevLivePrice, setPrevLivePrice] = useState(livePrice);
-  const [flash, setFlash] = useState<"green" | "red" | null>(null);
-  const [flashKey, setFlashKey] = useState(0);
-
-  // Adjust state during render (React recommended pattern for prop-derived state)
-  if (livePrice !== prevLivePrice) {
-    setPrevLivePrice(livePrice);
-    if (livePrice !== undefined && prevLivePrice !== undefined) {
-      setFlash(livePrice > prevLivePrice ? "green" : "red");
-      setFlashKey((k) => k + 1);
-    }
-  }
-
-  // Clear flash after animation completes
-  useEffect(() => {
-    if (!flash) return;
-    const timer = setTimeout(() => setFlash(null), 600);
-    return () => clearTimeout(timer);
-  }, [flash]);
-
-  return (
-    <TableCell
-      className={cn(
-        "text-right font-medium text-white transition-colors duration-300",
-        flash === "green" && "animate-[flash-green_0.6s_ease-out]",
-        flash === "red" && "animate-[flash-red_0.6s_ease-out]"
-      )}
-      key={flash ? `${coin.id}-${flashKey}` : coin.id}
-    >
-      {formatCurrency(displayPrice)}
-    </TableCell>
-  );
-}
 
 function SortIcon({
   field,
@@ -248,7 +213,7 @@ export function MarketTable({
                   </div>
                 </Link>
               </TableCell>
-              <PriceCell coin={coin} livePrice={livePrice} />
+              <PriceCell id={coin.id} livePrice={livePrice} fallbackPrice={coin.price_usd} />
               <TableCell
                 className={cn(
                   "text-right font-medium",
@@ -257,9 +222,7 @@ export function MarketTable({
                     : "text-red-400"
                 )}
               >
-                {change !== null
-                  ? `${change >= 0 ? "+" : ""}${change.toFixed(2)}%`
-                  : "-"}
+                {formatPercentage(change)}
               </TableCell>
               <TableCell className="hidden md:table-cell">
                 <div className="flex justify-center">

@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { formatPercentage } from "@/lib/formatters";
 
 type AccentColor = "indigo" | "emerald" | "amber" | "cyan";
 
@@ -31,9 +32,10 @@ interface KpiCardProps {
   icon: ReactNode;
   accentColor?: AccentColor;
   tooltip?: string;
+  sparkline?: ReactNode;
 }
 
-export function KpiCard({ title, value, change, icon, accentColor = "indigo", tooltip }: KpiCardProps) {
+export function KpiCard({ title, value, change, icon, accentColor = "indigo", tooltip, sparkline }: KpiCardProps) {
   const accent = accentStyles[accentColor];
 
   const card = (
@@ -45,17 +47,19 @@ export function KpiCard({ title, value, change, icon, accentColor = "indigo", to
         <div className="space-y-2">
           <p className="text-sm font-medium text-slate-400">{title}</p>
           <p className="text-2xl font-bold text-white">{value}</p>
-          {change !== null && (
-            <p
-              className={cn(
-                "text-sm font-medium",
-                change >= 0 ? "text-emerald-400" : "text-red-400"
-              )}
-            >
-              {change >= 0 ? "+" : ""}
-              {change.toFixed(2)}%
-            </p>
-          )}
+          <div className="flex items-center gap-2">
+            {change !== null && (
+              <p
+                className={cn(
+                  "text-sm font-medium",
+                  change >= 0 ? "text-emerald-400" : "text-red-400"
+                )}
+              >
+                {formatPercentage(change)}
+              </p>
+            )}
+            {sparkline}
+          </div>
         </div>
         <div className={cn("flex size-10 items-center justify-center rounded-lg", accent.iconBg)}>
           {icon}

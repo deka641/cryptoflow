@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 class MarketOverview(BaseModel):
     total_market_cap: float
     total_volume_24h: float
@@ -9,3 +10,9 @@ class MarketOverview(BaseModel):
     volume_change_24h_pct: float | None = None
     top_gainers: list[dict]  # [{id, symbol, name, price_change_24h_pct}]
     top_losers: list[dict]
+
+
+class KpiSparklineResponse(BaseModel):
+    market_cap: list[float]
+    volume: list[float]
+    btc_dominance: list[float]

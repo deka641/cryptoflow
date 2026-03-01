@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
-import type { MarketOverview, Coin, PaginatedResponse } from "@/types";
+import type { MarketOverview, Coin, PaginatedResponse, KpiSparklines } from "@/types";
 
 export function useMarketOverview() {
   const [data, setData] = useState<MarketOverview | null>(null);
@@ -67,4 +67,18 @@ export function useCoins(page = 1, perPage = 20, search = "") {
   }, [fetch]);
 
   return { data, loading, error, refetch: fetch };
+}
+
+export function useKpiSparklines() {
+  const [data, setData] = useState<KpiSparklines | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.getKpiSparklines()
+      .then((result) => { if (!cancelled) setData(result); })
+      .catch(() => { /* sparklines are optional, fail silently */ });
+    return () => { cancelled = true; };
+  }, []);
+
+  return data;
 }

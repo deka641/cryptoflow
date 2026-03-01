@@ -11,6 +11,7 @@ interface RiskMetricsProps {
   maxDrawdown: number | null | undefined;
   sharpeRatio: number | null | undefined;
   loading: boolean;
+  periodLabel?: string;
 }
 
 function getVolatilityColor(v: number): string {
@@ -51,7 +52,7 @@ function MetricValue({ value, children }: { value: number | null | undefined; ch
   return <>{children(value)}</>;
 }
 
-export function RiskMetrics({ volatility, maxDrawdown, sharpeRatio, loading }: RiskMetricsProps) {
+export function RiskMetrics({ volatility, maxDrawdown, sharpeRatio, loading, periodLabel }: RiskMetricsProps) {
   if (loading) {
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -64,7 +65,9 @@ export function RiskMetrics({ volatility, maxDrawdown, sharpeRatio, loading }: R
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-white mb-3">Risk Metrics</h2>
+      <h2 className="text-lg font-semibold text-white mb-3">
+        Risk Metrics{periodLabel ? ` (${periodLabel})` : ""}
+      </h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {/* Volatility */}
         <Card className="glass-card border-l-[3px] border-l-violet-500">

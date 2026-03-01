@@ -1,10 +1,9 @@
 import Link from "next/link";
 import type { CoinMover } from "@/types";
 import { cn } from "@/lib/utils";
-import { formatCurrency } from "@/lib/formatters";
+import { formatCurrency, formatPercentage } from "@/lib/formatters";
 
 interface TopMoversProps {
-  title: string;
   movers: CoinMover[];
 }
 
@@ -52,8 +51,7 @@ export function TopMovers({ movers }: TopMoversProps) {
                     : "text-red-400"
                 )}
               >
-                {mover.price_change_24h_pct >= 0 ? "+" : ""}
-                {mover.price_change_24h_pct.toFixed(2)}%
+                {formatPercentage(mover.price_change_24h_pct)}
               </p>
             </div>
           </Link>

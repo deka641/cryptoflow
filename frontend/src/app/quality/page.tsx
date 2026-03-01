@@ -5,7 +5,6 @@ import { api } from "@/lib/api";
 import type { QualitySummary, QualityCheck } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableHeader,
@@ -26,24 +25,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-function StatusBadge({ status }: { status: string }) {
-  const statusLower = status.toLowerCase();
-  const colorClass =
-    statusLower === "passed"
-      ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20"
-      : statusLower === "failed"
-        ? "bg-red-500/15 text-red-400 border-red-500/20"
-        : statusLower === "warning"
-          ? "bg-yellow-500/15 text-yellow-400 border-yellow-500/20"
-          : "bg-slate-500/15 text-slate-400 border-slate-500/20";
-
-  return (
-    <Badge variant="outline" className={cn("capitalize", colorClass)}>
-      {status}
-    </Badge>
-  );
-}
+import { StatusBadge } from "@/components/ui/status-badge";
+import { formatDateTime } from "@/lib/formatters";
 
 function ScoreRing({ score, size = 64 }: { score: number; size?: number }) {
   const radius = (size - 8) / 2;
@@ -128,15 +111,6 @@ function SummaryCard({ summary }: { summary: QualitySummary }) {
       </TooltipContent>
     </Tooltip>
   );
-}
-
-function formatDateTime(value: string): string {
-  return new Date(value).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 export default function QualityPage() {

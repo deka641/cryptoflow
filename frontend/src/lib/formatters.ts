@@ -60,8 +60,21 @@ export function formatPercentage(value: number | null): string {
  * Format a quantity with appropriate decimal places.
  * Quantities >= 1 show up to 4 decimals; quantities < 1 show up to 8 decimals.
  */
-export function formatQuantity(qty: number): string {
-  if (isInvalidNumber(qty)) return "-";
+export function formatQuantity(qty: number | null | undefined): string {
+  if (qty === null || qty === undefined || isInvalidNumber(qty)) return "-";
   if (qty >= 1) return qty.toLocaleString("en-US", { maximumFractionDigits: 4 });
   return qty.toLocaleString("en-US", { maximumFractionDigits: 8 });
+}
+
+/**
+ * Format an ISO datetime string to a short display format.
+ */
+export function formatDateTime(value: string | null): string {
+  if (!value) return "-";
+  return new Date(value).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }

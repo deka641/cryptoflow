@@ -30,6 +30,11 @@ def client(db):
         yield db
 
     app.dependency_overrides[get_db] = override_get_db
+
+    # Clear login rate limiter state before each test
+    from app.routers.auth import _login_attempts
+    _login_attempts.clear()
+
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()

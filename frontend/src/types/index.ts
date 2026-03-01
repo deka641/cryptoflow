@@ -55,6 +55,12 @@ export interface CoinMover {
   price_change_24h_pct: number;
 }
 
+export interface KpiSparklines {
+  market_cap: number[];
+  volume: number[];
+  btc_dominance: number[];
+}
+
 export interface OHLCVPoint {
   date: string;
   open: number | null;

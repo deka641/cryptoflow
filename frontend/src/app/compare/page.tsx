@@ -384,7 +384,9 @@ function CompareContent() {
             </p>
           </CardHeader>
           <CardContent>
-            {historyLoading || analyticsLoading ? (
+            {analyticsError ? (
+              <ErrorState message="Failed to load analytics data" onRetry={fetchAnalytics} compact />
+            ) : historyLoading || analyticsLoading ? (
               <div className="space-y-3">
                 {Array.from({ length: selectedCoins.length }).map((_, i) => (
                   <Skeleton key={i} className="h-12 w-full bg-slate-700" />
@@ -398,7 +400,7 @@ function CompareContent() {
       )}
 
       {/* Pairwise Correlation */}
-      {selectedCoins.length >= 2 && correlationData && (
+      {selectedCoins.length >= 2 && (
         <Card className="glass-card">
           <CardHeader>
             <CardTitle className="text-white">Pairwise Correlation</CardTitle>
@@ -409,16 +411,18 @@ function CompareContent() {
             </p>
           </CardHeader>
           <CardContent>
-            {analyticsLoading ? (
+            {analyticsError ? (
+              <ErrorState message="Failed to load correlation data" onRetry={fetchAnalytics} compact />
+            ) : analyticsLoading ? (
               <Skeleton className="h-48 w-full bg-slate-700" />
-            ) : (
+            ) : correlationData ? (
               <PairwiseCorrelation
                 selectedSymbols={selectedCoins.map((c) => c.symbol)}
                 allSymbols={correlationData.coins}
                 matrix={correlationData.matrix}
                 colors={selectedCoins.map((_, i) => COIN_COLORS[i])}
               />
-            )}
+            ) : null}
           </CardContent>
         </Card>
       )}

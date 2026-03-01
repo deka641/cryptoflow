@@ -39,7 +39,8 @@ import {
   Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatCompactCurrency, formatCurrency, formatSupply } from "@/lib/formatters";
+import { formatCompactCurrency, formatCurrency, formatSupply, formatPercentage } from "@/lib/formatters";
+import { usePriceFlash } from "@/hooks/use-price-flash";
 
 const TIME_PERIODS = [
   { label: "7d", days: 7 },
@@ -63,28 +64,8 @@ const extendedStatAccents = [
   { border: "border-l-sky-500", iconBg: "bg-sky-500/15 text-sky-400" },
 ];
 
-// Live price cell with flash animation (same pattern as MarketTable PriceCell)
 function LivePriceDisplay({ coin, livePrice }: { coin: Coin; livePrice?: number }) {
-  const displayPrice = livePrice ?? coin.price_usd;
-  const [prevLivePrice, setPrevLivePrice] = useState(livePrice);
-  const [flash, setFlash] = useState<"green" | "red" | null>(null);
-  const [flashKey, setFlashKey] = useState(0);
-
-  // Adjust state during render (React recommended pattern for prop-derived state)
-  if (livePrice !== prevLivePrice) {
-    setPrevLivePrice(livePrice);
-    if (livePrice !== undefined && prevLivePrice !== undefined) {
-      setFlash(livePrice > prevLivePrice ? "green" : "red");
-      setFlashKey((k) => k + 1);
-    }
-  }
-
-  // Clear flash after animation completes
-  useEffect(() => {
-    if (!flash) return;
-    const timer = setTimeout(() => setFlash(null), 600);
-    return () => clearTimeout(timer);
-  }, [flash]);
+  const { displayPrice, flash, flashKey } = usePriceFlash(livePrice, coin.price_usd);
 
   return (
     <p
@@ -124,6 +105,23 @@ export default function CoinDetailPage() {
   const { toggle, isWatched } = useWatchlist();
   const { addHolding } = usePortfolio();
   const [portfolioDialogOpen, setPortfolioDialogOpen] = useState(false);
+
+  // Reset all data states when navigating to a different coin
+  // to prevent showing stale data from the previous coin
+  useEffect(() => {
+    setCoin(null);
+    setHistory(null);
+    setOhlcv(null);
+    setAnalytics(null);
+    setLoading(true);
+    setHistoryLoading(true);
+    setOhlcvLoading(true);
+    setAnalyticsLoading(true);
+    setCoinError(false);
+    setHistoryError(false);
+    setOhlcvError(false);
+    setAnalyticsError(false);
+  }, [coinId]);
 
   const fetchCoin = useCallback(async () => {
     try {
@@ -168,14 +166,14 @@ export default function CoinDetailPage() {
     try {
       setAnalyticsLoading(true);
       setAnalyticsError(false);
-      const result = await api.getCoinAnalytics(coinId, 30);
+      const result = await api.getCoinAnalytics(coinId, days);
       setAnalytics(result);
     } catch {
       setAnalyticsError(true);
     } finally {
       setAnalyticsLoading(false);
     }
-  }, [coinId]);
+  }, [coinId, days]);
 
   const fetchCoinList = useCallback(async () => {
     try {
@@ -340,8 +338,7 @@ export default function CoinDetailPage() {
                 : "bg-red-500/10 text-red-400 border-red-500/20"
             )}
           >
-            {coin.price_change_24h_pct >= 0 ? "+" : ""}
-            {coin.price_change_24h_pct.toFixed(2)}%
+            {formatPercentage(coin.price_change_24h_pct)}
           </span>
         )}
 
@@ -596,6 +593,7 @@ export default function CoinDetailPage() {
           maxDrawdown={analytics?.max_drawdown}
           sharpeRatio={analytics?.sharpe_ratio}
           loading={true}
+          periodLabel={TIME_PERIODS.find((p) => p.days === days)?.label}
         />
       ) : (
         <FadeIn>
@@ -604,6 +602,7 @@ export default function CoinDetailPage() {
             maxDrawdown={analytics?.max_drawdown}
             sharpeRatio={analytics?.sharpe_ratio}
             loading={false}
+            periodLabel={TIME_PERIODS.find((p) => p.days === days)?.label}
           />
         </FadeIn>
       )}

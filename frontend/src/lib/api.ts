@@ -76,6 +76,10 @@ class ApiClient {
     return this.request<import("@/types").MarketOverview>("/api/v1/market/overview");
   }
 
+  async getKpiSparklines() {
+    return this.request<import("@/types").KpiSparklines>("/api/v1/market/kpi-sparklines");
+  }
+
   // Analytics
   async getCorrelation(periodDays = 30) {
     return this.request<import("@/types").CorrelationMatrix>(

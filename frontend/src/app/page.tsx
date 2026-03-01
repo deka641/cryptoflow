@@ -1,9 +1,10 @@
 "use client";
 
-import { useMarketOverview, useCoins } from "@/hooks/use-market-data";
+import { useMarketOverview, useCoins, useKpiSparklines } from "@/hooks/use-market-data";
 import { useLivePricesContext } from "@/providers/live-prices-provider";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { TopMovers } from "@/components/dashboard/TopMovers";
+import { KpiSparkline } from "@/components/dashboard/KpiSparkline";
 import { MarketTreemap } from "@/components/dashboard/MarketTreemap";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -48,8 +49,9 @@ function MoversSkeleton() {
 
 export default function DashboardPage() {
   const { data, loading, error, refetch } = useMarketOverview();
-  const { data: coinsData, loading: coinsLoading } = useCoins(1, 50);
+  const { data: coinsData, loading: coinsLoading, error: coinsError, refetch: refetchCoins } = useCoins(1, 50);
   const { prices: livePrices } = useLivePricesContext();
+  const sparklines = useKpiSparklines();
 
   const animatedMarketCap = useCountUp(data?.total_market_cap ?? null);
   const animatedVolume = useCountUp(data?.total_volume_24h ?? null);
@@ -88,6 +90,9 @@ export default function DashboardPage() {
               icon={<DollarSign className="size-5" />}
               accentColor="indigo"
               tooltip="Combined value of all tracked cryptocurrencies — price × circulating supply, summed across the top 50 coins."
+              sparkline={sparklines?.market_cap && sparklines.market_cap.length > 1 ? (
+                <KpiSparkline data={sparklines.market_cap} positive={(data.market_cap_change_24h_pct ?? 0) >= 0} />
+              ) : undefined}
             />
             <KpiCard
               title="24h Volume"
@@ -96,6 +101,9 @@ export default function DashboardPage() {
               icon={<BarChart3 className="size-5" />}
               accentColor="emerald"
               tooltip="Total trading volume across all tracked coins in the last 24 hours. High volume indicates strong market activity."
+              sparkline={sparklines?.volume && sparklines.volume.length > 1 ? (
+                <KpiSparkline data={sparklines.volume} positive={(data.volume_change_24h_pct ?? 0) >= 0} />
+              ) : undefined}
             />
             <KpiCard
               title="BTC Dominance"
@@ -104,6 +112,12 @@ export default function DashboardPage() {
               icon={<Bitcoin className="size-5" />}
               accentColor="amber"
               tooltip="Bitcoin's share of total crypto market cap. A drop often signals capital flowing into altcoins."
+              sparkline={sparklines?.btc_dominance && sparklines.btc_dominance.length > 1 ? (
+                <KpiSparkline
+                  data={sparklines.btc_dominance}
+                  positive={sparklines.btc_dominance[sparklines.btc_dominance.length - 1] >= sparklines.btc_dominance[0]}
+                />
+              ) : undefined}
             />
             <KpiCard
               title="Active Coins"
@@ -127,7 +141,9 @@ export default function DashboardPage() {
       </div>
       <Card className="glass-card">
         <CardContent>
-          {coinsLoading || !coinsData ? (
+          {coinsError && !coinsData ? (
+            <ErrorState message="Failed to load coin data" onRetry={refetchCoins} />
+          ) : coinsLoading || !coinsData ? (
             <div className="space-y-3">
               <Skeleton className="h-[400px] w-full rounded-lg bg-slate-700" />
               <div className="flex items-center justify-center gap-2">
@@ -179,7 +195,7 @@ export default function DashboardPage() {
                 <CardTitle className="text-white">Top Gainers</CardTitle>
               </CardHeader>
               <CardContent>
-                <TopMovers title="Top Gainers" movers={data.top_gainers} />
+                <TopMovers movers={data.top_gainers} />
               </CardContent>
             </Card>
             <Card className="glass-card">
@@ -187,7 +203,7 @@ export default function DashboardPage() {
                 <CardTitle className="text-white">Top Losers</CardTitle>
               </CardHeader>
               <CardContent>
-                <TopMovers title="Top Losers" movers={data.top_losers} />
+                <TopMovers movers={data.top_losers} />
               </CardContent>
             </Card>
           </FadeIn>
