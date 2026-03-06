@@ -8,6 +8,17 @@ echo "========================================="
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_DIR"
 
+# Load environment from .env if present
+if [ -f "$PROJECT_DIR/.env" ]; then
+    set -a
+    source "$PROJECT_DIR/.env"
+    set +a
+fi
+
+DB_USER="${DB_USER:-cryptoflow}"
+DB_PASS="${DB_PASS:-cryptoflow123}"
+DB_NAME="${DB_NAME:-cryptoflow}"
+
 # 1. Start services
 echo ""
 echo "[1/6] Starting PostgreSQL and Redis..."
@@ -28,8 +39,8 @@ echo "  Done"
 # 3. Database setup
 echo ""
 echo "[3/6] Setting up database..."
-su - postgres -c "psql -tc \"SELECT 1 FROM pg_roles WHERE rolname='cryptoflow'\" | grep -q 1 || psql -c \"CREATE USER cryptoflow WITH PASSWORD 'cryptoflow123';\"" 2>/dev/null
-su - postgres -c "psql -tc \"SELECT 1 FROM pg_database WHERE datname='cryptoflow'\" | grep -q 1 || psql -c \"CREATE DATABASE cryptoflow OWNER cryptoflow;\"" 2>/dev/null
+su - postgres -c "psql -tc \"SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'\" | grep -q 1 || psql -c \"CREATE USER $DB_USER WITH PASSWORD '$DB_PASS';\"" 2>/dev/null
+su - postgres -c "psql -tc \"SELECT 1 FROM pg_database WHERE datname='$DB_NAME'\" | grep -q 1 || psql -c \"CREATE DATABASE $DB_NAME OWNER $DB_USER;\"" 2>/dev/null
 echo "  Done"
 
 # 4. Run migrations

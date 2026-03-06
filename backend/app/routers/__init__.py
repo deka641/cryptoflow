@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.routers import auth, coins, market, analytics, pipeline, quality, websocket, watchlist, portfolio
+from app.routers import auth, coins, market, analytics, pipeline, quality, websocket, watchlist, portfolio, alerts
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
@@ -12,3 +12,4 @@ api_router.include_router(quality.router, prefix="/quality", tags=["quality"])
 api_router.include_router(websocket.router, prefix="/ws", tags=["websocket"])
 api_router.include_router(watchlist.router, prefix="/watchlist", tags=["watchlist"])
 api_router.include_router(portfolio.router, prefix="/portfolio", tags=["portfolio"])
+api_router.include_router(alerts.router, prefix="/alerts", tags=["alerts"])

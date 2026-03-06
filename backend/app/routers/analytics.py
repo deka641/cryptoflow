@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.models.analytics import AnalyticsVolatility
+from app.models.coin import DimCoin
 from app.schemas.analytics import CorrelationMatrix, VolatilityEntry
 from app.services import analytics_service
 
@@ -27,3 +29,36 @@ def get_volatility(
     """Get coins ranked by volatility over the given period."""
     data = analytics_service.get_volatility_ranking(db, period_days=period_days)
     return [VolatilityEntry(**entry) for entry in data]
+
+
+@router.get("/volatility/{coin_id}/history")
+def get_volatility_history(
+    coin_id: int,
+    db: Session = Depends(get_db),
+):
+    """Get volatility metrics history for a specific coin (all available periods)."""
+    coin = db.query(DimCoin).filter(DimCoin.id == coin_id).first()
+    if not coin:
+        return {"coin_id": coin_id, "entries": []}
+
+    entries = (
+        db.query(AnalyticsVolatility)
+        .filter(AnalyticsVolatility.coin_id == coin_id)
+        .order_by(AnalyticsVolatility.period_days.asc())
+        .all()
+    )
+
+    return {
+        "coin_id": coin_id,
+        "symbol": coin.symbol,
+        "entries": [
+            {
+                "period_days": e.period_days,
+                "volatility": float(e.volatility) if e.volatility else None,
+                "max_drawdown": float(e.max_drawdown) if e.max_drawdown else None,
+                "sharpe_ratio": float(e.sharpe_ratio) if e.sharpe_ratio else None,
+                "computed_at": e.computed_at.isoformat() if e.computed_at else None,
+            }
+            for e in entries
+        ],
+    }

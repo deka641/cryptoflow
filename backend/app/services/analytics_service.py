@@ -28,11 +28,12 @@ def get_correlation_matrix(db: Session, period_days: int = 30, top_n: int = 15) 
     n = len(coin_ids)
     matrix = [[None] * n for _ in range(n)]
     computed_at = None
+    coin_idx = {cid: idx for idx, cid in enumerate(coin_ids)}
 
     for corr in correlations:
-        if corr.coin_a_id in coin_map and corr.coin_b_id in coin_map:
-            i = coin_ids.index(corr.coin_a_id) if corr.coin_a_id in coin_ids else -1
-            j = coin_ids.index(corr.coin_b_id) if corr.coin_b_id in coin_ids else -1
+        if corr.coin_a_id in coin_idx and corr.coin_b_id in coin_idx:
+            i = coin_idx[corr.coin_a_id]
+            j = coin_idx[corr.coin_b_id]
             if i >= 0 and j >= 0:
                 val = float(corr.correlation) if corr.correlation is not None else None
                 matrix[i][j] = val

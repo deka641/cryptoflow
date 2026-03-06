@@ -18,14 +18,14 @@ DEFAULT_SERVER = "0.0.0.0"
 DEFAULT_SERVER_PORT = 5050
 
 # ---------------------------------------------------------------------------
-# Desktop mode — no login screen, no master password
+# Server mode — authentication required
 # ---------------------------------------------------------------------------
-SERVER_MODE = False
-MASTER_PASSWORD_REQUIRED = False
+SERVER_MODE = True
+MASTER_PASSWORD_REQUIRED = True
 
 # ---------------------------------------------------------------------------
 # Misc
 # ---------------------------------------------------------------------------
 UPGRADE_CHECK_ENABLED = False
 UPGRADE_CHECK_KEY = ""
-CSP_ENABLED = False
+CSP_ENABLED = True

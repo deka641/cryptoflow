@@ -25,6 +25,8 @@ export function TopMovers({ movers }: TopMoversProps) {
                 <img
                   src={mover.image_url}
                   alt={mover.name}
+                  width={24}
+                  height={24}
                   className="size-6 rounded-full"
                 />
               ) : (

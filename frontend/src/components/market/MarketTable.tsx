@@ -198,6 +198,8 @@ export function MarketTable({
                     <img
                       src={coin.image_url}
                       alt={coin.name}
+                      width={24}
+                      height={24}
                       className="size-6 rounded-full"
                     />
                   ) : (

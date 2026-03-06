@@ -112,7 +112,7 @@ export function AddHoldingDialog({ open, onOpenChange, onAdd, onEdit, editHoldin
               <Label className="text-slate-300">Coin</Label>
               <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-800 px-3 py-2">
                 {preselectedCoin.image_url && (
-                  <img src={preselectedCoin.image_url} alt={preselectedCoin.name} className="size-5 rounded-full" />
+                  <img src={preselectedCoin.image_url} alt={preselectedCoin.name} width={20} height={20} className="size-5 rounded-full" />
                 )}
                 <span className="text-sm text-white">
                   {preselectedCoin.name} ({preselectedCoin.symbol.toUpperCase()})

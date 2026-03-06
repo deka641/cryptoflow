@@ -26,7 +26,7 @@ function CoinPill({ coin }: { coin: CorrelatedCoin }) {
       className="flex items-center gap-2.5 rounded-lg bg-slate-800/40 px-3 py-2 transition-all duration-200 hover:bg-slate-700/40"
     >
       {coin.image_url ? (
-        <img src={coin.image_url} alt={coin.name} className="size-6 rounded-full" />
+        <img src={coin.image_url} alt={coin.name} width={24} height={24} className="size-6 rounded-full" />
       ) : (
         <div className="flex size-6 items-center justify-center rounded-full bg-slate-700 text-xs font-bold text-slate-300">
           {coin.symbol[0]}

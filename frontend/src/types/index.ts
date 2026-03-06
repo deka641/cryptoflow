@@ -177,6 +177,20 @@ export interface PaginatedResponse<T> {
   pages: number;
 }
 
+export interface PriceAlert {
+  id: number;
+  coin_id: number;
+  coingecko_id: string;
+  symbol: string;
+  name: string;
+  image_url: string | null;
+  target_price: number;
+  direction: "above" | "below";
+  triggered: boolean;
+  created_at: string;
+  triggered_at: string | null;
+}
+
 export interface PortfolioHolding {
   id: number;
   coin_id: number;

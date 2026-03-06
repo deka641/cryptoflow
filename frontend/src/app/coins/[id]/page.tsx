@@ -8,6 +8,7 @@ import { useLivePricesContext } from "@/providers/live-prices-provider";
 import { useAuth } from "@/providers/auth-provider";
 import { useWatchlist } from "@/hooks/use-watchlist";
 import { usePortfolio } from "@/hooks/use-portfolio";
+import { useAlerts } from "@/hooks/use-alerts";
 import { AddHoldingDialog } from "@/components/portfolio/AddHoldingDialog";
 import type { Coin, CoinHistory, CoinOHLCV, CoinAnalytics } from "@/types";
 import { PriceChart } from "@/components/charts/PriceChart";
@@ -23,6 +24,7 @@ import { ErrorState } from "@/components/ui/error-state";
 import { FadeIn } from "@/components/ui/fade-in";
 import {
   ArrowLeft,
+  Bell,
   DollarSign,
   BarChart3,
   Activity,
@@ -38,6 +40,9 @@ import {
   ArrowUpDown,
   Layers,
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { formatCompactCurrency, formatCurrency, formatSupply, formatPercentage } from "@/lib/formatters";
 import { usePriceFlash } from "@/hooks/use-price-flash";
@@ -95,6 +100,7 @@ export default function CoinDetailPage() {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [ohlcvLoading, setOhlcvLoading] = useState(true);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [volHistory, setVolHistory] = useState<{ period_days: number; volatility: number | null; max_drawdown: number | null; sharpe_ratio: number | null }[]>([]);
   const [coinError, setCoinError] = useState(false);
   const [historyError, setHistoryError] = useState(false);
   const [ohlcvError, setOhlcvError] = useState(false);
@@ -104,7 +110,11 @@ export default function CoinDetailPage() {
   const { user } = useAuth();
   const { toggle, isWatched } = useWatchlist();
   const { addHolding } = usePortfolio();
+  const { createAlert } = useAlerts();
   const [portfolioDialogOpen, setPortfolioDialogOpen] = useState(false);
+  const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+  const [alertPrice, setAlertPrice] = useState("");
+  const [alertDirection, setAlertDirection] = useState<"above" | "below">("above");
 
   // Reset all data states when navigating to a different coin
   // to prevent showing stale data from the previous coin
@@ -184,11 +194,21 @@ export default function CoinDetailPage() {
     }
   }, []);
 
+  const fetchVolHistory = useCallback(async () => {
+    try {
+      const data = await api.getVolatilityHistory(coinId);
+      setVolHistory(data.entries);
+    } catch {
+      setVolHistory([]);
+    }
+  }, [coinId]);
+
   useEffect(() => {
     fetchCoin();
     fetchAnalytics();
     fetchCoinList();
-  }, [fetchCoin, fetchAnalytics, fetchCoinList]);
+    fetchVolHistory();
+  }, [fetchCoin, fetchAnalytics, fetchCoinList, fetchVolHistory]);
 
   useEffect(() => {
     fetchHistory();
@@ -303,7 +323,7 @@ export default function CoinDetailPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center gap-3">
         {coin.image_url ? (
-          <img src={coin.image_url} alt={coin.name} className="size-12 rounded-full" />
+          <img src={coin.image_url} alt={coin.name} width={48} height={48} className="size-12 rounded-full" />
         ) : (
           <div className="flex size-12 items-center justify-center rounded-full bg-slate-700 text-xl font-bold text-slate-300">
             {coin.symbol[0]?.toUpperCase()}
@@ -369,6 +389,20 @@ export default function CoinDetailPage() {
                 {isWatched(coin.id) ? "Remove from watchlist" : "Add to watchlist"}
               </TooltipContent>
             </Tooltip>
+          )}
+          {user && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setAlertPrice(coin.price_usd?.toString() ?? "");
+                setAlertDialogOpen(true);
+              }}
+              className="border-slate-700 text-slate-300 hover:text-white"
+            >
+              <Bell className="size-4 mr-1" />
+              Alert
+            </Button>
           )}
           {user && (
             <Button
@@ -607,6 +641,68 @@ export default function CoinDetailPage() {
         </FadeIn>
       )}
 
+      {/* Risk Metrics Across Periods */}
+      {volHistory.length > 1 && (
+        <FadeIn>
+          <Card className="glass-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-white text-base">Risk Across Periods</CardTitle>
+              <p className="text-xs text-slate-400 mt-1">
+                Compare volatility, max drawdown, and Sharpe ratio across different time windows.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-700/50">
+                      <th className="text-left text-slate-400 font-medium py-2 pr-4">Period</th>
+                      <th className="text-right text-slate-400 font-medium py-2 px-4">Volatility</th>
+                      <th className="text-right text-slate-400 font-medium py-2 px-4">Max Drawdown</th>
+                      <th className="text-right text-slate-400 font-medium py-2 px-4">Sharpe Ratio</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {volHistory.map((entry) => (
+                      <tr key={entry.period_days} className="border-b border-slate-800/50">
+                        <td className="py-2 pr-4 text-slate-300 font-medium">{entry.period_days}d</td>
+                        <td className="py-2 px-4 text-right">
+                          <span className={cn(
+                            "font-semibold",
+                            entry.volatility !== null && entry.volatility < 3 ? "text-emerald-400" :
+                            entry.volatility !== null && entry.volatility < 6 ? "text-amber-400" : "text-red-400"
+                          )}>
+                            {entry.volatility !== null ? `${(entry.volatility * 100).toFixed(1)}%` : "-"}
+                          </span>
+                        </td>
+                        <td className="py-2 px-4 text-right">
+                          <span className={cn(
+                            "font-semibold",
+                            entry.max_drawdown !== null && entry.max_drawdown < 0.2 ? "text-emerald-400" :
+                            entry.max_drawdown !== null && entry.max_drawdown < 0.4 ? "text-amber-400" : "text-red-400"
+                          )}>
+                            {entry.max_drawdown !== null ? `-${(entry.max_drawdown * 100).toFixed(1)}%` : "-"}
+                          </span>
+                        </td>
+                        <td className="py-2 px-4 text-right">
+                          <span className={cn(
+                            "font-semibold",
+                            entry.sharpe_ratio !== null && entry.sharpe_ratio >= 1 ? "text-emerald-400" :
+                            entry.sharpe_ratio !== null && entry.sharpe_ratio >= 0 ? "text-amber-400" : "text-red-400"
+                          )}>
+                            {entry.sharpe_ratio !== null ? entry.sharpe_ratio.toFixed(2) : "-"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </FadeIn>
+      )}
+
       {/* Correlation Insights */}
       {analyticsError ? null : analyticsLoading ? (
         <CorrelationInsights
@@ -640,6 +736,78 @@ export default function CoinDetailPage() {
             image_url: coin.image_url,
           }}
         />
+      )}
+
+      {/* Price Alert Dialog */}
+      {user && coin && (
+        <Dialog open={alertDialogOpen} onOpenChange={setAlertDialogOpen}>
+          <DialogContent className="bg-slate-900 border-slate-700">
+            <DialogHeader>
+              <DialogTitle className="text-white">Set Price Alert for {coin.symbol.toUpperCase()}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label className="text-slate-300">Alert when price goes</Label>
+                <div className="flex gap-2">
+                  <Button
+                    variant={alertDirection === "above" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setAlertDirection("above")}
+                    className={alertDirection === "above" ? "bg-emerald-600 hover:bg-emerald-700" : "border-slate-700 text-slate-300"}
+                  >
+                    Above
+                  </Button>
+                  <Button
+                    variant={alertDirection === "below" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setAlertDirection("below")}
+                    className={alertDirection === "below" ? "bg-red-600 hover:bg-red-700" : "border-slate-700 text-slate-300"}
+                  >
+                    Below
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-slate-300">Target Price (USD)</Label>
+                <Input
+                  type="number"
+                  step="any"
+                  value={alertPrice}
+                  onChange={(e) => setAlertPrice(e.target.value)}
+                  placeholder="e.g. 50000"
+                  className="bg-slate-800 border-slate-700 text-white"
+                />
+                {coin.price_usd && (
+                  <p className="text-xs text-slate-500">
+                    Current price: ${coin.price_usd.toLocaleString()}
+                  </p>
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setAlertDialogOpen(false)}
+                className="border-slate-700 text-slate-300"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={async () => {
+                  const price = parseFloat(alertPrice);
+                  if (isNaN(price) || price <= 0) return;
+                  try {
+                    await createAlert(coin.id, price, alertDirection);
+                    setAlertDialogOpen(false);
+                  } catch { /* toast handled in hook */ }
+                }}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                Set Alert
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Briefcase, Plus } from "lucide-react";
+import { Briefcase, Download, Plus } from "lucide-react";
+import { api } from "@/lib/api";
 import { useAuth } from "@/providers/auth-provider";
 import { useLivePricesContext } from "@/providers/live-prices-provider";
 import { usePortfolio } from "@/hooks/use-portfolio";
@@ -107,10 +108,31 @@ export default function PortfolioPage() {
       <div>
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold text-white">Portfolio</h2>
-          <Button onClick={handleOpenAdd} size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white">
-            <Plus className="size-4 mr-1" />
-            Add Holding
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={async () => {
+                try {
+                  const blob = await api.exportPortfolioCsv();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = "cryptoflow-portfolio.csv";
+                  a.click();
+                  URL.revokeObjectURL(url);
+                } catch { /* toast handled by api client */ }
+              }}
+              size="sm"
+              variant="outline"
+              className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+            >
+              <Download className="size-4 mr-1" />
+              Export CSV
+            </Button>
+            <Button onClick={handleOpenAdd} size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white">
+              <Plus className="size-4 mr-1" />
+              Add Holding
+            </Button>
+          </div>
         </div>
         <p className="mt-1 text-sm text-slate-400">
           Track your crypto holdings, monitor real-time P&L, and analyze your portfolio allocation.

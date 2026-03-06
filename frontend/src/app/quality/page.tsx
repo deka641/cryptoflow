@@ -43,7 +43,7 @@ function ScoreRing({ score, size = 64 }: { score: number; size?: number }) {
 
   return (
     <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90" style={{ filter: `drop-shadow(0 0 6px ${color}40)` }}>
+      <svg width={size} height={size} className="-rotate-90" style={{ filter: `drop-shadow(0 0 6px ${color}40)` }} role="img" aria-label={`Quality score: ${Math.round(score)}%`}>
         <circle
           cx={size / 2}
           cy={size / 2}

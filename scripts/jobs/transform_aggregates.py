@@ -10,8 +10,13 @@ import sys
 import os
 import logging
 from datetime import datetime, timezone
+from pathlib import Path
 
 import psycopg2
+
+# Load .env from project root
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -19,7 +24,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-DB_DSN = os.getenv("DATABASE_URL", "postgresql://cryptoflow:cryptoflow123@localhost:5432/cryptoflow")
+DB_DSN = os.environ["DATABASE_URL"]
 JOB_ID = "transform_aggregates"
 
 

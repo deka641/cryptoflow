@@ -17,6 +17,7 @@ Results are upserted into ``analytics_correlation`` and
 from __future__ import annotations
 
 import logging
+import os
 from datetime import datetime, timedelta, timezone
 from itertools import combinations
 
@@ -28,7 +29,7 @@ import psycopg2.extras
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
-DB_DSN = "postgresql://cryptoflow:cryptoflow123@localhost:5432/cryptoflow"
+DB_DSN = os.getenv("DATABASE_URL", "postgresql://cryptoflow:cryptoflow123@localhost:5432/cryptoflow")
 
 logger = logging.getLogger(__name__)
 

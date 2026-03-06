@@ -15,6 +15,7 @@ CoinGecko's free-tier budget (~10 req/min).
 from __future__ import annotations
 
 import logging
+import os
 import time
 from datetime import datetime, timedelta, timezone
 
@@ -33,7 +34,7 @@ MIN_REQ_INTERVAL = 6.0
 MAX_RETRIES = 3
 INITIAL_BACKOFF = 5.0
 
-DB_DSN = "postgresql://cryptoflow:cryptoflow123@localhost:5432/cryptoflow"
+DB_DSN = os.getenv("DATABASE_URL", "postgresql://cryptoflow:cryptoflow123@localhost:5432/cryptoflow")
 HISTORY_DAYS = 90
 TOP_N_COINS = 20
 BATCH_INSERT_SIZE = 500

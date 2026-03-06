@@ -1,4 +1,6 @@
 import logging
+import os
+from pathlib import Path
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings
@@ -6,6 +8,9 @@ from pydantic_settings import BaseSettings
 _logger = logging.getLogger(__name__)
 
 _INSECURE_DEFAULT_SECRET = "super-secret-change-in-production"
+
+# Resolve .env from project root (two levels up from this file)
+_ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
 
 
 class Settings(BaseSettings):
@@ -23,12 +28,12 @@ class Settings(BaseSettings):
         if self.JWT_SECRET == _INSECURE_DEFAULT_SECRET:
             _logger.warning(
                 "JWT_SECRET is using the insecure default value. "
-                "Set the JWT_SECRET environment variable for production use."
+                "Set the JWT_SECRET environment variable in .env for production use."
             )
         return self
 
     class Config:
-        env_file = ".env"
+        env_file = str(_ENV_FILE) if _ENV_FILE.exists() else ".env"
 
 
 settings = Settings()

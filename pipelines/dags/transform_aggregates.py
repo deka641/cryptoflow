@@ -19,6 +19,7 @@ efficiently, then performs an ON CONFLICT UPDATE upsert.
 from __future__ import annotations
 
 import logging
+import os
 from datetime import datetime, timedelta, timezone
 
 import psycopg2
@@ -27,7 +28,7 @@ import psycopg2.extras
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
-DB_DSN = "postgresql://cryptoflow:cryptoflow123@localhost:5432/cryptoflow"
+DB_DSN = os.getenv("DATABASE_URL", "postgresql://cryptoflow:cryptoflow123@localhost:5432/cryptoflow")
 LOOKBACK_DAYS = 7
 
 logger = logging.getLogger(__name__)

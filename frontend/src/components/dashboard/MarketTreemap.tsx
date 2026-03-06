@@ -101,7 +101,11 @@ function CustomTile({
       onMouseMove={(e) => onHover(e, node)}
       onMouseLeave={(e) => onHover(e, null)}
       onClick={() => onClick(coinId)}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(coinId); } }}
       style={{ cursor: "pointer" }}
+      tabIndex={0}
+      role="button"
+      aria-label={`${name} (${symbol.toUpperCase()}): ${formatCurrency(price)}, ${change >= 0 ? "+" : ""}${change.toFixed(1)}%`}
     >
       <rect
         x={x}

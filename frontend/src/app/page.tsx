@@ -87,6 +87,7 @@ export default function DashboardPage() {
               title="Total Market Cap"
               value={formatCompactCurrency(animatedMarketCap ?? data.total_market_cap)}
               change={data.market_cap_change_24h_pct ?? null}
+              changeLabel="24h"
               icon={<DollarSign className="size-5" />}
               accentColor="indigo"
               tooltip="Combined value of all tracked cryptocurrencies — price × circulating supply, summed across the top 50 coins."
@@ -98,6 +99,7 @@ export default function DashboardPage() {
               title="24h Volume"
               value={formatCompactCurrency(animatedVolume ?? data.total_volume_24h)}
               change={data.volume_change_24h_pct ?? null}
+              changeLabel="24h"
               icon={<BarChart3 className="size-5" />}
               accentColor="emerald"
               tooltip="Total trading volume across all tracked coins in the last 24 hours. High volume indicates strong market activity."

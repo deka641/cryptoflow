@@ -93,6 +93,14 @@ class ApiClient {
     );
   }
 
+  async getVolatilityHistory(coinId: number) {
+    return this.request<{
+      coin_id: number;
+      symbol: string;
+      entries: { period_days: number; volatility: number | null; max_drawdown: number | null; sharpe_ratio: number | null; computed_at: string | null }[];
+    }>(`/api/v1/analytics/volatility/${coinId}/history`);
+  }
+
   // Pipeline
   async getPipelineRuns(page = 1, perPage = 20, dagId?: string) {
     const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
@@ -168,8 +176,45 @@ class ApiClient {
     return this.request<void>(`/api/v1/portfolio/holdings/${id}`, { method: "DELETE" });
   }
 
+  async exportPortfolioCsv(): Promise<Blob> {
+    const token = this.getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(`${this.baseUrl}/api/v1/portfolio/export`, { headers });
+    if (!res.ok) throw new Error("Export failed");
+    return res.blob();
+  }
+
   async getPortfolioPerformance(days = 30) {
     return this.request<import("@/types").PortfolioPerformance>(`/api/v1/portfolio/performance?days=${days}`);
+  }
+
+  async getPortfolioBenchmark(days = 30, symbol = "btc") {
+    return this.request<{ symbol: string; days: number; data_points: { timestamp: string; value: number }[] }>(
+      `/api/v1/portfolio/benchmark?days=${days}&symbol=${symbol}`
+    );
+  }
+
+  // Alerts
+  async getAlerts() {
+    return this.request<import("@/types").PriceAlert[]>("/api/v1/alerts");
+  }
+
+  async createAlert(data: { coin_id: number; target_price: number; direction: string }) {
+    return this.request<import("@/types").PriceAlert>("/api/v1/alerts", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteAlert(id: number) {
+    return this.request<void>(`/api/v1/alerts/${id}`, { method: "DELETE" });
+  }
+
+  async checkAlerts() {
+    return this.request<{ triggered: { alert_id: number; symbol: string; name: string; direction: string; target_price: number; current_price: number }[]; checked: number }>(
+      "/api/v1/alerts/check"
+    );
   }
 
   // Auth

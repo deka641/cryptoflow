@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import sys
 import time
 from datetime import datetime, timedelta, timezone
@@ -33,7 +34,7 @@ MIN_REQ_INTERVAL = 6.0
 MAX_RETRIES = 3
 INITIAL_BACKOFF = 5.0
 
-DB_DSN = "postgresql://cryptoflow:cryptoflow123@localhost:5432/cryptoflow"
+DB_DSN = os.getenv("DATABASE_URL", "postgresql://cryptoflow:cryptoflow123@localhost:5432/cryptoflow")
 
 logger = logging.getLogger(__name__)
 

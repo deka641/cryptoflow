@@ -14,6 +14,10 @@ export const metadata: Metadata = {
     default: "CryptoFlow — Real-Time Crypto Analytics",
   },
   description: "Real-time cryptocurrency analytics platform with market data, portfolio tracking, quantitative analysis, and data pipeline monitoring for the top 50 coins.",
+  icons: {
+    icon: "/favicon.svg",
+  },
+  manifest: "/manifest.json",
   openGraph: {
     type: "website",
     siteName: "CryptoFlow",

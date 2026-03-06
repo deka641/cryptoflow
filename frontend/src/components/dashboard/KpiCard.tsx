@@ -29,13 +29,14 @@ interface KpiCardProps {
   title: string;
   value: string;
   change: number | null;
+  changeLabel?: string;
   icon: ReactNode;
   accentColor?: AccentColor;
   tooltip?: string;
   sparkline?: ReactNode;
 }
 
-export function KpiCard({ title, value, change, icon, accentColor = "indigo", tooltip, sparkline }: KpiCardProps) {
+export function KpiCard({ title, value, change, changeLabel, icon, accentColor = "indigo", tooltip, sparkline }: KpiCardProps) {
   const accent = accentStyles[accentColor];
 
   const card = (
@@ -56,6 +57,7 @@ export function KpiCard({ title, value, change, icon, accentColor = "indigo", to
                 )}
               >
                 {formatPercentage(change)}
+                {changeLabel && <span className="ml-1 text-xs font-normal text-slate-500">{changeLabel}</span>}
               </p>
             )}
             {sparkline}

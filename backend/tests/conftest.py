@@ -7,7 +7,8 @@ from app.database import Base, get_db
 from app.main import app
 
 # Use the same database but in a transaction that gets rolled back
-TEST_DB_URL = "postgresql://cryptoflow:cryptoflow123@localhost:5432/cryptoflow"
+from app.config import settings
+TEST_DB_URL = settings.DATABASE_URL
 
 engine = create_engine(TEST_DB_URL)
 TestingSessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)

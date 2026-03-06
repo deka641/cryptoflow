@@ -7,3 +7,4 @@ from app.models.pipeline import PipelineRun  # noqa: F401
 from app.models.user import User  # noqa: F401
 from app.models.watchlist import UserWatchlist  # noqa: F401
 from app.models.portfolio import PortfolioHolding  # noqa: F401
+from app.models.alert import PriceAlert  # noqa: F401

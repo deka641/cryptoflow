@@ -1,6 +1,9 @@
+import csv
+import io
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -201,6 +204,8 @@ def update_holding(
     db.refresh(holding)
 
     coin = db.query(DimCoin).filter(DimCoin.id == holding.coin_id).first()
+    if not coin:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Coin no longer exists")
     prices, _ = _get_prices_and_coins(db, [holding.coin_id])
     return _enrich_holding(holding, coin, prices.get(holding.coin_id))
 
@@ -221,6 +226,63 @@ def delete_holding(
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Holding not found")
     return None
+
+
+@router.get("/export")
+def export_portfolio_csv(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Export portfolio holdings as CSV."""
+    holdings = (
+        db.query(PortfolioHolding)
+        .filter(PortfolioHolding.user_id == current_user.id)
+        .order_by(PortfolioHolding.created_at.desc())
+        .all()
+    )
+
+    coin_ids = list({h.coin_id for h in holdings})
+    prices, coins = _get_prices_and_coins(db, coin_ids)
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "Coin", "Symbol", "Quantity", "Buy Price (USD)", "Current Price (USD)",
+        "Cost Basis (USD)", "Current Value (USD)", "P&L (USD)", "P&L (%)", "Notes", "Added",
+    ])
+
+    for h in holdings:
+        coin = coins.get(h.coin_id)
+        if not coin:
+            continue
+        qty = float(h.quantity)
+        buy_price = float(h.buy_price_usd)
+        current_price = prices.get(h.coin_id)
+        cost_basis = qty * buy_price
+        current_value = qty * current_price if current_price is not None else None
+        pnl_usd = current_value - cost_basis if current_value is not None else None
+        pnl_pct = (pnl_usd / cost_basis * 100) if pnl_usd is not None and cost_basis > 0 else None
+
+        writer.writerow([
+            coin.name,
+            coin.symbol.upper(),
+            qty,
+            round(buy_price, 2),
+            round(current_price, 2) if current_price is not None else "",
+            round(cost_basis, 2),
+            round(current_value, 2) if current_value is not None else "",
+            round(pnl_usd, 2) if pnl_usd is not None else "",
+            round(pnl_pct, 2) if pnl_pct is not None else "",
+            h.notes or "",
+            h.created_at.strftime("%Y-%m-%d") if h.created_at else "",
+        ])
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=cryptoflow-portfolio.csv"},
+    )
 
 
 @router.get("/performance", response_model=PortfolioPerformance)
@@ -302,3 +364,43 @@ def get_portfolio_performance(
         data_points = [data_points[int(i * step)] for i in range(200)]
 
     return PortfolioPerformance(days=days, data_points=data_points)
+
+
+@router.get("/benchmark")
+def get_benchmark(
+    days: int = Query(30, ge=1, le=365),
+    symbol: str = Query("btc", description="Benchmark coin symbol"),
+    db: Session = Depends(get_db),
+):
+    """Get normalized benchmark price data (base 100) for comparison with portfolio."""
+    coin = db.query(DimCoin).filter(DimCoin.symbol == symbol.lower()).first()
+    if not coin:
+        raise HTTPException(status_code=404, detail="Benchmark coin not found")
+
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    rows = (
+        db.query(FactMarketData.timestamp, FactMarketData.price_usd)
+        .filter(
+            FactMarketData.coin_id == coin.id,
+            FactMarketData.timestamp >= since,
+            FactMarketData.price_usd.isnot(None),
+        )
+        .order_by(FactMarketData.timestamp.asc())
+        .all()
+    )
+
+    if not rows:
+        return {"symbol": symbol.upper(), "days": days, "data_points": []}
+
+    base_price = float(rows[0].price_usd)
+    points = [
+        {"timestamp": r.timestamp.isoformat(), "value": round(float(r.price_usd) / base_price * 100, 2)}
+        for r in rows
+    ]
+
+    # Downsample to ~200 points
+    if len(points) > 200:
+        step = len(points) / 200
+        points = [points[int(i * step)] for i in range(200)]
+
+    return {"symbol": symbol.upper(), "days": days, "data_points": points}

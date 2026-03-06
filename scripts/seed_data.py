@@ -6,14 +6,18 @@ Run from project root: source .venv/bin/activate && python scripts/seed_data.py
 import sys
 import time
 import os
+from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
+
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 import httpx
 import psycopg2
 from datetime import datetime, timezone
 
-DB_URL = "postgresql://cryptoflow:cryptoflow123@localhost:5432/cryptoflow"
+DB_URL = os.environ["DATABASE_URL"]
 COINGECKO_BASE = "https://api.coingecko.com/api/v3"
 
 
