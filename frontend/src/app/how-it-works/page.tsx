@@ -397,7 +397,7 @@ export default function HowItWorksPage() {
             <RealtimeFlowBox
               icon={<Zap className="size-4" />}
               title="CoinCap WebSocket"
-              subtitle="Streaming feed for top 20 assets"
+              subtitle="Streaming feed for ~50 assets"
             />
             <RealtimeArrowRight />
             <RealtimeFlowBox
@@ -430,7 +430,7 @@ export default function HowItWorksPage() {
             <RealtimeFlowBox
               icon={<Zap className="size-4" />}
               title="CoinCap WebSocket"
-              subtitle="Streaming feed for top 20 assets"
+              subtitle="Streaming feed for ~50 assets"
             />
             <RealtimeArrowDown />
             <RealtimeFlowBox

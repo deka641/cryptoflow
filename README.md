@@ -32,7 +32,7 @@
 - **Dual data pipelines running in parallel** - Batch ingestion (CoinGecko REST, every 10 min) feeds the warehouse while a streaming pipeline (CoinCap WebSocket &rarr; Redis Pub/Sub &rarr; Browser) delivers sub-second price updates
 - **Star schema data warehouse** - Dimensional model with fact tables, time/coin dimensions, precomputed analytics tables, and a materialized view for sub-millisecond dashboard queries
 - **Three-stage real-time pipeline** - Standalone consumer captures CoinCap WebSocket ticks, publishes to Redis Pub/Sub, and FastAPI's lifespan subscriber broadcasts to all connected browsers
-- **27 endpoints across 9 resource groups** - Full REST API with WebSocket streaming, JWT authentication, pagination, filtering, and Swagger documentation
+- **35 endpoints across 10 resource groups** - Full REST API with WebSocket streaming, JWT authentication, pagination, filtering, and Swagger documentation
 - **Self-monitoring infrastructure** - Pipeline health dashboard tracks every batch run (status, duration, records); six automated quality checks (freshness, completeness, anomalies, referential integrity) run hourly
 - **7 coordinated services from a single script** - PostgreSQL, Redis, FastAPI, real-time consumer, Next.js, cron scheduler, and pgAdmin - all managed by `start.sh` / `stop.sh`
 
@@ -140,7 +140,7 @@ flowchart LR
     end
 
     subgraph api["FastAPI"]
-        REST["REST API\n26 endpoints"]
+        REST["REST API\n35 endpoints"]
         WS["WebSocket\nServer"]
         AUTH["JWT Auth"]
     end
@@ -296,11 +296,12 @@ A standalone async consumer (`realtime/consumer.py`) maintains a persistent WebS
 
 Full interactive documentation at [`/docs`](https://cryptoflow.deka-labs.dev/api/docs) (Swagger UI).
 
-### Public Endpoints (17)
+### Public Endpoints (19)
 
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/api/v1/market/overview` | Market KPIs: total cap, volume, BTC dominance, top movers |
+| `GET` | `/api/v1/market/kpi-sparklines` | Sparkline arrays for market cap, volume, BTC dominance |
 | `GET` | `/api/v1/coins` | Paginated coin list with current prices, search, sort |
 | `GET` | `/api/v1/coins/sparklines` | 7-day sparkline price arrays for multiple coins |
 | `GET` | `/api/v1/coins/{id}` | Single coin with full market data, ATH/ATL, supply |
@@ -309,6 +310,7 @@ Full interactive documentation at [`/docs`](https://cryptoflow.deka-labs.dev/api
 | `GET` | `/api/v1/coins/{id}/analytics` | Risk metrics: volatility, Sharpe, max drawdown, correlations |
 | `GET` | `/api/v1/analytics/correlation` | Correlation matrix for top N coins by market cap |
 | `GET` | `/api/v1/analytics/volatility` | Coins ranked by volatility with Sharpe ratios |
+| `GET` | `/api/v1/analytics/volatility/{id}/history` | Volatility history across periods for a single coin |
 | `GET` | `/api/v1/pipeline/runs` | Paginated pipeline run history (filterable by job) |
 | `GET` | `/api/v1/pipeline/health` | Health status and data freshness per batch job |
 | `GET` | `/api/v1/quality/checks` | Quality check results (filterable by status, table) |
@@ -318,11 +320,12 @@ Full interactive documentation at [`/docs`](https://cryptoflow.deka-labs.dev/api
 | `POST` | `/api/v1/auth/register` | Register a new user (email + password validation) |
 | `POST` | `/api/v1/auth/login` | Authenticate and receive JWT access token |
 
-### Authenticated Endpoints (10)
+### Authenticated Endpoints (16)
 
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/api/v1/auth/me` | Current user profile |
+| `PUT` | `/api/v1/auth/password` | Change current user's password |
 | `GET` | `/api/v1/watchlist` | List watched coin IDs |
 | `POST` | `/api/v1/watchlist/{coin_id}` | Add coin to watchlist |
 | `DELETE` | `/api/v1/watchlist/{coin_id}` | Remove coin from watchlist |
@@ -332,6 +335,12 @@ Full interactive documentation at [`/docs`](https://cryptoflow.deka-labs.dev/api
 | `PUT` | `/api/v1/portfolio/holdings/{id}` | Update a holding |
 | `DELETE` | `/api/v1/portfolio/holdings/{id}` | Delete a holding |
 | `GET` | `/api/v1/portfolio/performance` | Historical portfolio value over time |
+| `GET` | `/api/v1/portfolio/export` | Export portfolio as CSV |
+| `GET` | `/api/v1/portfolio/benchmark` | Benchmark portfolio vs BTC/ETH (base-100 series) |
+| `GET` | `/api/v1/alerts` | List current user's price alerts |
+| `POST` | `/api/v1/alerts` | Create or update a price alert |
+| `DELETE` | `/api/v1/alerts/{id}` | Delete a price alert |
+| `POST` | `/api/v1/alerts/check` | Check and trigger current user's alerts |
 
 ---
 

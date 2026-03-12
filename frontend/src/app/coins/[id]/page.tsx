@@ -115,6 +115,7 @@ export default function CoinDetailPage() {
   const [alertDialogOpen, setAlertDialogOpen] = useState(false);
   const [alertPrice, setAlertPrice] = useState("");
   const [alertDirection, setAlertDirection] = useState<"above" | "below">("above");
+  const [alertSaving, setAlertSaving] = useState(false);
 
   // Reset all data states when navigating to a different coin
   // to prevent showing stale data from the previous coin
@@ -292,6 +293,15 @@ export default function CoinDetailPage() {
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-1.5 text-sm">
+        <Link href="/market" className="text-slate-400 hover:text-white transition-colors">
+          Market
+        </Link>
+        <span className="text-slate-600">/</span>
+        <span className="text-white font-medium">{coin.name} ({coin.symbol.toUpperCase()})</span>
+      </nav>
+
       {/* Navigation Bar: Back + Prev/Next */}
       <div className="flex items-center justify-between">
         <Button variant="ghost" size="sm" asChild className="text-slate-400 hover:text-white">
@@ -793,17 +803,20 @@ export default function CoinDetailPage() {
                 Cancel
               </Button>
               <Button
+                disabled={alertSaving}
                 onClick={async () => {
                   const price = parseFloat(alertPrice);
                   if (isNaN(price) || price <= 0) return;
+                  setAlertSaving(true);
                   try {
                     await createAlert(coin.id, price, alertDirection);
                     setAlertDialogOpen(false);
                   } catch { /* toast handled in hook */ }
+                  finally { setAlertSaving(false); }
                 }}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white"
               >
-                Set Alert
+                {alertSaving ? "Setting..." : "Set Alert"}
               </Button>
             </DialogFooter>
           </DialogContent>

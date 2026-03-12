@@ -153,19 +153,24 @@ def delete_alert(
     return None
 
 
-@router.get("/check")
+@router.post("/check")
 def check_alerts(
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Check all untriggered alerts against latest prices (called internally)."""
+    """Check current user's untriggered alerts against latest prices."""
     from sqlalchemy import text
 
     # Get latest prices
     latest = db.execute(text("SELECT coin_id, price_usd FROM mv_latest_market_data")).fetchall()
     price_map = {r.coin_id: float(r.price_usd) for r in latest if r.price_usd is not None}
 
-    # Get untriggered alerts
-    alerts = db.query(PriceAlert).filter(PriceAlert.triggered == False).all()  # noqa: E712
+    # Get untriggered alerts for the current user only
+    alerts = (
+        db.query(PriceAlert)
+        .filter(PriceAlert.user_id == current_user.id, PriceAlert.triggered == False)  # noqa: E712
+        .all()
+    )
 
     triggered = []
     coins = {}
@@ -193,7 +198,6 @@ def check_alerts(
             if coin:
                 triggered.append({
                     "alert_id": alert.id,
-                    "user_id": alert.user_id,
                     "coin_id": alert.coin_id,
                     "coingecko_id": coin.coingecko_id,
                     "symbol": coin.symbol,

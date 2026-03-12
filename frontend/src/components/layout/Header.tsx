@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Menu, User, LogOut, Briefcase } from "lucide-react";
+import { Menu, User, LogOut, Briefcase, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -33,6 +33,7 @@ const pageTitles: Record<string, string> = {
   "/pipeline": "Pipeline",
   "/quality": "Quality",
   "/how-it-works": "How It Works",
+  "/profile": "Profile",
 };
 
 function getPageTitle(pathname: string): string {
@@ -141,6 +142,12 @@ export function Header() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-slate-700/50" />
+              <DropdownMenuItem asChild className="cursor-pointer hover:bg-slate-700/50 focus:bg-slate-700/50 focus:text-white">
+                <Link href="/profile">
+                  <UserCog className="size-4 mr-2" />
+                  Profile
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer hover:bg-slate-700/50 focus:bg-slate-700/50 focus:text-white">
                 <Link href="/portfolio">
                   <Briefcase className="size-4 mr-2" />

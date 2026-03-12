@@ -21,11 +21,13 @@ class CoinGeckoClient:
     def _request(self, endpoint: str, params: dict | None = None, retries: int = 3) -> dict | list:
         self._wait_for_rate_limit()
         url = f"{self.base_url}{endpoint}"
+        last_response = None
         for attempt in range(retries):
             try:
                 with httpx.Client(timeout=30) as client:
                     resp = client.get(url, params=params)
                     if resp.status_code == 429:
+                        last_response = resp
                         wait = 2 ** (attempt + 1) * 10
                         time.sleep(wait)
                         continue
@@ -35,7 +37,12 @@ class CoinGeckoClient:
                 if attempt == retries - 1:
                     raise
                 time.sleep(2 ** attempt)
-        return {}
+        # All retries exhausted due to 429 rate limiting
+        raise httpx.HTTPStatusError(
+            f"CoinGecko rate limit exceeded after {retries} retries",
+            request=httpx.Request("GET", url),
+            response=last_response,
+        )
 
     def get_coins_markets(
         self, vs_currency: str = "usd", per_page: int = 50, page: int = 1

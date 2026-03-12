@@ -79,22 +79,25 @@ def run():
             top_coins = cur.fetchall()
             coin_ids = [c[0] for c in top_coins]
 
-            # Fetch daily close prices for all coins
+            # Fetch daily close prices for all top coins in a single query
             coin_prices: dict[int, list[tuple[str, float]]] = {}
-            for coin_id in coin_ids:
-                cur.execute("""
-                    SELECT timestamp::date, price_usd
+            if coin_ids:
+                placeholders = ",".join(["%s"] * len(coin_ids))
+                cur.execute(f"""
+                    SELECT coin_id, timestamp::date, price_usd
                     FROM fact_market_data
-                    WHERE coin_id = %s
+                    WHERE coin_id IN ({placeholders})
                       AND timestamp >= %s
                       AND price_usd IS NOT NULL
-                    ORDER BY timestamp
-                """, (coin_id, cutoff))
-                # Take last price per day
-                day_prices: dict[str, float] = {}
-                for row in cur.fetchall():
-                    day_prices[str(row[0])] = float(row[1])
-                coin_prices[coin_id] = sorted(day_prices.items())
+                    ORDER BY coin_id, timestamp
+                """, (*coin_ids, cutoff))
+                # Group by coin_id, take last price per day
+                all_rows = cur.fetchall()
+                day_prices_by_coin: dict[int, dict[str, float]] = {cid: {} for cid in coin_ids}
+                for row in all_rows:
+                    day_prices_by_coin[row[0]][str(row[1])] = float(row[2])
+                for cid in coin_ids:
+                    coin_prices[cid] = sorted(day_prices_by_coin[cid].items())
 
             # Compute correlation matrix
             corr_rows = []
@@ -136,17 +139,23 @@ def run():
             cur.execute("SELECT id, symbol FROM dim_coin WHERE market_cap_rank IS NOT NULL ORDER BY market_cap_rank")
             all_coins = cur.fetchall()
 
+            # Fetch all price data for volatility in a single query
+            all_coin_ids = [c[0] for c in all_coins]
+            vol_price_data: dict[int, dict[str, float]] = {cid: {} for cid, _ in all_coins}
+            if all_coin_ids:
+                placeholders = ",".join(["%s"] * len(all_coin_ids))
+                cur.execute(f"""
+                    SELECT coin_id, timestamp::date, price_usd
+                    FROM fact_market_data
+                    WHERE coin_id IN ({placeholders}) AND timestamp >= %s AND price_usd IS NOT NULL
+                    ORDER BY coin_id, timestamp
+                """, (*all_coin_ids, cutoff))
+                for row in cur.fetchall():
+                    vol_price_data[row[0]][str(row[1])] = float(row[2])
+
             vol_rows = []
             for coin_id, symbol in all_coins:
-                cur.execute("""
-                    SELECT timestamp::date, price_usd
-                    FROM fact_market_data
-                    WHERE coin_id = %s AND timestamp >= %s AND price_usd IS NOT NULL
-                    ORDER BY timestamp
-                """, (coin_id, cutoff))
-                day_prices_map: dict[str, float] = {}
-                for row in cur.fetchall():
-                    day_prices_map[str(row[0])] = float(row[1])
+                day_prices_map = vol_price_data[coin_id]
                 prices = [day_prices_map[d] for d in sorted(day_prices_map.keys())]
 
                 if len(prices) < 5:

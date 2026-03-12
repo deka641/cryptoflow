@@ -16,6 +16,7 @@ export const metadata: Metadata = {
   description: "Real-time cryptocurrency analytics platform with market data, portfolio tracking, quantitative analysis, and data pipeline monitoring for the top 50 coins.",
   icons: {
     icon: "/favicon.svg",
+    apple: "/icon-192.png",
   },
   manifest: "/manifest.json",
   openGraph: {
@@ -23,11 +24,13 @@ export const metadata: Metadata = {
     siteName: "CryptoFlow",
     title: "CryptoFlow — Real-Time Crypto Analytics",
     description: "Real-time cryptocurrency analytics platform with market data, portfolio tracking, quantitative analysis, and data pipeline monitoring.",
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "CryptoFlow — Real-Time Crypto Analytics" }],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "CryptoFlow — Real-Time Crypto Analytics",
     description: "Real-time cryptocurrency analytics platform with market data, portfolio tracking, and quantitative analysis.",
+    images: ["/og-image.png"],
   },
 };
 

@@ -32,9 +32,9 @@ def client(db):
 
     app.dependency_overrides[get_db] = override_get_db
 
-    # Clear login rate limiter state before each test
-    from app.routers.auth import _login_attempts
-    _login_attempts.clear()
+    # Clear login rate limiter state before each test (in-memory + Redis)
+    from app.routers.auth import _clear_rate_limits
+    _clear_rate_limits()
 
     with TestClient(app) as c:
         yield c

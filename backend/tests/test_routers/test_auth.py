@@ -144,8 +144,8 @@ def test_login_rate_limiting(client):
     })
 
     # Clear any existing rate limit state for test isolation
-    from app.routers.auth import _login_attempts
-    _login_attempts.clear()
+    from app.routers.auth import _clear_rate_limits
+    _clear_rate_limits()
 
     # Make 10 failed login attempts (the limit)
     for _ in range(10):
@@ -161,8 +161,79 @@ def test_login_rate_limiting(client):
     })
     assert resp.status_code == 429
 
-    # Clean up
-    _login_attempts.clear()
+
+def test_change_password(client):
+    """Register, change password, old password fails, new password works."""
+    client.post("/api/v1/auth/register", json={
+        "email": "chpw@example.com", "password": "oldpass1A",
+    })
+    login_resp = client.post("/api/v1/auth/login", json={
+        "email": "chpw@example.com", "password": "oldpass1A",
+    })
+    token = login_resp.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Change password
+    resp = client.put("/api/v1/auth/password", json={
+        "current_password": "oldpass1A",
+        "new_password": "newpass1B",
+    }, headers=headers)
+    assert resp.status_code == 200
+
+    # Old password should fail
+    resp = client.post("/api/v1/auth/login", json={
+        "email": "chpw@example.com", "password": "oldpass1A",
+    })
+    assert resp.status_code == 401
+
+    # New password should work
+    resp = client.post("/api/v1/auth/login", json={
+        "email": "chpw@example.com", "password": "newpass1B",
+    })
+    assert resp.status_code == 200
+
+
+def test_change_password_wrong_current(client):
+    """Changing password with wrong current password should fail."""
+    client.post("/api/v1/auth/register", json={
+        "email": "chpw-wrong@example.com", "password": "correct1A",
+    })
+    login_resp = client.post("/api/v1/auth/login", json={
+        "email": "chpw-wrong@example.com", "password": "correct1A",
+    })
+    token = login_resp.json()["access_token"]
+
+    resp = client.put("/api/v1/auth/password", json={
+        "current_password": "wrong1234",
+        "new_password": "newpass1B",
+    }, headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 400
+
+
+def test_change_password_weak_new(client):
+    """New password must meet strength requirements."""
+    client.post("/api/v1/auth/register", json={
+        "email": "chpw-weak@example.com", "password": "strong1A",
+    })
+    login_resp = client.post("/api/v1/auth/login", json={
+        "email": "chpw-weak@example.com", "password": "strong1A",
+    })
+    token = login_resp.json()["access_token"]
+
+    # Too short
+    resp = client.put("/api/v1/auth/password", json={
+        "current_password": "strong1A",
+        "new_password": "Ab1",
+    }, headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 422
+
+
+def test_change_password_requires_auth(client):
+    resp = client.put("/api/v1/auth/password", json={
+        "current_password": "old1234A",
+        "new_password": "new1234B",
+    })
+    assert resp.status_code in (401, 403)
 
 
 def test_me_expired_token(client):

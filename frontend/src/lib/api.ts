@@ -213,7 +213,8 @@ class ApiClient {
 
   async checkAlerts() {
     return this.request<{ triggered: { alert_id: number; symbol: string; name: string; direction: string; target_price: number; current_price: number }[]; checked: number }>(
-      "/api/v1/alerts/check"
+      "/api/v1/alerts/check",
+      { method: "POST" }
     );
   }
 
@@ -241,6 +242,13 @@ class ApiClient {
 
   async getMe() {
     return this.request<import("@/types").User>("/api/v1/auth/me");
+  }
+
+  async changePassword(currentPassword: string, newPassword: string) {
+    return this.request<{ message: string }>("/api/v1/auth/password", {
+      method: "PUT",
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    });
   }
 
   logout() {

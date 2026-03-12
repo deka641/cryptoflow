@@ -26,7 +26,7 @@ export function ErrorState({
       )}
     >
       <AlertCircle className={cn("text-red-400", compact ? "size-4" : "size-6")} />
-      <p className={cn("text-slate-400", compact ? "text-sm" : "text-sm text-center")}>{message}</p>
+      <p className={cn("text-slate-400 max-w-full", compact ? "text-sm truncate" : "text-sm text-center line-clamp-3")}>{message}</p>
       {onRetry && (
         <Button
           variant="ghost"

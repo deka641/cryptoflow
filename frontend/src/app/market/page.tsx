@@ -66,22 +66,28 @@ export default function MarketPage() {
   // Fetch all watchlist coins across all pages
   const [watchlistCoins, setWatchlistCoins] = useState<Coin[]>([]);
   const [watchlistLoading, setWatchlistLoading] = useState(false);
+  const [watchlistInitialized, setWatchlistInitialized] = useState(false);
 
   const fetchWatchlistCoins = useCallback(async () => {
     if (!user || watchlist.size === 0) {
       setWatchlistCoins([]);
+      setWatchlistInitialized(true);
       return;
     }
-    setWatchlistLoading(true);
+    // Only show skeleton on first load, not on subsequent refreshes
+    if (!watchlistInitialized) {
+      setWatchlistLoading(true);
+    }
     try {
       const result = await api.getCoins(1, 50);
       setWatchlistCoins(result.items.filter((coin) => watchlist.has(coin.id)));
     } catch {
-      setWatchlistCoins([]);
+      if (!watchlistInitialized) setWatchlistCoins([]);
     } finally {
       setWatchlistLoading(false);
+      setWatchlistInitialized(true);
     }
-  }, [user, watchlist]);
+  }, [user, watchlist, watchlistInitialized]);
 
   useEffect(() => {
     if (activeTab === "watchlist") {
