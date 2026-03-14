@@ -25,6 +25,8 @@ interface MarketTableProps {
   sparklinesLoading?: boolean;
   onToggleWatchlist?: (coinId: number) => void;
   isWatched?: (coinId: number) => boolean;
+  onSortChange?: (field: SortField, direction: SortDirection) => void;
+  serverSort?: boolean;
 }
 
 type SortField =
@@ -61,20 +63,26 @@ export function MarketTable({
   sparklinesLoading,
   onToggleWatchlist,
   isWatched,
+  onSortChange,
+  serverSort,
 }: MarketTableProps) {
   const [sortField, setSortField] = useState<SortField>("market_cap_rank");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
   const handleSort = (field: SortField) => {
+    let newDir: SortDirection;
     if (sortField === field) {
-      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+      newDir = sortDirection === "asc" ? "desc" : "asc";
     } else {
-      setSortField(field);
-      setSortDirection(field === "market_cap_rank" ? "asc" : "desc");
+      newDir = field === "market_cap_rank" ? "asc" : "desc";
     }
+    setSortField(field);
+    setSortDirection(newDir);
+    onSortChange?.(field, newDir);
   };
 
   const sortedCoins = useMemo(() => {
+    if (serverSort) return coins;
     return [...coins].sort((a, b) => {
       const aVal = a[sortField];
       const bVal = b[sortField];
@@ -90,7 +98,7 @@ export function MarketTable({
         ? (aVal as number) - (bVal as number)
         : (bVal as number) - (aVal as number);
     });
-  }, [coins, sortField, sortDirection]);
+  }, [coins, sortField, sortDirection, serverSort]);
 
   return (
     <Table>

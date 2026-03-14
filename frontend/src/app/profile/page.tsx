@@ -54,6 +54,10 @@ export default function ProfilePage() {
       toast.error("New passwords do not match");
       return;
     }
+    if (!/^(?=.*[a-zA-Z])(?=.*\d).{8,}$/.test(newPassword)) {
+      toast.error("Password must be at least 8 characters with at least one letter and one digit");
+      return;
+    }
     setChangingPassword(true);
     try {
       await api.changePassword(currentPassword, newPassword);

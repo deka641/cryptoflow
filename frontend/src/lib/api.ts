@@ -47,9 +47,11 @@ class ApiClient {
   }
 
   // Coins
-  async getCoins(page = 1, perPage = 20, search = "") {
+  async getCoins(page = 1, perPage = 20, search = "", sortBy = "market_cap_rank", sortDir = "asc") {
     const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
     if (search) params.set("search", search);
+    if (sortBy !== "market_cap_rank") params.set("sort_by", sortBy);
+    if (sortDir !== "asc") params.set("sort_dir", sortDir);
     return this.request<import("@/types").PaginatedResponse<import("@/types").Coin>>(
       `/api/v1/coins?${params}`
     );
@@ -181,7 +183,15 @@ class ApiClient {
     const headers: Record<string, string> = {};
     if (token) headers["Authorization"] = `Bearer ${token}`;
     const res = await fetch(`${this.baseUrl}/api/v1/portfolio/export`, { headers });
-    if (!res.ok) throw new Error("Export failed");
+    if (!res.ok) {
+      // Auto-logout on 401 (expired or invalid token)
+      if (res.status === 401 && typeof window !== "undefined") {
+        localStorage.removeItem("access_token");
+        window.dispatchEvent(new Event("auth:logout"));
+      }
+      const error = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(error.detail || `Export failed (HTTP ${res.status})`);
+    }
     return res.blob();
   }
 

@@ -20,8 +20,10 @@ export default function MarketPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [sortBy, setSortBy] = useState("market_cap_rank");
+  const [sortDir, setSortDir] = useState("asc");
   const perPage = 20;
-  const { data, loading, error, refetch } = useCoins(page, perPage, debouncedSearch);
+  const { data, loading, error, refetch } = useCoins(page, perPage, debouncedSearch, sortBy, sortDir);
   const { prices } = useLivePricesContext();
   const { user } = useAuth();
   const { watchlist, toggle, isWatched } = useWatchlist();
@@ -144,6 +146,12 @@ export default function MarketPage() {
                     sparklinesLoading={sparklinesLoading}
                     onToggleWatchlist={toggle}
                     isWatched={isWatched}
+                    serverSort
+                    onSortChange={(field, dir) => {
+                      setSortBy(field);
+                      setSortDir(dir);
+                      setPage(1);
+                    }}
                   />
                 ) : (
                   <div className="flex h-48 items-center justify-center text-slate-500">

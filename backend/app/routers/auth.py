@@ -14,14 +14,16 @@ from app.config import settings
 
 _logger = logging.getLogger(__name__)
 
+# Dummy hash for constant-time login (prevents timing-based username enumeration)
+_DUMMY_HASH = hash_password("dummy-constant-password")
+
 router = APIRouter()
 
 # Rate limiter config
-_RATE_LIMIT_MAX = 10
 _RATE_LIMIT_WINDOW = 60  # seconds
 
 # In-memory fallback rate limiter
-_login_attempts: dict[str, list[float]] = defaultdict(list)
+_rate_limit_attempts: dict[str, list[float]] = defaultdict(list)
 
 # Try to use Redis for rate limiting (works across workers)
 _redis_client = None
@@ -42,31 +44,30 @@ def _get_redis():
 
 def _clear_rate_limits():
     """Clear all rate limit state (for testing)."""
-    _login_attempts.clear()
+    _rate_limit_attempts.clear()
     r = _get_redis()
     if r:
         try:
-            for key in r.scan_iter("rate_limit:login:*"):
+            for key in r.scan_iter("rate_limit:*"):
                 r.delete(key)
         except Exception:
             pass
 
 
-def _check_login_rate_limit(request: Request) -> None:
+def _check_rate_limit(request: Request, prefix: str, max_attempts: int, detail: str) -> None:
     ip = request.client.host if request.client else "unknown"
     r = _get_redis()
 
     if r:
-        # Redis-based rate limiting (works across multiple workers)
-        key = f"rate_limit:login:{ip}"
+        key = f"rate_limit:{prefix}:{ip}"
         try:
             current = r.incr(key)
             if current == 1:
                 r.expire(key, _RATE_LIMIT_WINDOW)
-            if current > _RATE_LIMIT_MAX:
+            if current > max_attempts:
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail="Too many login attempts. Please try again later.",
+                    detail=detail,
                 )
             return
         except HTTPException:
@@ -75,20 +76,22 @@ def _check_login_rate_limit(request: Request) -> None:
             pass  # Fall through to in-memory
 
     # In-memory fallback
+    mem_key = f"{prefix}:{ip}"
     now = time.monotonic()
-    attempts = _login_attempts[ip]
-    _login_attempts[ip] = [t for t in attempts if now - t < _RATE_LIMIT_WINDOW]
-    if len(_login_attempts[ip]) >= _RATE_LIMIT_MAX:
+    attempts = _rate_limit_attempts[mem_key]
+    _rate_limit_attempts[mem_key] = [t for t in attempts if now - t < _RATE_LIMIT_WINDOW]
+    if len(_rate_limit_attempts[mem_key]) >= max_attempts:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many login attempts. Please try again later.",
+            detail=detail,
         )
-    _login_attempts[ip].append(now)
+    _rate_limit_attempts[mem_key].append(now)
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def register(payload: UserRegister, db: Session = Depends(get_db)):
+def register(payload: UserRegister, request: Request, db: Session = Depends(get_db)):
     """Register a new user account."""
+    _check_rate_limit(request, "register", 5, "Too many registration attempts. Please try again later.")
     existing = db.query(User).filter(User.email == payload.email).first()
     if existing:
         raise HTTPException(
@@ -110,9 +113,14 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
 @router.post("/login", response_model=Token)
 def login(payload: UserLogin, request: Request, db: Session = Depends(get_db)):
     """Authenticate user and return a JWT access token."""
-    _check_login_rate_limit(request)
+    _check_rate_limit(request, "login", 10, "Too many login attempts. Please try again later.")
     user = db.query(User).filter(User.email == payload.email).first()
-    if not user or not verify_password(payload.password, user.hashed_password):
+    # Always run verify_password to prevent timing-based username enumeration
+    password_valid = verify_password(
+        payload.password,
+        user.hashed_password if user else _DUMMY_HASH,
+    )
+    if not user or not password_valid:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",

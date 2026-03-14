@@ -13,6 +13,7 @@ import {
   Cell,
 } from "recharts";
 import type { VolatilityEntry } from "@/types";
+import { formatCompactCurrency } from "@/lib/formatters";
 
 interface RiskReturnScatterProps {
   data: VolatilityEntry[];
@@ -34,13 +35,6 @@ function getSharpeColor(sharpe: number): string {
   if (sharpe >= 0) return "#fbbf24"; // amber-400
   if (sharpe >= -0.5) return "#fb923c"; // orange-400
   return "#f87171"; // red-400
-}
-
-function formatMarketCap(value: number): string {
-  if (value >= 1e12) return `$${(value / 1e12).toFixed(1)}T`;
-  if (value >= 1e9) return `$${(value / 1e9).toFixed(1)}B`;
-  if (value >= 1e6) return `$${(value / 1e6).toFixed(1)}M`;
-  return `$${value.toLocaleString()}`;
 }
 
 interface CustomTooltipProps {
@@ -94,7 +88,7 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
           <p className="text-xs text-slate-400">
             Market Cap:{" "}
             <span className="text-slate-200">
-              {formatMarketCap(entry.market_cap)}
+              {formatCompactCurrency(entry.market_cap)}
             </span>
           </p>
         )}

@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Integer, Numeric, DateTime, ForeignKey
+from sqlalchemy import Integer, Numeric, DateTime, ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -8,6 +8,10 @@ from app.database import Base
 
 class AnalyticsCorrelation(Base):
     __tablename__ = "analytics_correlation"
+    __table_args__ = (
+        Index("idx_corr_period_coin_a", "period_days", "coin_a_id"),
+        Index("idx_corr_period_coin_b", "period_days", "coin_b_id"),
+    )
 
     coin_a_id: Mapped[int] = mapped_column(Integer, ForeignKey("dim_coin.id"), primary_key=True)
     coin_b_id: Mapped[int] = mapped_column(Integer, ForeignKey("dim_coin.id"), primary_key=True)

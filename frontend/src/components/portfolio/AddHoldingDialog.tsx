@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
+import { ErrorState } from "@/components/ui/error-state";
 import type { Coin, PortfolioHolding } from "@/types";
 
 interface AddHoldingDialogProps {
@@ -124,7 +125,14 @@ export function AddHoldingDialog({ open, onOpenChange, onAdd, onEdit, editHoldin
             <div className="space-y-2">
               <Label htmlFor="coin" className="text-slate-300">Coin</Label>
               {coinsError ? (
-                <p className="text-sm text-red-400">Failed to load coins. Please close and try again.</p>
+                <ErrorState
+                  message="Failed to load coins"
+                  onRetry={() => {
+                    setCoinsError(false);
+                    api.getCoins(1, 50).then((res) => setCoins(res.items)).catch(() => setCoinsError(true));
+                  }}
+                  compact
+                />
               ) : (
                 <select
                   id="coin"

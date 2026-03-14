@@ -14,4 +14,4 @@ class DataQualityCheck(Base):
     table_name: Mapped[str] = mapped_column(String(100), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False)  # passed, failed, warning
     details: Mapped[dict | None] = mapped_column(JSON)
-    executed_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    executed_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)

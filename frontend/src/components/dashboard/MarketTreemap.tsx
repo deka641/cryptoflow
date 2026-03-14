@@ -4,7 +4,7 @@ import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { Treemap } from "recharts";
 import { useRouter } from "next/navigation";
 import type { Coin } from "@/types";
-import { formatCurrency, formatCompactCurrency } from "@/lib/formatters";
+import { formatCurrency, formatCompactCurrency, formatPercentage } from "@/lib/formatters";
 
 interface MarketTreemapProps {
   coins: Coin[];
@@ -105,7 +105,7 @@ function CustomTile({
       style={{ cursor: "pointer" }}
       tabIndex={0}
       role="button"
-      aria-label={`${name} (${symbol.toUpperCase()}): ${formatCurrency(price)}, ${change >= 0 ? "+" : ""}${change.toFixed(1)}%`}
+      aria-label={`${name} (${symbol.toUpperCase()}): ${formatCurrency(price)}, ${formatPercentage(change)}`}
     >
       <rect
         x={x}
@@ -156,8 +156,7 @@ function CustomTile({
           fontWeight="600"
           style={{ pointerEvents: "none" }}
         >
-          {change >= 0 ? "+" : ""}
-          {change.toFixed(2)}%
+          {formatPercentage(change)}
         </text>
       )}
     </g>
@@ -283,8 +282,7 @@ export function MarketTreemap({ coins, livePrices }: MarketTreemapProps) {
                   tooltip.node.change >= 0 ? "text-emerald-400" : "text-red-400"
                 }`}
               >
-                {tooltip.node.change >= 0 ? "+" : ""}
-                {tooltip.node.change.toFixed(2)}%
+                {formatPercentage(tooltip.node.change)}
               </span>
               <p className="text-xs text-slate-400">
                 MCap {formatCompactCurrency(tooltip.node.marketCap)}

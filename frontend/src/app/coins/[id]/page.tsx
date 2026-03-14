@@ -43,6 +43,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatCompactCurrency, formatCurrency, formatSupply, formatPercentage } from "@/lib/formatters";
 import { usePriceFlash } from "@/hooks/use-price-flash";
@@ -105,6 +106,8 @@ export default function CoinDetailPage() {
   const [historyError, setHistoryError] = useState(false);
   const [ohlcvError, setOhlcvError] = useState(false);
   const [analyticsError, setAnalyticsError] = useState(false);
+  const [coinListError, setCoinListError] = useState(false);
+  const [volHistoryError, setVolHistoryError] = useState(false);
 
   const { prices } = useLivePricesContext();
   const { user } = useAuth();
@@ -132,6 +135,8 @@ export default function CoinDetailPage() {
     setHistoryError(false);
     setOhlcvError(false);
     setAnalyticsError(false);
+    setCoinListError(false);
+    setVolHistoryError(false);
   }, [coinId]);
 
   const fetchCoin = useCallback(async () => {
@@ -190,8 +195,9 @@ export default function CoinDetailPage() {
     try {
       const result = await api.getCoins(1, 50);
       setCoinList(result.items);
+      setCoinListError(false);
     } catch {
-      // handle error silently
+      setCoinListError(true);
     }
   }, []);
 
@@ -199,8 +205,10 @@ export default function CoinDetailPage() {
     try {
       const data = await api.getVolatilityHistory(coinId);
       setVolHistory(data.entries);
+      setVolHistoryError(false);
     } catch {
       setVolHistory([]);
+      setVolHistoryError(true);
     }
   }, [coinId]);
 
@@ -311,21 +319,27 @@ export default function CoinDetailPage() {
           </Link>
         </Button>
         <div className="flex items-center gap-2">
-          {prevCoin && (
-            <Button variant="ghost" size="sm" asChild className="text-slate-400 hover:text-white">
-              <Link href={`/coins/${prevCoin.id}`}>
-                <ChevronLeft className="size-4 mr-0.5" />
-                {prevCoin.symbol.toUpperCase()}
-              </Link>
-            </Button>
-          )}
-          {nextCoin && (
-            <Button variant="ghost" size="sm" asChild className="text-slate-400 hover:text-white">
-              <Link href={`/coins/${nextCoin.id}`}>
-                {nextCoin.symbol.toUpperCase()}
-                <ChevronRight className="size-4 ml-0.5" />
-              </Link>
-            </Button>
+          {coinListError ? (
+            <span className="text-xs text-slate-500">Nav unavailable</span>
+          ) : (
+            <>
+              {prevCoin && (
+                <Button variant="ghost" size="sm" asChild className="text-slate-400 hover:text-white">
+                  <Link href={`/coins/${prevCoin.id}`}>
+                    <ChevronLeft className="size-4 mr-0.5" />
+                    {prevCoin.symbol.toUpperCase()}
+                  </Link>
+                </Button>
+              )}
+              {nextCoin && (
+                <Button variant="ghost" size="sm" asChild className="text-slate-400 hover:text-white">
+                  <Link href={`/coins/${nextCoin.id}`}>
+                    {nextCoin.symbol.toUpperCase()}
+                    <ChevronRight className="size-4 ml-0.5" />
+                  </Link>
+                </Button>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -652,7 +666,10 @@ export default function CoinDetailPage() {
       )}
 
       {/* Risk Metrics Across Periods */}
-      {volHistory.length > 1 && (
+      {volHistoryError && (
+        <ErrorState message="Failed to load risk history data" onRetry={fetchVolHistory} compact />
+      )}
+      {!volHistoryError && volHistory.length > 1 && (
         <FadeIn>
           <Card className="glass-card">
             <CardHeader className="pb-2">
@@ -789,7 +806,7 @@ export default function CoinDetailPage() {
                 />
                 {coin.price_usd && (
                   <p className="text-xs text-slate-500">
-                    Current price: ${coin.price_usd.toLocaleString()}
+                    Current price: {formatCurrency(coin.price_usd)}
                   </p>
                 )}
               </div>
@@ -806,13 +823,17 @@ export default function CoinDetailPage() {
                 disabled={alertSaving}
                 onClick={async () => {
                   const price = parseFloat(alertPrice);
-                  if (isNaN(price) || price <= 0) return;
+                  if (isNaN(price) || price <= 0) {
+                    toast.error("Please enter a valid price greater than zero");
+                    return;
+                  }
                   setAlertSaving(true);
                   try {
                     await createAlert(coin.id, price, alertDirection);
                     setAlertDialogOpen(false);
-                  } catch { /* toast handled in hook */ }
-                  finally { setAlertSaving(false); }
+                  } catch {
+                    toast.error("Failed to set alert");
+                  } finally { setAlertSaving(false); }
                 }}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white"
               >

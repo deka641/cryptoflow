@@ -93,8 +93,8 @@ def test_create_alert_zero_price(client, db):
     assert resp.status_code == 422
 
 
-def test_create_alert_duplicate_updates(client, db):
-    """Creating a duplicate alert (same user, coin, direction) should update instead of creating a new one."""
+def test_create_multiple_alerts_same_direction(client, db):
+    """Creating multiple alerts for the same coin/direction should create separate alerts."""
     token = _register_and_get_token(client, "dup-alert@example.com")
     coin_id = _get_coin(db)
 
@@ -102,14 +102,15 @@ def test_create_alert_duplicate_updates(client, db):
         "coin_id": coin_id, "target_price": 50000.0, "direction": "above",
     }, headers=_auth_header(token))
     assert resp1.status_code == 201
-    alert_id = resp1.json()["id"]
+    alert_id_1 = resp1.json()["id"]
 
     resp2 = client.post("/api/v1/alerts", json={
         "coin_id": coin_id, "target_price": 60000.0, "direction": "above",
     }, headers=_auth_header(token))
     assert resp2.status_code == 201
-    # Should update the existing alert, not create a new one
-    assert resp2.json()["id"] == alert_id
+    alert_id_2 = resp2.json()["id"]
+    # Should create a new, separate alert
+    assert alert_id_2 != alert_id_1
     assert resp2.json()["target_price"] == 60000.0
 
 

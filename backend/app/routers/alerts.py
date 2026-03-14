@@ -70,7 +70,7 @@ def get_alerts(
             symbol=coins[a.coin_id].symbol if a.coin_id in coins else "",
             name=coins[a.coin_id].name if a.coin_id in coins else "",
             image_url=coins[a.coin_id].image_url if a.coin_id in coins else None,
-            target_price=a.target_price,
+            target_price=float(a.target_price),
             direction=a.direction,
             triggered=a.triggered,
             created_at=a.created_at.isoformat() if a.created_at else "",
@@ -92,33 +92,27 @@ def create_alert(
     if not coin:
         raise HTTPException(status_code=404, detail="Coin not found")
 
-    # Check for duplicate (same user, coin, direction)
-    existing = (
+    # Enforce per-user limit (max 20 active alerts)
+    active_count = (
         db.query(PriceAlert)
-        .filter(
-            PriceAlert.user_id == current_user.id,
-            PriceAlert.coin_id == data.coin_id,
-            PriceAlert.direction == data.direction,
-            PriceAlert.triggered == False,  # noqa: E712
-        )
-        .first()
+        .filter(PriceAlert.user_id == current_user.id, PriceAlert.triggered == False)  # noqa: E712
+        .count()
     )
-    if existing:
-        # Update existing alert
-        existing.target_price = data.target_price
-        db.commit()
-        db.refresh(existing)
-        alert = existing
-    else:
-        alert = PriceAlert(
-            user_id=current_user.id,
-            coin_id=data.coin_id,
-            target_price=data.target_price,
-            direction=data.direction,
+    if active_count >= 20:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Maximum 20 active alerts allowed. Delete some alerts first.",
         )
-        db.add(alert)
-        db.commit()
-        db.refresh(alert)
+
+    alert = PriceAlert(
+        user_id=current_user.id,
+        coin_id=data.coin_id,
+        target_price=data.target_price,
+        direction=data.direction,
+    )
+    db.add(alert)
+    db.commit()
+    db.refresh(alert)
 
     return AlertResponse(
         id=alert.id,
@@ -127,7 +121,7 @@ def create_alert(
         symbol=coin.symbol,
         name=coin.name,
         image_url=coin.image_url,
-        target_price=alert.target_price,
+        target_price=float(alert.target_price),
         direction=alert.direction,
         triggered=alert.triggered,
         created_at=alert.created_at.isoformat() if alert.created_at else "",
@@ -172,8 +166,11 @@ def check_alerts(
         .all()
     )
 
+    # Batch-fetch all coins referenced by alerts (eliminates N+1 queries)
+    alert_coin_ids = list({a.coin_id for a in alerts})
+    coins = {c.id: c for c in db.query(DimCoin).filter(DimCoin.id.in_(alert_coin_ids)).all()} if alert_coin_ids else {}
+
     triggered = []
-    coins = {}
 
     for alert in alerts:
         price = price_map.get(alert.coin_id)
@@ -181,18 +178,13 @@ def check_alerts(
             continue
 
         should_trigger = (
-            (alert.direction == "above" and price >= alert.target_price) or
-            (alert.direction == "below" and price <= alert.target_price)
+            (alert.direction == "above" and price >= float(alert.target_price)) or
+            (alert.direction == "below" and price <= float(alert.target_price))
         )
 
         if should_trigger:
             alert.triggered = True
             alert.triggered_at = datetime.now(timezone.utc)
-
-            if alert.coin_id not in coins:
-                coin = db.query(DimCoin).filter(DimCoin.id == alert.coin_id).first()
-                if coin:
-                    coins[alert.coin_id] = coin
 
             coin = coins.get(alert.coin_id)
             if coin:
@@ -203,7 +195,7 @@ def check_alerts(
                     "symbol": coin.symbol,
                     "name": coin.name,
                     "direction": alert.direction,
-                    "target_price": alert.target_price,
+                    "target_price": float(alert.target_price),
                     "current_price": price,
                 })
 

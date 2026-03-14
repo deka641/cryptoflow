@@ -4,7 +4,7 @@ import { useState, useSyncExternalStore, useCallback } from "react";
 import { X, TrendingUp, TrendingDown } from "lucide-react";
 import { useLivePricesContext } from "@/providers/live-prices-provider";
 import { useCoins } from "@/hooks/use-market-data";
-import { formatCurrency } from "@/lib/formatters";
+import { formatCurrency, formatPercentage } from "@/lib/formatters";
 
 const STORAGE_KEY = "cryptoflow-ticker-dismissed";
 
@@ -64,8 +64,7 @@ export function PriceTicker() {
             ) : (
               <TrendingDown className="size-3" />
             )}
-            {isPositive ? "+" : ""}
-            {change.toFixed(2)}%
+            {formatPercentage(change)}
           </span>
         )}
       </span>

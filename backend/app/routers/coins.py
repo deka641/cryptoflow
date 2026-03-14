@@ -15,14 +15,24 @@ from app.schemas.pagination import PaginatedResponse
 router = APIRouter()
 
 
+_SORT_ALLOWLIST = {"market_cap_rank", "name", "price_usd", "market_cap", "total_volume", "price_change_24h_pct"}
+
+
 @router.get("", response_model=PaginatedResponse)
 def list_coins(
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(20, ge=1, le=100, description="Items per page"),
     search: str | None = Query(None, description="Search by name or symbol"),
+    sort_by: str = Query("market_cap_rank", description="Sort field"),
+    sort_dir: str = Query("asc", description="Sort direction: asc or desc"),
     db: Session = Depends(get_db),
 ):
     """List all coins with their latest market data from the materialized view."""
+    if sort_by not in _SORT_ALLOWLIST:
+        sort_by = "market_cap_rank"
+    if sort_dir not in ("asc", "desc"):
+        sort_dir = "asc"
+
     query = db.query(DimCoin)
 
     if search:
@@ -34,13 +44,33 @@ def list_coins(
     total = query.count()
     pages = math.ceil(total / per_page) if total > 0 else 1
 
-    coins = (
-        query
-        .order_by(DimCoin.market_cap_rank.asc().nullslast())
-        .offset((page - 1) * per_page)
-        .limit(per_page)
-        .all()
-    )
+    # For DimCoin-native fields, sort directly
+    dim_coin_fields = {"market_cap_rank", "name"}
+    if sort_by in dim_coin_fields:
+        col = getattr(DimCoin, sort_by)
+        order = col.asc().nullslast() if sort_dir == "asc" else col.desc().nullslast()
+        coins = (
+            query
+            .order_by(order)
+            .offset((page - 1) * per_page)
+            .limit(per_page)
+            .all()
+        )
+    else:
+        # For market data fields, fetch all matching coin IDs, sort via materialized view
+        all_coin_ids = [c.id for c in query.with_entities(DimCoin.id).all()]
+        if all_coin_ids:
+            mv_rows = db.execute(
+                text(f"SELECT coin_id, price_usd, market_cap, total_volume, price_change_24h_pct FROM mv_latest_market_data WHERE coin_id = ANY(:ids) ORDER BY {sort_by} {'ASC' if sort_dir == 'asc' else 'DESC'} NULLS LAST"),
+                {"ids": all_coin_ids},
+            ).fetchall()
+            sorted_ids = [r.coin_id for r in mv_rows]
+            # Paginate the sorted IDs
+            page_ids = sorted_ids[(page - 1) * per_page : page * per_page]
+            coins_by_id = {c.id: c for c in db.query(DimCoin).filter(DimCoin.id.in_(page_ids)).all()}
+            coins = [coins_by_id[cid] for cid in page_ids if cid in coins_by_id]
+        else:
+            coins = []
 
     # Fetch latest market data for the page of coins from the materialized view
     coin_ids = [c.id for c in coins]

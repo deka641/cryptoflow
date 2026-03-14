@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { useAuth } from "@/providers/auth-provider";
+import { formatCurrency } from "@/lib/formatters";
 import type { PriceAlert } from "@/types";
 
 export function useAlerts() {
@@ -36,7 +37,7 @@ export function useAlerts() {
         direction,
       });
       setAlerts((prev) => [result, ...prev.filter((a) => a.id !== result.id)]);
-      toast.success(`Alert set: ${result.symbol.toUpperCase()} ${direction} $${targetPrice}`);
+      toast.success(`Alert set: ${result.symbol.toUpperCase()} ${direction} ${formatCurrency(targetPrice)}`);
       return result;
     },
     []
@@ -61,7 +62,7 @@ export function useAlerts() {
       if (result.triggered.length > 0) {
         for (const t of result.triggered) {
           toast.info(
-            `${t.symbol.toUpperCase()} ${t.direction === "above" ? "rose above" : "fell below"} $${t.target_price} (now $${t.current_price.toFixed(2)})`,
+            `${t.symbol.toUpperCase()} ${t.direction === "above" ? "rose above" : "fell below"} ${formatCurrency(t.target_price)} (now ${formatCurrency(t.current_price)})`,
             { duration: 10000 }
           );
         }

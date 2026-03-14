@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Briefcase, Download, Plus } from "lucide-react";
+import { Briefcase, Download, Plus, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { useAuth } from "@/providers/auth-provider";
 import { useLivePricesContext } from "@/providers/live-prices-provider";
@@ -24,6 +25,7 @@ export default function PortfolioPage() {
   const { holdings, summary, loading, error, addHolding, updateHolding, deleteHolding, refetch } = usePortfolio();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editHolding, setEditHolding] = useState<PortfolioHolding | null>(null);
+  const [csvExporting, setCsvExporting] = useState(false);
 
   const handleEdit = (holding: PortfolioHolding) => {
     setEditHolding(holding);
@@ -111,6 +113,8 @@ export default function PortfolioPage() {
           <div className="flex gap-2">
             <Button
               onClick={async () => {
+                if (csvExporting) return;
+                setCsvExporting(true);
                 try {
                   const blob = await api.exportPortfolioCsv();
                   const url = URL.createObjectURL(blob);
@@ -119,14 +123,24 @@ export default function PortfolioPage() {
                   a.download = "cryptoflow-portfolio.csv";
                   a.click();
                   URL.revokeObjectURL(url);
-                } catch { /* toast handled by api client */ }
+                  toast.success("Portfolio exported");
+                } catch (err) {
+                  toast.error((err as Error).message || "Failed to export portfolio");
+                } finally {
+                  setCsvExporting(false);
+                }
               }}
               size="sm"
               variant="outline"
+              disabled={csvExporting}
               className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
             >
-              <Download className="size-4 mr-1" />
-              Export CSV
+              {csvExporting ? (
+                <Loader2 className="size-4 mr-1 animate-spin" />
+              ) : (
+                <Download className="size-4 mr-1" />
+              )}
+              {csvExporting ? "Exporting..." : "Export CSV"}
             </Button>
             <Button onClick={handleOpenAdd} size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white">
               <Plus className="size-4 mr-1" />
