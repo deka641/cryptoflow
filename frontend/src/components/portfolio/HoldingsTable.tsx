@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatQuantity, formatPercentage } from "@/lib/formatters";
-import { Pencil, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Trash2 } from "lucide-react";
 import type { PortfolioHolding } from "@/types";
 
 interface HoldingsTableProps {
@@ -32,9 +32,10 @@ interface HoldingsTableProps {
   livePrices: Record<string, number>;
   onEdit: (holding: PortfolioHolding) => void;
   onDelete: (id: number) => void;
+  deletingId?: number | null;
 }
 
-export function HoldingsTable({ holdings, livePrices, onEdit, onDelete }: HoldingsTableProps) {
+export function HoldingsTable({ holdings, livePrices, onEdit, onDelete, deletingId }: HoldingsTableProps) {
   if (holdings.length === 0) return null;
 
   return (
@@ -133,9 +134,12 @@ export function HoldingsTable({ holdings, livePrices, onEdit, onDelete }: Holdin
                         <AlertDialogCancel className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white">Cancel</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={() => onDelete(holding.id)}
+                          disabled={deletingId === holding.id}
                           className="bg-red-600 text-white hover:bg-red-700"
                         >
-                          Remove
+                          {deletingId === holding.id ? (
+                            <><Loader2 className="size-3.5 mr-1.5 animate-spin" />Removing...</>
+                          ) : "Remove"}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>

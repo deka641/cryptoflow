@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from "react";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import type { User } from "@/types";
 
@@ -31,9 +32,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Track whether user was previously authenticated for session expiry detection
+  const wasAuthenticatedRef = useRef(false);
+  useEffect(() => {
+    if (user) wasAuthenticatedRef.current = true;
+  }, [user]);
+
   // Listen for global 401 logout events (e.g. expired token during API calls)
   useEffect(() => {
-    const handleLogout = () => setUser(null);
+    const handleLogout = () => {
+      if (wasAuthenticatedRef.current) {
+        toast.info("Session expired — please sign in again");
+        wasAuthenticatedRef.current = false;
+      }
+      setUser(null);
+    };
     window.addEventListener("auth:logout", handleLogout);
     return () => window.removeEventListener("auth:logout", handleLogout);
   }, []);

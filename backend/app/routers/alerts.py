@@ -147,6 +147,41 @@ def delete_alert(
     return None
 
 
+@router.get("/triggered", response_model=list[AlertResponse])
+def get_triggered_alerts(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get recently triggered alerts for the current user (last 20)."""
+    alerts = (
+        db.query(PriceAlert)
+        .filter(PriceAlert.user_id == current_user.id, PriceAlert.triggered == True)  # noqa: E712
+        .order_by(PriceAlert.triggered_at.desc())
+        .limit(20)
+        .all()
+    )
+
+    coins = {c.id: c for c in db.query(DimCoin).filter(DimCoin.id.in_([a.coin_id for a in alerts])).all()}
+
+    return [
+        AlertResponse(
+            id=a.id,
+            coin_id=a.coin_id,
+            coingecko_id=coins[a.coin_id].coingecko_id if a.coin_id in coins else "",
+            symbol=coins[a.coin_id].symbol if a.coin_id in coins else "",
+            name=coins[a.coin_id].name if a.coin_id in coins else "",
+            image_url=coins[a.coin_id].image_url if a.coin_id in coins else None,
+            target_price=float(a.target_price),
+            direction=a.direction,
+            triggered=a.triggered,
+            created_at=a.created_at.isoformat() if a.created_at else "",
+            triggered_at=a.triggered_at.isoformat() if a.triggered_at else None,
+        )
+        for a in alerts
+        if a.coin_id in coins
+    ]
+
+
 @router.post("/check")
 def check_alerts(
     current_user: User = Depends(get_current_user),

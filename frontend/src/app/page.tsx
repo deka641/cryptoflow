@@ -16,8 +16,10 @@ import {
   Bitcoin,
   Coins,
 } from "lucide-react";
-import { formatCompactCurrency } from "@/lib/formatters";
+import { formatCompactCurrency, formatInteger } from "@/lib/formatters";
 import { useCountUp } from "@/hooks/use-count-up";
+import { WatchlistWidget } from "@/components/dashboard/WatchlistWidget";
+import { ChartErrorBoundary } from "@/components/ui/chart-error-boundary";
 
 function KpiSkeleton() {
   return (
@@ -123,7 +125,7 @@ export default function DashboardPage() {
             />
             <KpiCard
               title="Active Coins"
-              value={new Intl.NumberFormat("en-US").format(Math.round(animatedCoins ?? data.active_coins))}
+              value={formatInteger(Math.round(animatedCoins ?? data.active_coins))}
               change={null}
               icon={<Coins className="size-5" />}
               accentColor="cyan"
@@ -133,6 +135,9 @@ export default function DashboardPage() {
         )}
       </div>
       )}
+
+      {/* Watchlist Widget (only visible when logged in with watchlist items) */}
+      <WatchlistWidget />
 
       {/* Market Map */}
       <div>
@@ -154,10 +159,12 @@ export default function DashboardPage() {
             </div>
           ) : (
             <FadeIn>
-              <MarketTreemap
-                coins={coinsData.items}
-                livePrices={livePrices}
-              />
+              <ChartErrorBoundary>
+                <MarketTreemap
+                  coins={coinsData.items}
+                  livePrices={livePrices}
+                />
+              </ChartErrorBoundary>
             </FadeIn>
           )}
         </CardContent>

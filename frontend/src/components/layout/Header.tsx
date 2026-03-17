@@ -23,6 +23,7 @@ import {
 import { useAuth } from "@/providers/auth-provider";
 import { useLivePricesContext } from "@/providers/live-prices-provider";
 import { SidebarNav } from "./Sidebar";
+import { CoinSearchDialog } from "./CoinSearchDialog";
 
 const pageTitles: Record<string, string> = {
   "/": "Dashboard",
@@ -97,6 +98,7 @@ export function Header() {
       <h1 className="text-lg font-semibold text-white">{title}</h1>
 
       <div className="ml-auto flex items-center gap-4">
+        <CoinSearchDialog />
         <div className="flex items-center gap-2 text-sm text-slate-400">
           <span
             className={`size-2.5 rounded-full transition-all duration-300 ${

@@ -67,6 +67,14 @@ export function formatQuantity(qty: number | null | undefined): string {
 }
 
 /**
+ * Format a whole number with locale grouping (e.g. "1,234").
+ */
+export function formatInteger(value: number | null): string {
+  if (value === null || isInvalidNumber(value)) return "-";
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value);
+}
+
+/**
  * Format an ISO datetime string to a short display format.
  */
 export function formatDateTime(value: string | null): string {

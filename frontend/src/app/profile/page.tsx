@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { User as UserIcon, Lock, Bell, Briefcase, Shield } from "lucide-react";
+import { User as UserIcon, Lock, Bell, Briefcase, Shield, History } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { useAuth } from "@/providers/auth-provider";
@@ -12,7 +12,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FadeIn } from "@/components/ui/fade-in";
-import { formatCurrency } from "@/lib/formatters";
+import { formatCurrency, formatDateTime } from "@/lib/formatters";
+import type { PriceAlert } from "@/types";
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -21,6 +22,20 @@ export default function ProfilePage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
+  const [triggeredAlerts, setTriggeredAlerts] = useState<PriceAlert[]>([]);
+
+  const fetchTriggered = useCallback(async () => {
+    try {
+      const data = await api.getTriggeredAlerts();
+      setTriggeredAlerts(data);
+    } catch {
+      // silent
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user) fetchTriggered();
+  }, [user, fetchTriggered]);
 
   if (!user) {
     return (
@@ -201,6 +216,47 @@ export default function ProfilePage() {
                   ))}
                   {activeAlerts.length > 5 && (
                     <p className="text-xs text-slate-500 text-center">+{activeAlerts.length - 5} more</p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Recently Triggered Alerts */}
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-white">
+                <History className="size-5 text-violet-400" />
+                Recently Triggered
+                {triggeredAlerts.length > 0 && (
+                  <span className="ml-auto rounded-full bg-violet-500/15 px-2 py-0.5 text-xs font-medium text-violet-400">
+                    {triggeredAlerts.length}
+                  </span>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {triggeredAlerts.length === 0 ? (
+                <p className="text-sm text-slate-500">No triggered alerts yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {triggeredAlerts.slice(0, 10).map((alert) => (
+                    <div key={alert.id} className="flex items-center justify-between rounded-lg bg-slate-800/50 px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        {alert.image_url && (
+                          <img src={alert.image_url} alt={alert.name} width={20} height={20} className="size-5 rounded-full" />
+                        )}
+                        <span className="text-sm font-medium text-white">{alert.symbol.toUpperCase()}</span>
+                        <span className={`text-xs px-1.5 py-0.5 rounded ${alert.direction === "above" ? "bg-emerald-500/15 text-emerald-400" : "bg-red-500/15 text-red-400"}`}>
+                          {alert.direction}
+                        </span>
+                        <span className="text-sm text-slate-300">{formatCurrency(alert.target_price)}</span>
+                      </div>
+                      <span className="text-xs text-slate-500">{alert.triggered_at ? formatDateTime(alert.triggered_at) : ""}</span>
+                    </div>
+                  ))}
+                  {triggeredAlerts.length > 10 && (
+                    <p className="text-xs text-slate-500 text-center">+{triggeredAlerts.length - 10} more</p>
                   )}
                 </div>
               )}

@@ -21,9 +21,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDateTime } from "@/lib/formatters";
@@ -125,6 +126,7 @@ export default function QualityPage() {
   const [checksError, setChecksError] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [tableFilter, setTableFilter] = useState<string>("all");
+  const [detailCheck, setDetailCheck] = useState<QualityCheck | null>(null);
   const perPage = 15;
   const refreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -297,10 +299,18 @@ export default function QualityPage() {
                     <TableCell>
                       <StatusBadge status={check.status} />
                     </TableCell>
-                    <TableCell className="text-slate-400 text-sm hidden md:table-cell max-w-xs truncate">
-                      {check.details
-                        ? JSON.stringify(check.details).slice(0, 100)
-                        : "-"}
+                    <TableCell className="text-slate-400 text-sm hidden md:table-cell max-w-xs">
+                      {check.details ? (
+                        <button
+                          onClick={() => setDetailCheck(check)}
+                          className="flex items-center gap-1.5 text-left hover:text-white transition-colors group"
+                        >
+                          <span className="truncate max-w-[200px]">
+                            {JSON.stringify(check.details).slice(0, 80)}
+                          </span>
+                          <Eye className="size-3.5 shrink-0 text-slate-500 group-hover:text-indigo-400 transition-colors" />
+                        </button>
+                      ) : "-"}
                     </TableCell>
                     <TableCell className="text-slate-400 hidden sm:table-cell">
                       {formatDateTime(check.executed_at)}
@@ -316,6 +326,33 @@ export default function QualityPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Check Details Dialog */}
+      <Dialog open={detailCheck !== null} onOpenChange={(open) => { if (!open) setDetailCheck(null); }}>
+        <DialogContent className="bg-slate-900 border-slate-700 max-w-lg max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="text-white">
+              {detailCheck?.check_name}
+              <span className="text-sm font-normal text-slate-400 ml-2">
+                ({detailCheck?.table_name})
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-2">
+            <StatusBadge status={detailCheck?.status ?? "unknown"} />
+            <pre className="mt-4 overflow-auto rounded-lg bg-slate-800 p-4 text-xs text-slate-300 font-mono max-h-[50vh]">
+              {detailCheck?.details
+                ? JSON.stringify(detailCheck.details, null, 2)
+                : "No details available"}
+            </pre>
+            {detailCheck?.executed_at && (
+              <p className="mt-3 text-xs text-slate-500">
+                Executed: {formatDateTime(detailCheck.executed_at)}
+              </p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Pagination */}
       {checksPages > 1 && (

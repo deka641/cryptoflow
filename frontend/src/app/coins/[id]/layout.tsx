@@ -13,8 +13,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
         description: `Live price, charts, risk metrics, and analytics for ${coin.name} (${coin.symbol.toUpperCase()}).`,
       };
     }
-  } catch {
-    // Fall through to default
+  } catch (err) {
+    console.warn(`[SEO] Failed to fetch metadata for coin ${id}:`, err);
   }
   return {
     title: "Coin Detail",

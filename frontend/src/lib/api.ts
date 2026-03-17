@@ -210,6 +210,10 @@ class ApiClient {
     return this.request<import("@/types").PriceAlert[]>("/api/v1/alerts");
   }
 
+  async getTriggeredAlerts() {
+    return this.request<import("@/types").PriceAlert[]>("/api/v1/alerts/triggered");
+  }
+
   async createAlert(data: { coin_id: number; target_price: number; direction: string }) {
     return this.request<import("@/types").PriceAlert>("/api/v1/alerts", {
       method: "POST",

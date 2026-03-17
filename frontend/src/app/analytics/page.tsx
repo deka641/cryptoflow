@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { FadeIn } from "@/components/ui/fade-in";
+import { ChartErrorBoundary } from "@/components/ui/chart-error-boundary";
 
 const PERIODS = [
   { label: "30d", days: 30 },
@@ -120,15 +121,17 @@ export default function AnalyticsPage() {
                 </div>
               ) : correlation ? (
                 <FadeIn>
-                  <CorrelationHeatmap
-                    coins={correlation.coins}
-                    matrix={correlation.matrix}
-                    onCellClick={(coinA, coinB) => {
-                      router.push(
-                        `/compare?coins=${coinA},${coinB}&period=${correlationDays}`
-                      );
-                    }}
-                  />
+                  <ChartErrorBoundary>
+                    <CorrelationHeatmap
+                      coins={correlation.coins}
+                      matrix={correlation.matrix}
+                      onCellClick={(coinA, coinB) => {
+                        router.push(
+                          `/compare?coins=${coinA},${coinB}&period=${correlationDays}`
+                        );
+                      }}
+                    />
+                  </ChartErrorBoundary>
                 </FadeIn>
               ) : (
                 <ErrorState message="Failed to load correlation data" onRetry={fetchCorrelation} />
@@ -172,7 +175,9 @@ export default function AnalyticsPage() {
                 </div>
               ) : volatility ? (
                 <FadeIn>
-                  <RiskReturnScatter data={volatility} />
+                  <ChartErrorBoundary>
+                    <RiskReturnScatter data={volatility} />
+                  </ChartErrorBoundary>
                 </FadeIn>
               ) : (
                 <ErrorState message="Failed to load analytics data" onRetry={fetchVolatility} />
@@ -194,7 +199,9 @@ export default function AnalyticsPage() {
                   volSkeleton
                 ) : volatility ? (
                   <FadeIn>
-                    <DrawdownChart data={volatility} />
+                    <ChartErrorBoundary compact>
+                      <DrawdownChart data={volatility} />
+                    </ChartErrorBoundary>
                   </FadeIn>
                 ) : (
                   <ErrorState message="Failed to load drawdown data" onRetry={fetchVolatility} />
@@ -214,7 +221,9 @@ export default function AnalyticsPage() {
                   volSkeleton
                 ) : volatility ? (
                   <FadeIn>
-                    <VolatilityChart data={volatility} compact />
+                    <ChartErrorBoundary compact>
+                      <VolatilityChart data={volatility} compact />
+                    </ChartErrorBoundary>
                   </FadeIn>
                 ) : (
                   <ErrorState message="Failed to load volatility data" onRetry={fetchVolatility} />

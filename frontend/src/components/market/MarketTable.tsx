@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import {
   Table,
@@ -68,6 +68,17 @@ export function MarketTable({
 }: MarketTableProps) {
   const [sortField, setSortField] = useState<SortField>("market_cap_rank");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [togglingWatchlist, setTogglingWatchlist] = useState<number | null>(null);
+
+  const handleToggleWatchlist = useCallback(async (coinId: number) => {
+    if (!onToggleWatchlist) return;
+    setTogglingWatchlist(coinId);
+    try {
+      await onToggleWatchlist(coinId);
+    } finally {
+      setTogglingWatchlist(null);
+    }
+  }, [onToggleWatchlist]);
 
   const handleSort = (field: SortField) => {
     let newDir: SortDirection;
@@ -178,9 +189,13 @@ export function MarketTable({
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      onToggleWatchlist(coin.id);
+                      handleToggleWatchlist(coin.id);
                     }}
-                    className="flex items-center justify-center hover:scale-110 transition-transform"
+                    disabled={togglingWatchlist === coin.id}
+                    className={cn(
+                      "flex items-center justify-center hover:scale-110 transition-all",
+                      togglingWatchlist === coin.id && "opacity-50 animate-pulse"
+                    )}
                     aria-label={watched ? "Remove from watchlist" : "Add to watchlist"}
                   >
                     <Star

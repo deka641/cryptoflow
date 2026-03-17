@@ -47,6 +47,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatCompactCurrency, formatCurrency, formatSupply, formatPercentage } from "@/lib/formatters";
 import { usePriceFlash } from "@/hooks/use-price-flash";
+import { ChartErrorBoundary } from "@/components/ui/chart-error-boundary";
 
 const TIME_PERIODS = [
   { label: "7d", days: 7 },
@@ -113,7 +114,7 @@ export default function CoinDetailPage() {
   const { user } = useAuth();
   const { toggle, isWatched } = useWatchlist();
   const { addHolding } = usePortfolio();
-  const { createAlert } = useAlerts();
+  const { alerts, createAlert } = useAlerts();
   const [portfolioDialogOpen, setPortfolioDialogOpen] = useState(false);
   const [alertDialogOpen, setAlertDialogOpen] = useState(false);
   const [alertPrice, setAlertPrice] = useState("");
@@ -627,7 +628,9 @@ export default function CoinDetailPage() {
               <ErrorState message="Failed to load OHLCV data" onRetry={fetchOHLCV} />
             ) : (
               <FadeIn>
-                <CandlestickChart data={ohlcv?.candles ?? []} />
+                <ChartErrorBoundary>
+                  <CandlestickChart data={ohlcv?.candles ?? []} />
+                </ChartErrorBoundary>
               </FadeIn>
             )
           ) : historyLoading ? (
@@ -636,7 +639,9 @@ export default function CoinDetailPage() {
             <ErrorState message="Failed to load price history" onRetry={fetchHistory} />
           ) : (
             <FadeIn>
-              <PriceChart data={chartData} />
+              <ChartErrorBoundary>
+                <PriceChart data={chartData} />
+              </ChartErrorBoundary>
             </FadeIn>
           )}
         </CardContent>
@@ -763,6 +768,30 @@ export default function CoinDetailPage() {
             image_url: coin.image_url,
           }}
         />
+      )}
+
+      {/* Alert hint when no alerts exist for this coin */}
+      {user && coin && alerts.filter((a) => a.coin_id === coin.id && !a.triggered).length === 0 && (
+        <Card className="glass-card border-dashed border-slate-700/50">
+          <CardContent className="flex items-center justify-center gap-3 py-4">
+            <Bell className="size-4 text-slate-500" />
+            <p className="text-sm text-slate-500">
+              Set a price alert to get notified when {coin.symbol.toUpperCase()} hits your target.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setAlertPrice(coin.price_usd?.toString() ?? "");
+                setAlertDialogOpen(true);
+              }}
+              className="border-slate-700 text-slate-300 hover:text-white"
+            >
+              <Bell className="size-3.5 mr-1" />
+              Set Alert
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
       {/* Price Alert Dialog */}

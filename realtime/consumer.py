@@ -23,6 +23,7 @@ REDIS_CHANNEL = "crypto:prices"
 
 # Mapping from CoinCap asset IDs to CoinGecko IDs.
 # CoinCap uses its own ID scheme; the frontend expects CoinGecko IDs.
+# Last reconciled: 2026-03-17 — covers all likely top-50 coins by market cap.
 COINCAP_TO_COINGECKO = {
     "bitcoin": "bitcoin",
     "ethereum": "ethereum",
@@ -75,6 +76,18 @@ COINCAP_TO_COINGECKO = {
     "arweave": "arweave",
     "gala": "gala",
     "render-token": "render-token",
+    # Additional mappings for top-50 coverage
+    "sui": "sui",
+    "pepe": "pepe",
+    "injective-protocol": "injective-protocol",
+    "immutable-x": "immutable-x",
+    "sei": "sei-network",
+    "celestia": "celestia",
+    "jupiter": "jupiter-exchange-solana",
+    "ondo-finance": "ondo-finance",
+    "mantle": "mantle",
+    "optimism": "optimism",
+    "arbitrum": "arbitrum",
 }
 
 # Build CoinCap WebSocket URL with all asset IDs
@@ -106,7 +119,11 @@ async def consume():
                 while not shutdown_event.is_set():
                     try:
                         msg = await asyncio.wait_for(ws.recv(), timeout=60)
-                        data = json.loads(msg)
+                        try:
+                            data = json.loads(msg)
+                        except (json.JSONDecodeError, TypeError):
+                            logger.warning("Non-JSON message from CoinCap, skipping: %s", str(msg)[:100])
+                            continue
 
                         if data:
                             # Map CoinCap IDs to CoinGecko IDs and filter unchanged prices

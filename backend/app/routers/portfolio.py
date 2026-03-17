@@ -234,17 +234,25 @@ def export_portfolio_csv(
     db: Session = Depends(get_db),
 ):
     """Export portfolio holdings as CSV."""
-    holdings = (
-        db.query(PortfolioHolding)
-        .filter(PortfolioHolding.user_id == current_user.id)
-        .order_by(PortfolioHolding.created_at.desc())
-        .all()
-    )
+    try:
+        holdings = (
+            db.query(PortfolioHolding)
+            .filter(PortfolioHolding.user_id == current_user.id)
+            .order_by(PortfolioHolding.created_at.desc())
+            .all()
+        )
 
-    coin_ids = list({h.coin_id for h in holdings})
-    prices, coins = _get_prices_and_coins(db, coin_ids)
+        coin_ids = list({h.coin_id for h in holdings})
+        prices, coins = _get_prices_and_coins(db, coin_ids)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate export",
+        )
 
     output = io.StringIO()
+    # UTF-8 BOM for Excel compatibility
+    output.write("\ufeff")
     writer = csv.writer(output)
     writer.writerow([
         "Coin", "Symbol", "Quantity", "Buy Price (USD)", "Current Price (USD)",
@@ -256,7 +264,7 @@ def export_portfolio_csv(
         if not coin:
             continue
         qty = float(h.quantity)
-        buy_price = float(h.buy_price_usd)
+        buy_price = float(h.buy_price_usd) if h.buy_price_usd is not None else 0.0
         current_price = prices.get(h.coin_id)
         cost_basis = qty * buy_price
         current_value = qty * current_price if current_price is not None else None

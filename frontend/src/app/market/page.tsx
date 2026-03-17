@@ -234,10 +234,18 @@ export default function MarketPage() {
                       isWatched={isWatched}
                     />
                   ) : (
-                    <div className="flex h-48 flex-col items-center justify-center gap-2 text-slate-500">
+                    <div className="flex h-48 flex-col items-center justify-center gap-3 text-slate-500">
                       <Star className="size-8 text-slate-600" />
                       <p>Your watchlist is empty.</p>
                       <p className="text-xs text-slate-600">Star a coin to add it!</p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setActiveTab("all")}
+                        className="border-slate-700 text-slate-300 hover:text-white mt-1"
+                      >
+                        Browse Market
+                      </Button>
                     </div>
                   )}
                 </CardContent>

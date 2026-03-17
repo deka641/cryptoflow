@@ -79,13 +79,23 @@ def _check_rate_limit(request: Request, prefix: str, max_attempts: int, detail: 
     mem_key = f"{prefix}:{ip}"
     now = time.monotonic()
     attempts = _rate_limit_attempts[mem_key]
-    _rate_limit_attempts[mem_key] = [t for t in attempts if now - t < _RATE_LIMIT_WINDOW]
-    if len(_rate_limit_attempts[mem_key]) >= max_attempts:
+    cleaned = [t for t in attempts if now - t < _RATE_LIMIT_WINDOW]
+    if not cleaned:
+        # Remove empty keys to prevent unbounded dict growth
+        _rate_limit_attempts.pop(mem_key, None)
+        cleaned = []
+    else:
+        _rate_limit_attempts[mem_key] = cleaned
+    if len(cleaned) >= max_attempts:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=detail,
         )
     _rate_limit_attempts[mem_key].append(now)
+
+    # Cap total keys to prevent memory leak from many distinct IPs
+    if len(_rate_limit_attempts) > 10_000:
+        _rate_limit_attempts.clear()
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)

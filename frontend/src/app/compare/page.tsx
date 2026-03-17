@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { GitCompareArrows, TrendingUp } from "lucide-react";
+import { ChartErrorBoundary } from "@/components/ui/chart-error-boundary";
 
 const PERIODS = [
   { label: "7d", days: 7 },
@@ -367,7 +368,9 @@ function CompareContent() {
             ) : historyError ? (
               <ErrorState message="Failed to load price history" onRetry={fetchHistories} compact />
             ) : (
-              <NormalizedChart chartData={chartData} coins={coinInfos} />
+              <ChartErrorBoundary>
+                <NormalizedChart chartData={chartData} coins={coinInfos} />
+              </ChartErrorBoundary>
             )}
           </CardContent>
         </Card>
