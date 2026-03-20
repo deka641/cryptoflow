@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
   ScatterChart,
   Scatter,
@@ -50,9 +51,11 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
     <div className="rounded-lg border border-slate-700/50 bg-slate-800/90 backdrop-blur-md px-4 py-3 shadow-xl shadow-black/20">
       <div className="flex items-center gap-2 mb-2">
         {entry.image_url && (
-          <img
+          <Image
             src={entry.image_url}
             alt={entry.symbol}
+            width={20}
+            height={20}
             className="w-5 h-5 rounded-full"
           />
         )}

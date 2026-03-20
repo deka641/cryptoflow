@@ -102,6 +102,7 @@ stop_procs "pgAdmin4" "pgadmin4"
 
 # ── 5. Cron scheduler ───────────────────────
 step 5 "Cron scheduler"
+crontab -r 2>/dev/null
 if pgrep -x cron > /dev/null 2>&1; then
     service cron stop 2>/dev/null
     if ! pgrep -x cron > /dev/null 2>&1; then

@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/ui/error-state";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { formatCurrency, formatCompactCurrency } from "@/lib/formatters";
@@ -78,16 +79,19 @@ export function PerformanceChart({ hasHoldings }: PerformanceChartProps) {
   const [days, setDays] = useState(30);
   const [performance, setPerformance] = useState<PortfolioPerformance | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
   const [activeBenchmark, setActiveBenchmark] = useState<string | null>(null);
   const [benchmarkData, setBenchmarkData] = useState<{ timestamp: string; value: number }[]>([]);
 
   const fetchPerformance = useCallback(async (d: number) => {
     setLoading(true);
+    setError(false);
     try {
       const data = await api.getPortfolioPerformance(d);
       setPerformance(data);
     } catch {
       setPerformance(null);
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -201,6 +205,8 @@ export function PerformanceChart({ hasHoldings }: PerformanceChartProps) {
 
       {loading ? (
         <Skeleton className="h-80 w-full bg-slate-800" />
+      ) : error ? (
+        <ErrorState compact message="Failed to load performance data" onRetry={() => fetchPerformance(days)} />
       ) : chartData.length === 0 ? (
         <div className="flex h-80 items-center justify-center text-slate-500">
           No performance data for this period

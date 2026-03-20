@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState, useEffect, useCallback, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import type { Coin, CoinHistory, CorrelationMatrix, VolatilityEntry } from "@/types";
 import { CoinSelector, COIN_COLORS } from "@/components/compare/CoinSelector";
@@ -45,6 +45,7 @@ export default function ComparePage() {
 
 function CompareContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const [selectedCoins, setSelectedCoins] = useState<Coin[]>([]);
   const [periodDays, setPeriodDays] = useState(30);
@@ -327,12 +328,37 @@ function CompareContent() {
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <GitCompareArrows className="size-12 text-slate-600 mb-4" />
             <p className="text-lg font-medium text-slate-300">
-              Select at least 2 coins to see their comparison chart and metrics.
+              Compare Cryptocurrencies
             </p>
-            <p className="text-sm text-slate-500 mt-1">
-              Use the selector above to pick coins from the top 50 by market
-              cap.
+            <p className="text-sm text-slate-500 mt-2 max-w-md">
+              Select at least 2 coins above to compare their normalized performance, risk metrics, and pairwise correlations side by side.
             </p>
+            <div className="flex flex-wrap gap-2 mt-6">
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white"
+                onClick={() => router.push("/compare?coins=btc,eth")}
+              >
+                BTC vs ETH
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white"
+                onClick={() => router.push("/compare?coins=btc,eth,sol")}
+              >
+                BTC vs ETH vs SOL
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white"
+                onClick={() => router.push("/compare?coins=doge,shib")}
+              >
+                DOGE vs SHIB
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}

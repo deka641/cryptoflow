@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { CoinMover } from "@/types";
 import { cn } from "@/lib/utils";
@@ -22,7 +23,7 @@ export function TopMovers({ movers }: TopMoversProps) {
                 {index + 1}
               </span>
               {mover.image_url ? (
-                <img
+                <Image
                   src={mover.image_url}
                   alt={mover.name}
                   width={24}

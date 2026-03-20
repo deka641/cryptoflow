@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import Image from "next/image";
 import { Search, X, ChevronDown, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -150,9 +151,11 @@ export function CoinSelector({
                     )}
                   >
                     {coin.image_url ? (
-                      <img
+                      <Image
                         src={coin.image_url}
                         alt={coin.name}
+                        width={24}
+                        height={24}
                         className="size-6 rounded-full shrink-0"
                       />
                     ) : (

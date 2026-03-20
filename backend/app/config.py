@@ -22,10 +22,16 @@ class Settings(BaseSettings):
     COINGECKO_BASE_URL: str = "https://api.coingecko.com/api/v3"
     COINGECKO_RATE_LIMIT: int = 10  # requests per minute
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "https://cryptoflow.deka-labs.dev"]
+    ENVIRONMENT: str = "development"
 
     @model_validator(mode="after")
     def _warn_insecure_secret(self) -> "Settings":
         if self.JWT_SECRET == _INSECURE_DEFAULT_SECRET:
+            if self.ENVIRONMENT == "production":
+                raise ValueError(
+                    "JWT_SECRET must be changed from the insecure default "
+                    "in production. Set the JWT_SECRET environment variable in .env."
+                )
             _logger.warning(
                 "JWT_SECRET is using the insecure default value. "
                 "Set the JWT_SECRET environment variable in .env for production use."

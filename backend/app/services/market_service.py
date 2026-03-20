@@ -18,6 +18,7 @@ def get_market_overview(db: Session) -> dict:
             "top_losers": [],
             "market_cap_change_24h_pct": None,
             "volume_change_24h_pct": None,
+            "last_updated": None,
         }
 
     total_market_cap = sum(float(r.market_cap or 0) for r in latest)
@@ -77,6 +78,12 @@ def get_market_overview(db: Session) -> dict:
 
     movers.sort(key=lambda x: x["price_change_24h_pct"], reverse=True)
 
+    # Get the most recent data timestamp
+    last_updated_row = db.execute(text(
+        "SELECT MAX(timestamp) AS last_updated FROM fact_market_data"
+    )).fetchone()
+    last_updated = last_updated_row.last_updated.isoformat() if last_updated_row and last_updated_row.last_updated else None
+
     return {
         "total_market_cap": total_market_cap,
         "total_volume_24h": total_volume,
@@ -86,6 +93,7 @@ def get_market_overview(db: Session) -> dict:
         "top_losers": movers[-5:][::-1],
         "market_cap_change_24h_pct": market_cap_change_pct,
         "volume_change_24h_pct": volume_change_pct,
+        "last_updated": last_updated,
     }
 
 

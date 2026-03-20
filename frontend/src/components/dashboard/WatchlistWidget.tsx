@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useAuth } from "@/providers/auth-provider";
@@ -46,8 +47,8 @@ export function WatchlistWidget() {
     return () => { cancelled = true; };
   }, [user, watchlist]);
 
-  // Don't render if not logged in or watchlist is empty
-  if (!user || (watchlist.size === 0 && !loading)) return null;
+  // Don't render if not logged in
+  if (!user) return null;
 
   return (
     <Card className="glass-card">
@@ -64,7 +65,19 @@ export function WatchlistWidget() {
               <Skeleton key={i} className="h-14 w-full rounded-lg bg-slate-700" />
             ))}
           </div>
-        ) : coins.length === 0 ? null : (
+        ) : coins.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <Star className="size-8 text-slate-600 mb-2" />
+            <p className="text-sm text-slate-400">Your watchlist is empty</p>
+            <p className="text-xs text-slate-500 mt-1">
+              Star coins from the{" "}
+              <Link href="/market" className="text-indigo-400 hover:text-indigo-300 underline-offset-2 hover:underline">
+                Market page
+              </Link>
+              {" "}to track them here
+            </p>
+          </div>
+        ) : (
           <FadeIn>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {coins.map((coin) => {
@@ -79,7 +92,7 @@ export function WatchlistWidget() {
                     className="flex items-center gap-3 rounded-lg bg-slate-800/50 px-3 py-2.5 hover:bg-slate-700/50 transition-colors"
                   >
                     {coin.image_url ? (
-                      <img src={coin.image_url} alt={coin.name} width={24} height={24} className="size-6 rounded-full" />
+                      <Image src={coin.image_url} alt={coin.name} width={24} height={24} className="size-6 rounded-full" />
                     ) : (
                       <div className="flex size-6 items-center justify-center rounded-full bg-slate-700 text-xs font-bold text-slate-300">
                         {coin.symbol[0]?.toUpperCase()}

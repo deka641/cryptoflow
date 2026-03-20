@@ -120,7 +120,8 @@ export default function PortfolioPage() {
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement("a");
                   a.href = url;
-                  a.download = "cryptoflow-portfolio.csv";
+                  const today = new Date().toISOString().split('T')[0];
+                  a.download = `cryptoflow-portfolio-${today}.csv`;
                   a.click();
                   URL.revokeObjectURL(url);
                   toast.success("Portfolio exported");

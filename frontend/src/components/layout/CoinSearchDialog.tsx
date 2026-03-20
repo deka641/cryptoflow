@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -140,7 +141,7 @@ export function CoinSearchDialog() {
                 }`}
               >
                 {coin.image_url ? (
-                  <img
+                  <Image
                     src={coin.image_url}
                     alt={coin.name}
                     width={24}

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
   Table,
   TableHeader,
@@ -63,9 +64,11 @@ export function PerformanceTable({ metrics }: PerformanceTableProps) {
                   style={{ backgroundColor: m.color }}
                 />
                 {m.imageUrl ? (
-                  <img
+                  <Image
                     src={m.imageUrl}
                     alt={m.name}
+                    width={24}
+                    height={24}
                     className="size-6 rounded-full shrink-0"
                   />
                 ) : (

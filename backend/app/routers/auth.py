@@ -1,13 +1,15 @@
 import logging
+import secrets
 import time
 from collections import defaultdict
+from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.auth import UserRegister, UserLogin, UserResponse, Token, PasswordChange
+from app.schemas.auth import UserRegister, UserLogin, UserResponse, Token, PasswordChange, ForgotPasswordRequest, ResetPasswordRequest
 from app.auth.jwt import hash_password, verify_password, create_access_token
 from app.auth.dependencies import get_current_user
 from app.config import settings
@@ -167,3 +169,57 @@ def change_password(
     current_user.hashed_password = hash_password(payload.new_password)
     db.commit()
     return {"message": "Password updated successfully"}
+
+
+@router.post("/forgot-password")
+def forgot_password(payload: ForgotPasswordRequest, request: Request, db: Session = Depends(get_db)):
+    """Request a password reset token."""
+    _check_rate_limit(request, "forgot_password", 3, "Too many password reset requests. Please try again later.")
+    user = db.query(User).filter(User.email == payload.email).first()
+
+    # Always return success to prevent email enumeration
+    if not user:
+        return {"message": "If an account with that email exists, a password reset token has been generated."}
+
+    # Generate token
+    token = secrets.token_urlsafe(32)
+    user.password_reset_token = token
+    user.reset_token_expires = datetime.now(timezone.utc) + timedelta(hours=1)
+    db.commit()
+
+    _logger.info("Password reset token generated for user %s: %s", user.email, token)
+
+    # Return token in response for dev purposes (no email service configured)
+    return {
+        "message": "If an account with that email exists, a password reset token has been generated.",
+        "dev_token": token,
+    }
+
+
+@router.post("/reset-password")
+def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db)):
+    """Reset password using a valid reset token."""
+    user = db.query(User).filter(User.password_reset_token == payload.token).first()
+
+    if not user or not user.reset_token_expires:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token",
+        )
+
+    if user.reset_token_expires < datetime.now(timezone.utc):
+        # Clear expired token
+        user.password_reset_token = None
+        user.reset_token_expires = None
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token",
+        )
+
+    user.hashed_password = hash_password(payload.new_password)
+    user.password_reset_token = None
+    user.reset_token_expires = None
+    db.commit()
+
+    return {"message": "Password has been reset successfully"}

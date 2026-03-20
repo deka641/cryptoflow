@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   Table,
@@ -218,7 +219,7 @@ export function MarketTable({
                   className="flex items-center gap-3 hover:underline"
                 >
                   {coin.image_url ? (
-                    <img
+                    <Image
                       src={coin.image_url}
                       alt={coin.name}
                       width={24}

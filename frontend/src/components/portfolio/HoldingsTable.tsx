@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import {
   Table,
@@ -71,7 +72,7 @@ export function HoldingsTable({ holdings, livePrices, onEdit, onDelete, deleting
               <TableCell>
                 <Link href={`/coins/${holding.coin_id}`} className="flex items-center gap-3 hover:underline">
                   {holding.image_url ? (
-                    <img src={holding.image_url} alt={holding.name} width={24} height={24} className="size-6 rounded-full" />
+                    <Image src={holding.image_url} alt={holding.name} width={24} height={24} className="size-6 rounded-full" />
                   ) : (
                     <div className="flex size-6 items-center justify-center rounded-full bg-slate-700 text-xs font-bold text-slate-300">
                       {holding.symbol[0]?.toUpperCase()}

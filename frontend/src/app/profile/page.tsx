@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { User as UserIcon, Lock, Bell, Briefcase, Shield, History } from "lucide-react";
 import { toast } from "sonner";
@@ -204,7 +205,7 @@ export default function ProfilePage() {
                     <div key={alert.id} className="flex items-center justify-between rounded-lg bg-slate-800/50 px-3 py-2">
                       <div className="flex items-center gap-2">
                         {alert.image_url && (
-                          <img src={alert.image_url} alt={alert.name} width={20} height={20} className="size-5 rounded-full" />
+                          <Image src={alert.image_url} alt={alert.name} width={20} height={20} className="size-5 rounded-full" />
                         )}
                         <span className="text-sm font-medium text-white">{alert.symbol.toUpperCase()}</span>
                         <span className={`text-xs px-1.5 py-0.5 rounded ${alert.direction === "above" ? "bg-emerald-500/15 text-emerald-400" : "bg-red-500/15 text-red-400"}`}>
@@ -244,7 +245,7 @@ export default function ProfilePage() {
                     <div key={alert.id} className="flex items-center justify-between rounded-lg bg-slate-800/50 px-3 py-2">
                       <div className="flex items-center gap-2">
                         {alert.image_url && (
-                          <img src={alert.image_url} alt={alert.name} width={20} height={20} className="size-5 rounded-full" />
+                          <Image src={alert.image_url} alt={alert.name} width={20} height={20} className="size-5 rounded-full" />
                         )}
                         <span className="text-sm font-medium text-white">{alert.symbol.toUpperCase()}</span>
                         <span className={`text-xs px-1.5 py-0.5 rounded ${alert.direction === "above" ? "bg-emerald-500/15 text-emerald-400" : "bg-red-500/15 text-red-400"}`}>

@@ -150,6 +150,8 @@ else
         fail "Cron failed to start"
     fi
 fi
+crontab "$PROJECT_DIR/scripts/crontab"
+info "Installed CryptoFlow crontab (4 batch jobs)"
 
 # ── 7. pgAdmin4 ──────────────────────────────
 step 7 "pgAdmin4 ${D}(:5050)${N}"

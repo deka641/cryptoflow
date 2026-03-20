@@ -1,0 +1,21 @@
+# ─────────────────────────────────────────────
+# CryptoFlow — Batch Job Schedules
+# ─────────────────────────────────────────────
+# Install:  crontab /opt/cryptoflow/scripts/crontab
+# Remove:   crontab -r
+#
+# Jobs log to /tmp/cryptoflow-*.log and record runs in the pipeline_runs table.
+# All jobs run from the project root with the Python virtualenv activated.
+# ─────────────────────────────────────────────
+
+# Ingest market data from CoinGecko (every 10 minutes)
+*/10 * * * * cd /opt/cryptoflow && .venv/bin/python scripts/jobs/ingest_market_data.py >> /tmp/cryptoflow-ingest.log 2>&1
+
+# Transform daily OHLCV aggregates (daily at 03:00 UTC)
+0 3 * * * cd /opt/cryptoflow && .venv/bin/python scripts/jobs/transform_aggregates.py >> /tmp/cryptoflow-aggregates.log 2>&1
+
+# Compute correlation and volatility analytics (daily at 04:00 UTC)
+0 4 * * * cd /opt/cryptoflow && .venv/bin/python scripts/jobs/compute_analytics.py >> /tmp/cryptoflow-analytics.log 2>&1
+
+# Run data quality checks (every hour)
+0 * * * * cd /opt/cryptoflow && .venv/bin/python scripts/jobs/data_quality_checks.py >> /tmp/cryptoflow-quality.log 2>&1

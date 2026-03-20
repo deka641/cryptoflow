@@ -1,6 +1,6 @@
 import csv
 import io
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
@@ -289,7 +289,7 @@ def export_portfolio_csv(
     return StreamingResponse(
         iter([output.getvalue()]),
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=cryptoflow-portfolio.csv"},
+        headers={"Content-Disposition": f'attachment; filename="cryptoflow-portfolio-{date.today().isoformat()}.csv"'},
     )
 
 

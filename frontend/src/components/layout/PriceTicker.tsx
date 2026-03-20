@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore, useCallback } from "react";
+import Image from "next/image";
 import { X, TrendingUp, TrendingDown } from "lucide-react";
 import { useLivePricesContext } from "@/providers/live-prices-provider";
 import { useCoins } from "@/hooks/use-market-data";
@@ -49,7 +50,7 @@ export function PriceTicker() {
         className="inline-flex items-center gap-1.5 px-4 whitespace-nowrap"
       >
         {coin.image_url && (
-          <img src={coin.image_url} alt="" width={16} height={16} className="size-4 rounded-full" />
+          <Image src={coin.image_url} alt="" width={16} height={16} className="size-4 rounded-full" />
         )}
         <span className="font-medium text-slate-200">{coin.symbol.toUpperCase()}</span>
         <span className="text-white">{formatCurrency(price)}</span>

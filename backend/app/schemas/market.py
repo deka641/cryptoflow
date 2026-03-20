@@ -10,6 +10,7 @@ class MarketOverview(BaseModel):
     volume_change_24h_pct: float | None = None
     top_gainers: list[dict]  # [{id, symbol, name, price_change_24h_pct}]
     top_losers: list[dict]
+    last_updated: str | None = None
 
 
 class KpiSparklineResponse(BaseModel):

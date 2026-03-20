@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useLivePricesContext } from "@/providers/live-prices-provider";
@@ -348,7 +349,7 @@ export default function CoinDetailPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center gap-3">
         {coin.image_url ? (
-          <img src={coin.image_url} alt={coin.name} width={48} height={48} className="size-12 rounded-full" />
+          <Image src={coin.image_url} alt={coin.name} width={48} height={48} className="size-12 rounded-full" />
         ) : (
           <div className="flex size-12 items-center justify-center rounded-full bg-slate-700 text-xl font-bold text-slate-300">
             {coin.symbol[0]?.toUpperCase()}
