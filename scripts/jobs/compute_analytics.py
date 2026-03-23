@@ -16,6 +16,7 @@ from pathlib import Path
 
 import psycopg2
 from psycopg2.extras import execute_values
+from _common import db_connection, log_pipeline_run
 
 # Load .env from project root
 from dotenv import load_dotenv
@@ -60,181 +61,160 @@ def run():
     records_processed = 0
     error_message = None
 
-    conn = None
     try:
-        conn = psycopg2.connect(DB_DSN)
-        cur = conn.cursor()
+        with db_connection(DB_DSN) as conn:
+            cur = conn.cursor()
 
-        for period_days in [30, 90]:
-            cutoff = datetime.now(timezone.utc) - timedelta(days=period_days)
-            logger.info(f"Computing analytics for {period_days}d period...")
+            for period_days in [30, 90]:
+                cutoff = datetime.now(timezone.utc) - timedelta(days=period_days)
+                logger.info(f"Computing analytics for {period_days}d period...")
 
-            # Get top 15 coins by market cap rank
-            cur.execute("""
-                SELECT id, symbol FROM dim_coin
-                WHERE market_cap_rank IS NOT NULL
-                ORDER BY market_cap_rank
-                LIMIT 15
-            """)
-            top_coins = cur.fetchall()
-            coin_ids = [c[0] for c in top_coins]
+                # Get top 15 coins by market cap rank
+                cur.execute("""
+                    SELECT id, symbol FROM dim_coin
+                    WHERE market_cap_rank IS NOT NULL
+                    ORDER BY market_cap_rank
+                    LIMIT 15
+                """)
+                top_coins = cur.fetchall()
+                coin_ids = [c[0] for c in top_coins]
 
-            # Fetch daily close prices for all top coins in a single query
-            coin_prices: dict[int, list[tuple[str, float]]] = {}
-            if coin_ids:
-                placeholders = ",".join(["%s"] * len(coin_ids))
-                cur.execute(f"""
-                    SELECT coin_id, timestamp::date, price_usd
-                    FROM fact_market_data
-                    WHERE coin_id IN ({placeholders})
-                      AND timestamp >= %s
-                      AND price_usd IS NOT NULL
-                    ORDER BY coin_id, timestamp
-                """, (*coin_ids, cutoff))
-                # Group by coin_id, take last price per day
-                all_rows = cur.fetchall()
-                day_prices_by_coin: dict[int, dict[str, float]] = {cid: {} for cid in coin_ids}
-                for row in all_rows:
-                    day_prices_by_coin[row[0]][str(row[1])] = float(row[2])
-                for cid in coin_ids:
-                    coin_prices[cid] = sorted(day_prices_by_coin[cid].items())
+                # Fetch daily close prices for all top coins in a single query
+                coin_prices: dict[int, list[tuple[str, float]]] = {}
+                if coin_ids:
+                    placeholders = ",".join(["%s"] * len(coin_ids))
+                    cur.execute(f"""
+                        SELECT coin_id, timestamp::date, price_usd
+                        FROM fact_market_data
+                        WHERE coin_id IN ({placeholders})
+                          AND timestamp >= %s
+                          AND price_usd IS NOT NULL
+                        ORDER BY coin_id, timestamp
+                    """, (*coin_ids, cutoff))
+                    # Group by coin_id, take last price per day
+                    all_rows = cur.fetchall()
+                    day_prices_by_coin: dict[int, dict[str, float]] = {cid: {} for cid in coin_ids}
+                    for row in all_rows:
+                        day_prices_by_coin[row[0]][str(row[1])] = float(row[2])
+                    for cid in coin_ids:
+                        coin_prices[cid] = sorted(day_prices_by_coin[cid].items())
 
-            # Compute correlation matrix
-            corr_rows = []
-            for i, coin_a in enumerate(coin_ids):
-                for j, coin_b in enumerate(coin_ids):
-                    if i > j:
-                        continue  # skip duplicates, will insert both directions
+                # Compute correlation matrix
+                corr_rows = []
+                for i, coin_a in enumerate(coin_ids):
+                    for j, coin_b in enumerate(coin_ids):
+                        if i > j:
+                            continue  # skip duplicates, will insert both directions
 
-                    prices_a = dict(coin_prices.get(coin_a, []))
-                    prices_b = dict(coin_prices.get(coin_b, []))
-                    common_dates = sorted(set(prices_a.keys()) & set(prices_b.keys()))
+                        prices_a = dict(coin_prices.get(coin_a, []))
+                        prices_b = dict(coin_prices.get(coin_b, []))
+                        common_dates = sorted(set(prices_a.keys()) & set(prices_b.keys()))
 
-                    if len(common_dates) < 5:
-                        corr = None
-                    elif coin_a == coin_b:
-                        corr = 1.0
-                    else:
-                        returns_a = daily_returns([prices_a[d] for d in common_dates])
-                        returns_b = daily_returns([prices_b[d] for d in common_dates])
-                        min_len = min(len(returns_a), len(returns_b))
-                        corr = pearson(returns_a[:min_len], returns_b[:min_len])
+                        if len(common_dates) < 5:
+                            corr = None
+                        elif coin_a == coin_b:
+                            corr = 1.0
+                        else:
+                            returns_a = daily_returns([prices_a[d] for d in common_dates])
+                            returns_b = daily_returns([prices_b[d] for d in common_dates])
+                            min_len = min(len(returns_a), len(returns_b))
+                            corr = pearson(returns_a[:min_len], returns_b[:min_len])
 
-                    corr_val = round(corr, 6) if corr is not None else None
-                    corr_rows.append((coin_a, coin_b, period_days, corr_val, datetime.now(timezone.utc)))
-                    if coin_a != coin_b:
-                        corr_rows.append((coin_b, coin_a, period_days, corr_val, datetime.now(timezone.utc)))
+                        corr_val = round(corr, 6) if corr is not None else None
+                        corr_rows.append((coin_a, coin_b, period_days, corr_val, datetime.now(timezone.utc)))
+                        if coin_a != coin_b:
+                            corr_rows.append((coin_b, coin_a, period_days, corr_val, datetime.now(timezone.utc)))
 
-            if corr_rows:
-                execute_values(cur, """
-                    INSERT INTO analytics_correlation (coin_a_id, coin_b_id, period_days, correlation, computed_at)
-                    VALUES %s
-                    ON CONFLICT (coin_a_id, coin_b_id, period_days) DO UPDATE SET
-                        correlation = EXCLUDED.correlation,
-                        computed_at = EXCLUDED.computed_at
-                """, corr_rows)
-                records_processed += len(corr_rows)
+                if corr_rows:
+                    execute_values(cur, """
+                        INSERT INTO analytics_correlation (coin_a_id, coin_b_id, period_days, correlation, computed_at)
+                        VALUES %s
+                        ON CONFLICT (coin_a_id, coin_b_id, period_days) DO UPDATE SET
+                            correlation = EXCLUDED.correlation,
+                            computed_at = EXCLUDED.computed_at
+                    """, corr_rows)
+                    records_processed += len(corr_rows)
 
-            # Compute volatility for ALL coins
-            cur.execute("SELECT id, symbol FROM dim_coin WHERE market_cap_rank IS NOT NULL ORDER BY market_cap_rank")
-            all_coins = cur.fetchall()
+                # Compute volatility for ALL coins
+                cur.execute("SELECT id, symbol FROM dim_coin WHERE market_cap_rank IS NOT NULL ORDER BY market_cap_rank")
+                all_coins = cur.fetchall()
 
-            # Fetch all price data for volatility in a single query
-            all_coin_ids = [c[0] for c in all_coins]
-            vol_price_data: dict[int, dict[str, float]] = {cid: {} for cid, _ in all_coins}
-            if all_coin_ids:
-                placeholders = ",".join(["%s"] * len(all_coin_ids))
-                cur.execute(f"""
-                    SELECT coin_id, timestamp::date, price_usd
-                    FROM fact_market_data
-                    WHERE coin_id IN ({placeholders}) AND timestamp >= %s AND price_usd IS NOT NULL
-                    ORDER BY coin_id, timestamp
-                """, (*all_coin_ids, cutoff))
-                for row in cur.fetchall():
-                    vol_price_data[row[0]][str(row[1])] = float(row[2])
+                # Fetch all price data for volatility in a single query
+                all_coin_ids = [c[0] for c in all_coins]
+                vol_price_data: dict[int, dict[str, float]] = {cid: {} for cid, _ in all_coins}
+                if all_coin_ids:
+                    placeholders = ",".join(["%s"] * len(all_coin_ids))
+                    cur.execute(f"""
+                        SELECT coin_id, timestamp::date, price_usd
+                        FROM fact_market_data
+                        WHERE coin_id IN ({placeholders}) AND timestamp >= %s AND price_usd IS NOT NULL
+                        ORDER BY coin_id, timestamp
+                    """, (*all_coin_ids, cutoff))
+                    for row in cur.fetchall():
+                        vol_price_data[row[0]][str(row[1])] = float(row[2])
 
-            vol_rows = []
-            for coin_id, symbol in all_coins:
-                day_prices_map = vol_price_data[coin_id]
-                prices = [day_prices_map[d] for d in sorted(day_prices_map.keys())]
+                vol_rows = []
+                for coin_id, symbol in all_coins:
+                    day_prices_map = vol_price_data[coin_id]
+                    prices = [day_prices_map[d] for d in sorted(day_prices_map.keys())]
 
-                if len(prices) < 5:
-                    continue
+                    if len(prices) < 5:
+                        continue
 
-                returns = daily_returns(prices)
-                if not returns:
-                    continue
+                    returns = daily_returns(prices)
+                    if not returns:
+                        continue
 
-                # Volatility = std dev of daily returns
-                mean_ret = sum(returns) / len(returns)
-                variance = sum((r - mean_ret) ** 2 for r in returns) / len(returns)
-                vol = math.sqrt(variance)
+                    # Volatility = std dev of daily returns
+                    mean_ret = sum(returns) / len(returns)
+                    variance = sum((r - mean_ret) ** 2 for r in returns) / len(returns)
+                    vol = math.sqrt(variance)
 
-                # Max drawdown
-                peak = prices[0]
-                max_dd = 0.0
-                for p in prices:
-                    if p > peak:
-                        peak = p
-                    dd = (peak - p) / peak if peak > 0 else 0
-                    if dd > max_dd:
-                        max_dd = dd
+                    # Max drawdown
+                    peak = prices[0]
+                    max_dd = 0.0
+                    for p in prices:
+                        if p > peak:
+                            peak = p
+                        dd = (peak - p) / peak if peak > 0 else 0
+                        if dd > max_dd:
+                            max_dd = dd
 
-                # Sharpe ratio (annualized, risk-free = 0)
-                annualized_return = mean_ret * 365
-                annualized_vol = vol * math.sqrt(365)
-                sharpe = annualized_return / annualized_vol if annualized_vol > 0 else 0.0
+                    # Sharpe ratio (annualized, risk-free = 0)
+                    annualized_return = mean_ret * 365
+                    annualized_vol = vol * math.sqrt(365)
+                    sharpe = annualized_return / annualized_vol if annualized_vol > 0 else 0.0
 
-                vol_rows.append((
-                    coin_id, period_days,
-                    round(vol, 6),
-                    round(max_dd, 4),
-                    round(max(min(sharpe, 99.0), -99.0), 4),
-                    datetime.now(timezone.utc),
-                ))
+                    vol_rows.append((
+                        coin_id, period_days,
+                        round(vol, 6),
+                        round(max_dd, 4),
+                        round(max(min(sharpe, 99.0), -99.0), 4),
+                        datetime.now(timezone.utc),
+                    ))
 
-            if vol_rows:
-                execute_values(cur, """
-                    INSERT INTO analytics_volatility (coin_id, period_days, volatility, max_drawdown, sharpe_ratio, computed_at)
-                    VALUES %s
-                    ON CONFLICT (coin_id, period_days) DO UPDATE SET
-                        volatility = EXCLUDED.volatility,
-                        max_drawdown = EXCLUDED.max_drawdown,
-                        sharpe_ratio = EXCLUDED.sharpe_ratio,
-                        computed_at = EXCLUDED.computed_at
-                """, vol_rows)
-                records_processed += len(vol_rows)
+                if vol_rows:
+                    execute_values(cur, """
+                        INSERT INTO analytics_volatility (coin_id, period_days, volatility, max_drawdown, sharpe_ratio, computed_at)
+                        VALUES %s
+                        ON CONFLICT (coin_id, period_days) DO UPDATE SET
+                            volatility = EXCLUDED.volatility,
+                            max_drawdown = EXCLUDED.max_drawdown,
+                            sharpe_ratio = EXCLUDED.sharpe_ratio,
+                            computed_at = EXCLUDED.computed_at
+                    """, vol_rows)
+                    records_processed += len(vol_rows)
 
-            conn.commit()
-            logger.info(f"  {period_days}d: {len(corr_rows)} correlation + {len(vol_rows)} volatility rows")
+                conn.commit()
+                logger.info(f"  {period_days}d: {len(corr_rows)} correlation + {len(vol_rows)} volatility rows")
 
-        cur.close()
+            cur.close()
 
     except Exception as e:
         error_message = str(e)[:500]
         logger.error(f"Job failed: {e}")
-    finally:
-        if conn:
-            conn.close()
 
-    # Log pipeline run
-    end_time = datetime.now(timezone.utc)
-    status = "success" if error_message is None else "failed"
-
-    try:
-        conn = psycopg2.connect(DB_DSN)
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO pipeline_runs (dag_id, status, start_time, end_time, records_processed, error_message)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (JOB_ID, status, start_time, end_time, records_processed, error_message))
-        conn.commit()
-        cur.close()
-        conn.close()
-    except Exception as e:
-        logger.error(f"Failed to log pipeline run: {e}")
-
-    logger.info(f"Job finished: {status} ({records_processed} records in {(end_time - start_time).total_seconds():.1f}s)")
+    status = log_pipeline_run(JOB_ID, start_time, records_processed, error_message, DB_DSN)
     return 0 if status == "success" else 1
 
 

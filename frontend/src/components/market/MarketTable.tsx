@@ -14,6 +14,7 @@ import {
 import { PriceCell } from "@/components/ui/price-cell";
 import { cn } from "@/lib/utils";
 import { SparklineChart } from "@/components/charts/SparklineChart";
+import { ChartErrorBoundary } from "@/components/ui/chart-error-boundary";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Coin } from "@/types";
 import { ArrowUpDown, ArrowUp, ArrowDown, Star } from "lucide-react";
@@ -255,7 +256,9 @@ export function MarketTable({
                   {sparklinesLoading ? (
                     <Skeleton className="h-10 w-[120px] bg-slate-700" />
                   ) : sparkData && sparkData.length > 0 ? (
-                    <SparklineChart data={sparkData} />
+                    <ChartErrorBoundary compact>
+                      <SparklineChart data={sparkData} />
+                    </ChartErrorBoundary>
                   ) : (
                     <span className="text-slate-600 text-xs">-</span>
                   )}

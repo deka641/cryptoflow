@@ -52,12 +52,26 @@ if [ -n "$PGADMIN_PKG_DIR" ] && [ -d "$PGADMIN_PKG_DIR" ]; then
     echo -e "  ${D}Linked config_local.py → $PGADMIN_PKG_DIR/${N}"
 fi
 
+# Load pgAdmin credentials from .env (with defaults for backward compat)
+PGADMIN_EMAIL="${PGADMIN_EMAIL:-}"
+PGADMIN_PASSWORD="${PGADMIN_PASSWORD:-}"
+if [ -f "$PROJECT_DIR/.env" ]; then
+    PGADMIN_EMAIL="${PGADMIN_EMAIL:-$(grep -oP '^PGADMIN_EMAIL=\K.*' "$PROJECT_DIR/.env" 2>/dev/null || true)}"
+    PGADMIN_PASSWORD="${PGADMIN_PASSWORD:-$(grep -oP '^PGADMIN_PASSWORD=\K.*' "$PROJECT_DIR/.env" 2>/dev/null || true)}"
+fi
+PGADMIN_EMAIL="${PGADMIN_EMAIL:-admin@cryptoflow.local}"
+PGADMIN_PASSWORD="${PGADMIN_PASSWORD:-admin}"
+
+if [ "$PGADMIN_PASSWORD" = "admin" ]; then
+    echo -e "  ${Y}⚠ WARNING: Using default pgAdmin password. Set PGADMIN_PASSWORD in .env for production.${N}"
+fi
+
 # Run pgAdmin setup to create the SQLite database
 echo -e "  Initializing pgAdmin database..."
 python3 -c "
 import sys, os
-os.environ.setdefault('PGADMIN_SETUP_EMAIL', 'admin@cryptoflow.local')
-os.environ.setdefault('PGADMIN_SETUP_PASSWORD', 'admin')
+os.environ['PGADMIN_SETUP_EMAIL'] = '$PGADMIN_EMAIL'
+os.environ['PGADMIN_SETUP_PASSWORD'] = '$PGADMIN_PASSWORD'
 try:
     from pgadmin4 import setup
     setup.setup_db()

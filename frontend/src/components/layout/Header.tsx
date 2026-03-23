@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Menu, User, LogOut, Briefcase, UserCog } from "lucide-react";
+import { Menu, User, LogOut, Briefcase, UserCog, Keyboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -45,7 +45,11 @@ function getPageTitle(pathname: string): string {
   return "CryptoFlow";
 }
 
-export function Header() {
+interface HeaderProps {
+  onOpenShortcuts?: () => void;
+}
+
+export function Header({ onOpenShortcuts }: HeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
@@ -99,6 +103,16 @@ export function Header() {
 
       <div className="ml-auto flex items-center gap-4">
         <CoinSearchDialog />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hidden sm:inline-flex size-8 text-slate-400 hover:text-white"
+          onClick={onOpenShortcuts}
+          title="Keyboard shortcuts (?)"
+        >
+          <Keyboard className="size-4" />
+          <span className="sr-only">Keyboard shortcuts</span>
+        </Button>
         <div className="flex items-center gap-2 text-sm text-slate-400">
           <span
             className={`size-2.5 rounded-full transition-all duration-300 ${

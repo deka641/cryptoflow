@@ -16,6 +16,7 @@ from pathlib import Path
 import httpx
 import psycopg2
 from psycopg2.extras import execute_values
+from _common import db_connection, log_pipeline_run
 
 # Load .env from project root
 from dotenv import load_dotenv
@@ -67,106 +68,85 @@ def run():
     records_processed = 0
     error_message = None
 
-    conn = None
     try:
         logger.info("Fetching top 50 coins from CoinGecko...")
         coins = fetch_coins_markets(50)
         logger.info(f"Received {len(coins)} coins")
 
-        conn = psycopg2.connect(DB_DSN)
-        cur = conn.cursor()
+        with db_connection(DB_DSN) as conn:
+            cur = conn.cursor()
 
-        # Upsert dim_coin
-        for c in coins:
-            cur.execute("""
-                INSERT INTO dim_coin (coingecko_id, symbol, name, image_url, market_cap_rank,
-                    ath, ath_date, atl, atl_date, total_supply, max_supply, high_24h, low_24h, updated_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
-                ON CONFLICT (coingecko_id) DO UPDATE SET
-                    symbol = EXCLUDED.symbol,
-                    name = EXCLUDED.name,
-                    image_url = EXCLUDED.image_url,
-                    market_cap_rank = EXCLUDED.market_cap_rank,
-                    ath = EXCLUDED.ath,
-                    ath_date = EXCLUDED.ath_date,
-                    atl = EXCLUDED.atl,
-                    atl_date = EXCLUDED.atl_date,
-                    total_supply = EXCLUDED.total_supply,
-                    max_supply = EXCLUDED.max_supply,
-                    high_24h = EXCLUDED.high_24h,
-                    low_24h = EXCLUDED.low_24h,
-                    updated_at = NOW()
-                RETURNING id
-            """, (c["id"], c["symbol"], c["name"], c.get("image"), c.get("market_cap_rank"),
-                  c.get("ath"), c.get("ath_date"), c.get("atl"), c.get("atl_date"),
-                  c.get("total_supply"), c.get("max_supply"), c.get("high_24h"), c.get("low_24h")))
-        conn.commit()
-        logger.info("dim_coin upserted")
-
-        # Build coin_id lookup
-        cur.execute("SELECT coingecko_id, id FROM dim_coin")
-        coin_map = dict(cur.fetchall())
-
-        # Insert fact_market_data
-        now = datetime.now(timezone.utc).replace(microsecond=0)
-        rows = []
-        for c in coins:
-            coin_id = coin_map.get(c["id"])
-            if not coin_id:
-                continue
-            rows.append((
-                coin_id,
-                now,
-                c.get("current_price"),
-                c.get("market_cap"),
-                c.get("total_volume"),
-                c.get("price_change_percentage_24h"),
-                c.get("circulating_supply"),
-            ))
-
-        if rows:
-            execute_values(cur, """
-                INSERT INTO fact_market_data
-                    (coin_id, timestamp, price_usd, market_cap, total_volume, price_change_24h_pct, circulating_supply)
-                VALUES %s
-                ON CONFLICT (coin_id, timestamp) DO NOTHING
-            """, rows)
-            records_processed = len(rows)
+            # Upsert dim_coin
+            for c in coins:
+                cur.execute("""
+                    INSERT INTO dim_coin (coingecko_id, symbol, name, image_url, market_cap_rank,
+                        ath, ath_date, atl, atl_date, total_supply, max_supply, high_24h, low_24h, updated_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                    ON CONFLICT (coingecko_id) DO UPDATE SET
+                        symbol = EXCLUDED.symbol,
+                        name = EXCLUDED.name,
+                        image_url = EXCLUDED.image_url,
+                        market_cap_rank = EXCLUDED.market_cap_rank,
+                        ath = EXCLUDED.ath,
+                        ath_date = EXCLUDED.ath_date,
+                        atl = EXCLUDED.atl,
+                        atl_date = EXCLUDED.atl_date,
+                        total_supply = EXCLUDED.total_supply,
+                        max_supply = EXCLUDED.max_supply,
+                        high_24h = EXCLUDED.high_24h,
+                        low_24h = EXCLUDED.low_24h,
+                        updated_at = NOW()
+                    RETURNING id
+                """, (c["id"], c["symbol"], c["name"], c.get("image"), c.get("market_cap_rank"),
+                      c.get("ath"), c.get("ath_date"), c.get("atl"), c.get("atl_date"),
+                      c.get("total_supply"), c.get("max_supply"), c.get("high_24h"), c.get("low_24h")))
             conn.commit()
-            logger.info(f"Inserted {records_processed} market data rows")
+            logger.info("dim_coin upserted")
 
-        # Refresh materialized view
-        cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_latest_market_data")
-        conn.commit()
-        logger.info("Materialized view refreshed")
+            # Build coin_id lookup
+            cur.execute("SELECT coingecko_id, id FROM dim_coin")
+            coin_map = dict(cur.fetchall())
 
-        cur.close()
+            # Insert fact_market_data
+            now = datetime.now(timezone.utc).replace(microsecond=0)
+            rows = []
+            for c in coins:
+                coin_id = coin_map.get(c["id"])
+                if not coin_id:
+                    continue
+                rows.append((
+                    coin_id,
+                    now,
+                    c.get("current_price"),
+                    c.get("market_cap"),
+                    c.get("total_volume"),
+                    c.get("price_change_percentage_24h"),
+                    c.get("circulating_supply"),
+                ))
+
+            if rows:
+                execute_values(cur, """
+                    INSERT INTO fact_market_data
+                        (coin_id, timestamp, price_usd, market_cap, total_volume, price_change_24h_pct, circulating_supply)
+                    VALUES %s
+                    ON CONFLICT (coin_id, timestamp) DO NOTHING
+                """, rows)
+                records_processed = len(rows)
+                conn.commit()
+                logger.info(f"Inserted {records_processed} market data rows")
+
+            # Refresh materialized view
+            cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_latest_market_data")
+            conn.commit()
+            logger.info("Materialized view refreshed")
+
+            cur.close()
 
     except Exception as e:
         error_message = str(e)[:500]
         logger.error(f"Job failed: {e}")
-    finally:
-        if conn:
-            conn.close()
 
-    # Log pipeline run
-    end_time = datetime.now(timezone.utc)
-    status = "success" if error_message is None else "failed"
-
-    try:
-        conn = psycopg2.connect(DB_DSN)
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO pipeline_runs (dag_id, status, start_time, end_time, records_processed, error_message)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (JOB_ID, status, start_time, end_time, records_processed, error_message))
-        conn.commit()
-        cur.close()
-        conn.close()
-    except Exception as e:
-        logger.error(f"Failed to log pipeline run: {e}")
-
-    logger.info(f"Job finished: {status} ({records_processed} records in {(end_time - start_time).total_seconds():.1f}s)")
+    status = log_pipeline_run(JOB_ID, start_time, records_processed, error_message, DB_DSN)
     return 0 if status == "success" else 1
 
 

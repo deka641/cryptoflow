@@ -73,14 +73,18 @@ step 3 "FastAPI backend ${D}(:8000)${N}"
 # Stop stale process if any
 if pgrep -f "uvicorn app.main" > /dev/null 2>&1; then
     warn "Stale uvicorn found — restarting"
-    pkill -f "uvicorn app.main" 2>/dev/null; sleep 1
+    pkill -f "uvicorn app.main" 2>/dev/null
+    # Wait for port to be released
+    if ! wait_for "Port 8000 free" "! lsof -i :8000 -t > /dev/null 2>&1" 10; then
+        warn "Port 8000 still occupied after 10s"
+    fi
 fi
 source "$PROJECT_DIR/.venv/bin/activate"
 cd "$PROJECT_DIR/backend"
 nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload > /tmp/cryptoflow-api.log 2>&1 &
 api_pid=$!
 info "PID: $api_pid  Log: /tmp/cryptoflow-api.log"
-if wait_for "FastAPI" "pgrep -f 'uvicorn app.main'" 6; then
+if wait_for "FastAPI" "curl -sf http://localhost:8000/health" 15; then
     ok "Started"
 else
     fail "FastAPI failed to start — check /tmp/cryptoflow-api.log"
@@ -131,7 +135,7 @@ fi
 nohup npm run start -- -p 3000 > /tmp/cryptoflow-frontend.log 2>&1 &
 frontend_pid=$!
 info "PID: $frontend_pid  Log: /tmp/cryptoflow-frontend.log"
-if wait_for "Next.js" "pgrep -f 'next-server'" 15; then
+if wait_for "Next.js" "curl -sf http://localhost:3000 > /dev/null" 20; then
     ok "Started"
 else
     fail "Next.js failed to start — check /tmp/cryptoflow-frontend.log"

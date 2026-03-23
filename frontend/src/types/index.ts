@@ -211,6 +211,13 @@ export interface PortfolioHolding {
   updated_at: string;
 }
 
+export interface SectorData {
+  category: string;
+  avg_change_24h: number;
+  total_market_cap: number;
+  coin_count: number;
+}
+
 export interface PortfolioSummary {
   total_value_usd: number;
   total_cost_basis_usd: number;
@@ -218,6 +225,17 @@ export interface PortfolioSummary {
   total_pnl_pct: number | null;
   holdings_count: number;
   unique_coins: number;
+}
+
+export interface DominanceCoin {
+  symbol: string;
+  name: string;
+  dominance: number;
+}
+
+export interface DominancePoint {
+  timestamp: string;
+  coins: DominanceCoin[];
 }
 
 export interface PerformancePoint {
@@ -228,4 +246,10 @@ export interface PerformancePoint {
 export interface PortfolioPerformance {
   days: number;
   data_points: PerformancePoint[];
+}
+
+export interface SentimentData {
+  value: number;
+  value_classification: string;
+  history: { value: number; timestamp: string }[];
 }

@@ -23,7 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
-import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, Radio, Wifi, WifiOff, Activity, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDateTime } from "@/lib/formatters";
@@ -100,8 +100,19 @@ export default function PipelinePage() {
   const [healthError, setHealthError] = useState(false);
   const [runsError, setRunsError] = useState(false);
   const [dagFilter, setDagFilter] = useState<string>("all");
+  const [wsStatus, setWsStatus] = useState<{
+    active_connections: number;
+    last_broadcast_at: number | null;
+    seconds_since_broadcast: number | null;
+    total_messages_broadcast: number;
+    messages_per_minute: number;
+    consumer_connected: boolean;
+  } | null>(null);
+  const [wsLoading, setWsLoading] = useState(true);
+  const [wsError, setWsError] = useState(false);
   const perPage = 15;
   const refreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const wsRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchHealth = useCallback(async () => {
     try {
@@ -131,6 +142,19 @@ export default function PipelinePage() {
     }
   }, [page, dagFilter]);
 
+  const fetchWsStatus = useCallback(async () => {
+    try {
+      setWsLoading(true);
+      setWsError(false);
+      const result = await api.getWebSocketStatus();
+      setWsStatus(result);
+    } catch {
+      setWsError(true);
+    } finally {
+      setWsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchHealth();
   }, [fetchHealth]);
@@ -149,6 +173,15 @@ export default function PipelinePage() {
       if (refreshRef.current) clearInterval(refreshRef.current);
     };
   }, [fetchHealth, fetchRuns]);
+
+  // Fetch WebSocket status on mount and poll every 30 seconds
+  useEffect(() => {
+    fetchWsStatus();
+    wsRefreshRef.current = setInterval(fetchWsStatus, 30000);
+    return () => {
+      if (wsRefreshRef.current) clearInterval(wsRefreshRef.current);
+    };
+  }, [fetchWsStatus]);
 
   // Get unique dag_ids for filter dropdown
   const dagIds = health ? [...new Set(health.map((h) => h.dag_id))] : [];
@@ -189,6 +222,65 @@ export default function PipelinePage() {
             </CardContent>
           </Card>
         )}
+      </div>
+
+      {/* Real-Time Pipeline */}
+      <div>
+        <h2 className="text-lg font-semibold text-white mb-4">Real-Time Pipeline</h2>
+        {wsLoading ? (
+          <Skeleton className="h-40 w-full rounded-xl bg-slate-700" />
+        ) : wsError ? (
+          <ErrorState message="Failed to load real-time pipeline status." onRetry={fetchWsStatus} compact />
+        ) : wsStatus ? (
+          <Card className="glass-card border-l-[3px] border-l-blue-500">
+            <CardContent className="grid grid-cols-2 gap-6 sm:grid-cols-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-sm text-slate-400">
+                  <Wifi className="size-4" />
+                  <span>Connections</span>
+                </div>
+                <p className="text-2xl font-bold text-white">{wsStatus.active_connections}</p>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-sm text-slate-400">
+                  <Activity className="size-4" />
+                  <span>Msgs / min</span>
+                </div>
+                <p className="text-2xl font-bold text-white">{wsStatus.messages_per_minute}</p>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-sm text-slate-400">
+                  <MessageSquare className="size-4" />
+                  <span>Last Broadcast</span>
+                </div>
+                <p className="text-sm font-medium text-white">
+                  {wsStatus.seconds_since_broadcast !== null
+                    ? `${wsStatus.seconds_since_broadcast.toFixed(0)}s ago`
+                    : "Never"}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-sm text-slate-400">
+                  <Radio className="size-4" />
+                  <span>Consumer</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {wsStatus.consumer_connected ? (
+                    <>
+                      <Wifi className="size-4 text-emerald-400" />
+                      <span className="text-sm font-medium text-emerald-400">Connected</span>
+                    </>
+                  ) : (
+                    <>
+                      <WifiOff className="size-4 text-red-400" />
+                      <span className="text-sm font-medium text-red-400">Disconnected</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
       </div>
 
       {/* Runs Table */}

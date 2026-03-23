@@ -28,7 +28,7 @@ export default function ProfilePage() {
   const fetchTriggered = useCallback(async () => {
     try {
       const data = await api.getTriggeredAlerts();
-      setTriggeredAlerts(data);
+      setTriggeredAlerts(data.items);
     } catch {
       // silent
     }

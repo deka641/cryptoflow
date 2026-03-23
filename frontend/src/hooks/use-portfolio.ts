@@ -82,18 +82,21 @@ export function usePortfolio() {
   }, [fetchData]);
 
   const deleteHolding = useCallback(async (id: number) => {
-    // Optimistic delete
-    const prev = holdings;
-    setHoldings((h) => h.filter((x) => x.id !== id));
+    // Optimistic delete — capture snapshot atomically via functional updater
+    let snapshot: PortfolioHolding[] | null = null;
+    setHoldings((prev) => {
+      snapshot = prev;
+      return prev.filter((x) => x.id !== id);
+    });
     try {
       await api.deletePortfolioHolding(id);
       toast.success("Holding removed");
       await fetchData();
     } catch {
-      setHoldings(prev);
+      if (snapshot !== null) setHoldings(snapshot);
       toast.error("Failed to remove holding");
     }
-  }, [holdings, fetchData]);
+  }, [fetchData]);
 
   return { holdings, summary, loading, error, addHolding, updateHolding, deleteHolding, refetch: fetchData };
 }

@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import math
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, field_validator
 from sqlalchemy.orm import Session
 
@@ -147,23 +149,33 @@ def delete_alert(
     return None
 
 
-@router.get("/triggered", response_model=list[AlertResponse])
+@router.get("/triggered")
 def get_triggered_alerts(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Get recently triggered alerts for the current user (last 20)."""
-    alerts = (
+    """Get triggered alerts for the current user with pagination."""
+    base_query = (
         db.query(PriceAlert)
         .filter(PriceAlert.user_id == current_user.id, PriceAlert.triggered == True)  # noqa: E712
+    )
+
+    total = base_query.count()
+    pages = math.ceil(total / per_page) if total > 0 else 1
+
+    alerts = (
+        base_query
         .order_by(PriceAlert.triggered_at.desc())
-        .limit(20)
+        .offset((page - 1) * per_page)
+        .limit(per_page)
         .all()
     )
 
     coins = {c.id: c for c in db.query(DimCoin).filter(DimCoin.id.in_([a.coin_id for a in alerts])).all()}
 
-    return [
+    items = [
         AlertResponse(
             id=a.id,
             coin_id=a.coin_id,
@@ -180,6 +192,14 @@ def get_triggered_alerts(
         for a in alerts
         if a.coin_id in coins
     ]
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "pages": pages,
+    }
 
 
 @router.post("/check")

@@ -15,7 +15,14 @@ from app.schemas.pagination import PaginatedResponse
 router = APIRouter()
 
 
-_SORT_ALLOWLIST = {"market_cap_rank", "name", "price_usd", "market_cap", "total_volume", "price_change_24h_pct"}
+_SORT_COLUMN_MAP = {
+    "market_cap_rank": "market_cap_rank",
+    "name": "name",
+    "price_usd": "price_usd",
+    "market_cap": "market_cap",
+    "total_volume": "total_volume",
+    "price_change_24h_pct": "price_change_24h_pct",
+}
 
 
 @router.get("", response_model=PaginatedResponse)
@@ -28,8 +35,7 @@ def list_coins(
     db: Session = Depends(get_db),
 ):
     """List all coins with their latest market data from the materialized view."""
-    if sort_by not in _SORT_ALLOWLIST:
-        sort_by = "market_cap_rank"
+    sort_by = _SORT_COLUMN_MAP.get(sort_by, "market_cap_rank")
     if sort_dir not in ("asc", "desc"):
         sort_dir = "asc"
 
@@ -45,8 +51,7 @@ def list_coins(
     pages = math.ceil(total / per_page) if total > 0 else 1
 
     # For DimCoin-native fields, sort directly
-    dim_coin_fields = {"market_cap_rank", "name"}
-    if sort_by in dim_coin_fields:
+    if sort_by in ("market_cap_rank", "name"):
         col = getattr(DimCoin, sort_by)
         order = col.asc().nullslast() if sort_dir == "asc" else col.desc().nullslast()
         coins = (
@@ -60,8 +65,9 @@ def list_coins(
         # For market data fields, fetch all matching coin IDs, sort via materialized view
         all_coin_ids = [c.id for c in query.with_entities(DimCoin.id).all()]
         if all_coin_ids:
+            direction = "ASC" if sort_dir == "asc" else "DESC"
             mv_rows = db.execute(
-                text(f"SELECT coin_id, price_usd, market_cap, total_volume, price_change_24h_pct FROM mv_latest_market_data WHERE coin_id = ANY(:ids) ORDER BY {sort_by} {'ASC' if sort_dir == 'asc' else 'DESC'} NULLS LAST"),
+                text(f"SELECT coin_id, price_usd, market_cap, total_volume, price_change_24h_pct FROM mv_latest_market_data WHERE coin_id = ANY(:ids) ORDER BY {sort_by} {direction} NULLS LAST"),
                 {"ids": all_coin_ids},
             ).fetchall()
             sorted_ids = [r.coin_id for r in mv_rows]

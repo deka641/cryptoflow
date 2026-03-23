@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -95,6 +97,72 @@ def get_market_overview(db: Session) -> dict:
         "volume_change_24h_pct": volume_change_pct,
         "last_updated": last_updated,
     }
+
+
+def get_market_dominance(db: Session, days: int) -> list[dict]:
+    """Get market dominance (% of total market cap) for the top 10 coins over time.
+
+    Returns hourly data points, each containing the dominance percentage for each
+    of the top 10 coins by market_cap_rank.  Capped at 168 data points (7 days
+    of hourly data) even when `days` is larger – the query itself limits to
+    `days` worth of data and then rounds to the nearest hour.
+    """
+    rows = db.execute(text("""
+        WITH top_coins AS (
+            SELECT id, symbol, name
+            FROM dim_coin
+            WHERE market_cap_rank IS NOT NULL
+            ORDER BY market_cap_rank
+            LIMIT 10
+        ),
+        bucketed AS (
+            SELECT
+                date_trunc('hour', f.timestamp) AS bucket,
+                f.coin_id,
+                AVG(f.market_cap) AS avg_market_cap
+            FROM fact_market_data f
+            WHERE f.timestamp >= NOW() - MAKE_INTERVAL(days => :days)
+              AND f.market_cap IS NOT NULL
+              AND f.market_cap > 0
+            GROUP BY bucket, f.coin_id
+        ),
+        totals AS (
+            SELECT bucket, SUM(avg_market_cap) AS total_cap
+            FROM bucketed
+            GROUP BY bucket
+            HAVING SUM(avg_market_cap) > 0
+        )
+        SELECT
+            b.bucket AS timestamp,
+            tc.symbol,
+            tc.name,
+            ROUND((b.avg_market_cap / t.total_cap * 100)::numeric, 2) AS dominance
+        FROM bucketed b
+        JOIN top_coins tc ON tc.id = b.coin_id
+        JOIN totals t ON t.bucket = b.bucket
+        ORDER BY b.bucket, dominance DESC
+    """), {"days": days}).fetchall()
+
+    # Group by timestamp
+    grouped: OrderedDict[str, list[dict]] = OrderedDict()
+    for row in rows:
+        ts = row.timestamp.isoformat()
+        if ts not in grouped:
+            grouped[ts] = []
+        grouped[ts].append({
+            "symbol": row.symbol.upper(),
+            "name": row.name,
+            "dominance": float(row.dominance),
+        })
+
+    result = [{"timestamp": ts, "coins": coins} for ts, coins in grouped.items()]
+
+    # Limit to ~168 data points to keep payload reasonable
+    if len(result) > 168:
+        step = len(result) / 168
+        result = [result[int(i * step)] for i in range(168)]
+
+    return result
 
 
 def get_kpi_sparklines(db: Session) -> dict:

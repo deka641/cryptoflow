@@ -13,8 +13,12 @@ def test_websocket_status():
     assert "last_broadcast_at" in data
     assert "seconds_since_broadcast" in data
     assert "total_messages_broadcast" in data
+    assert "messages_per_minute" in data
+    assert "consumer_connected" in data
     assert isinstance(data["active_connections"], int)
     assert isinstance(data["total_messages_broadcast"], int)
+    assert isinstance(data["messages_per_minute"], int)
+    assert isinstance(data["consumer_connected"], bool)
 
 
 def test_websocket_connect():
@@ -38,8 +42,13 @@ def test_websocket_status_endpoint():
         assert "total_messages_broadcast" in data
         assert "last_broadcast_at" in data
         assert "seconds_since_broadcast" in data
+        assert "messages_per_minute" in data
+        assert "consumer_connected" in data
         # Connection count and message count should be non-negative integers
         assert isinstance(data["active_connections"], int)
         assert data["active_connections"] >= 0
         assert isinstance(data["total_messages_broadcast"], int)
         assert data["total_messages_broadcast"] >= 0
+        assert isinstance(data["messages_per_minute"], int)
+        assert data["messages_per_minute"] >= 0
+        assert isinstance(data["consumer_connected"], bool)

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useMarketOverview, useCoins, useKpiSparklines } from "@/hooks/use-market-data";
 import { useLivePricesContext } from "@/providers/live-prices-provider";
 import { KpiCard } from "@/components/dashboard/KpiCard";
@@ -20,41 +19,10 @@ import {
 import { formatCompactCurrency, formatInteger } from "@/lib/formatters";
 import { useCountUp } from "@/hooks/use-count-up";
 import { WatchlistWidget } from "@/components/dashboard/WatchlistWidget";
+import { DominanceChart } from "@/components/dashboard/DominanceChart";
+import { SentimentGauge } from "@/components/dashboard/SentimentGauge";
 import { ChartErrorBoundary } from "@/components/ui/chart-error-boundary";
-
-function DataFreshness({ lastUpdated }: { lastUpdated: string }) {
-  const [minutesAgo, setMinutesAgo] = useState<number>(() =>
-    Math.round((Date.now() - new Date(lastUpdated).getTime()) / 60000)
-  );
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setMinutesAgo(Math.round((Date.now() - new Date(lastUpdated).getTime()) / 60000));
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [lastUpdated]);
-
-  const dotColor =
-    minutesAgo < 15
-      ? "bg-emerald-400 animate-pulse"
-      : minutesAgo < 60
-        ? "bg-yellow-400"
-        : "bg-red-400";
-
-  const label =
-    minutesAgo < 1
-      ? "just now"
-      : minutesAgo < 60
-        ? `${minutesAgo} min ago`
-        : `${Math.floor(minutesAgo / 60)}h ${minutesAgo % 60}m ago`;
-
-  return (
-    <div className="flex items-center gap-2 text-xs text-slate-500">
-      <span className={`inline-block size-2 rounded-full ${dotColor}`} />
-      <span>Last updated: {label}</span>
-    </div>
-  );
-}
+import { DataFreshness } from "@/components/ui/data-freshness";
 
 function KpiSkeleton() {
   return (
@@ -129,7 +97,9 @@ export default function DashboardPage() {
               accentColor="indigo"
               tooltip="Combined value of all tracked cryptocurrencies — price × circulating supply, summed across the top 50 coins."
               sparkline={sparklines?.market_cap && sparklines.market_cap.length > 1 ? (
-                <KpiSparkline data={sparklines.market_cap} positive={(data.market_cap_change_24h_pct ?? 0) >= 0} />
+                <ChartErrorBoundary compact>
+                  <KpiSparkline data={sparklines.market_cap} positive={(data.market_cap_change_24h_pct ?? 0) >= 0} />
+                </ChartErrorBoundary>
               ) : undefined}
             />
             <KpiCard
@@ -141,7 +111,9 @@ export default function DashboardPage() {
               accentColor="emerald"
               tooltip="Total trading volume across all tracked coins in the last 24 hours. High volume indicates strong market activity."
               sparkline={sparklines?.volume && sparklines.volume.length > 1 ? (
-                <KpiSparkline data={sparklines.volume} positive={(data.volume_change_24h_pct ?? 0) >= 0} />
+                <ChartErrorBoundary compact>
+                  <KpiSparkline data={sparklines.volume} positive={(data.volume_change_24h_pct ?? 0) >= 0} />
+                </ChartErrorBoundary>
               ) : undefined}
             />
             <KpiCard
@@ -152,10 +124,12 @@ export default function DashboardPage() {
               accentColor="amber"
               tooltip="Bitcoin's share of total crypto market cap. A drop often signals capital flowing into altcoins."
               sparkline={sparklines?.btc_dominance && sparklines.btc_dominance.length > 1 ? (
-                <KpiSparkline
-                  data={sparklines.btc_dominance}
-                  positive={sparklines.btc_dominance[sparklines.btc_dominance.length - 1] >= sparklines.btc_dominance[0]}
-                />
+                <ChartErrorBoundary compact>
+                  <KpiSparkline
+                    data={sparklines.btc_dominance}
+                    positive={sparklines.btc_dominance[sparklines.btc_dominance.length - 1] >= sparklines.btc_dominance[0]}
+                  />
+                </ChartErrorBoundary>
               ) : undefined}
             />
             <KpiCard
@@ -176,6 +150,37 @@ export default function DashboardPage() {
 
       {/* Watchlist Widget (only visible when logged in with watchlist items) */}
       <WatchlistWidget />
+
+      {/* Sentiment & Market Dominance */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Fear & Greed Index */}
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle className="text-white">Fear & Greed Index</CardTitle>
+            <p className="text-xs text-slate-400">
+              Market sentiment score from 0 (Extreme Fear) to 100 (Extreme Greed), sourced from Alternative.me.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <SentimentGauge />
+          </CardContent>
+        </Card>
+
+        {/* Market Dominance */}
+        <Card className="glass-card lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-white">Market Dominance</CardTitle>
+            <p className="text-xs text-slate-400">
+              Share of total market capitalization held by the top 10 cryptocurrencies over time. Shifts in dominance signal capital rotation between major assets.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <ChartErrorBoundary>
+              <DominanceChart />
+            </ChartErrorBoundary>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Market Map */}
       <div>

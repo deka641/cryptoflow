@@ -26,6 +26,8 @@ _RATE_LIMIT_WINDOW = 60  # seconds
 
 # In-memory fallback rate limiter
 _rate_limit_attempts: dict[str, list[float]] = defaultdict(list)
+_last_sweep: float = 0.0
+_SWEEP_INTERVAL = 60.0  # seconds between cleanup sweeps
 
 # Try to use Redis for rate limiting (works across workers)
 _redis_client = None
@@ -95,9 +97,14 @@ def _check_rate_limit(request: Request, prefix: str, max_attempts: int, detail: 
         )
     _rate_limit_attempts[mem_key].append(now)
 
-    # Cap total keys to prevent memory leak from many distinct IPs
-    if len(_rate_limit_attempts) > 10_000:
-        _rate_limit_attempts.clear()
+    # Periodic TTL-based sweep instead of nuclear clear
+    global _last_sweep
+    if now - _last_sweep > _SWEEP_INTERVAL:
+        _last_sweep = now
+        stale_keys = [k for k, v in _rate_limit_attempts.items()
+                      if not v or now - v[-1] >= _RATE_LIMIT_WINDOW]
+        for k in stale_keys:
+            _rate_limit_attempts.pop(k, None)
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -207,7 +214,11 @@ def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db))
             detail="Invalid or expired reset token",
         )
 
-    if user.reset_token_expires < datetime.now(timezone.utc):
+    # Compare in UTC — the DB column is naive DateTime, so normalize both sides
+    expires = user.reset_token_expires
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+    if expires < datetime.now(timezone.utc):
         # Clear expired token
         user.password_reset_token = None
         user.reset_token_expires = None

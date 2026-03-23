@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
+import { ChartErrorBoundary } from "@/components/ui/chart-error-boundary";
 import { PortfolioSummaryCards } from "@/components/portfolio/PortfolioSummaryCards";
 import { HoldingsTable } from "@/components/portfolio/HoldingsTable";
 import { AllocationChart } from "@/components/portfolio/AllocationChart";
@@ -176,7 +177,9 @@ export default function PortfolioPage() {
             <CardTitle className="text-white text-base">Allocation</CardTitle>
           </CardHeader>
           <CardContent>
-            <AllocationChart holdings={holdings} prices={prices} />
+            <ChartErrorBoundary compact>
+              <AllocationChart holdings={holdings} prices={prices} />
+            </ChartErrorBoundary>
           </CardContent>
         </Card>
       </div>
@@ -186,7 +189,9 @@ export default function PortfolioPage() {
           <CardTitle className="text-white text-base">Performance</CardTitle>
         </CardHeader>
         <CardContent>
-          <PerformanceChart hasHoldings={holdings.length > 0} />
+          <ChartErrorBoundary>
+            <PerformanceChart hasHoldings={holdings.length > 0} />
+          </ChartErrorBoundary>
         </CardContent>
       </Card>
 

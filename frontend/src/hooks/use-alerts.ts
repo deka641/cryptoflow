@@ -5,13 +5,22 @@ import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { useAuth } from "@/providers/auth-provider";
 import { formatCurrency } from "@/lib/formatters";
-import type { PriceAlert } from "@/types";
+import type { PriceAlert, PaginatedResponse } from "@/types";
 
 export function useAlerts() {
   const { user } = useAuth();
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
   const [loading, setLoading] = useState(false);
   const toastRef = useRef(false);
+  const [triggeredAlerts, setTriggeredAlerts] = useState<PriceAlert[]>([]);
+  const [triggeredLoading, setTriggeredLoading] = useState(false);
+  const [triggeredPage, setTriggeredPage] = useState(1);
+  const [triggeredPagination, setTriggeredPagination] = useState<{
+    total: number;
+    page: number;
+    per_page: number;
+    pages: number;
+  }>({ total: 0, page: 1, per_page: 20, pages: 1 });
 
   const fetchAlerts = useCallback(async () => {
     if (!user) return;
@@ -73,9 +82,36 @@ export function useAlerts() {
     }
   }, [user, fetchAlerts]);
 
+  const fetchTriggeredAlerts = useCallback(async (page = 1, perPage = 20) => {
+    if (!user) return;
+    try {
+      setTriggeredLoading(true);
+      const data: PaginatedResponse<PriceAlert> = await api.getTriggeredAlerts(page, perPage);
+      setTriggeredAlerts(data.items);
+      setTriggeredPagination({
+        total: data.total,
+        page: data.page,
+        per_page: data.per_page,
+        pages: data.pages,
+      });
+      setTriggeredPage(data.page);
+    } catch {
+      if (!toastRef.current) {
+        toast.error("Failed to load triggered alerts");
+        toastRef.current = true;
+      }
+    } finally {
+      setTriggeredLoading(false);
+    }
+  }, [user]);
+
   useEffect(() => {
     fetchAlerts();
   }, [fetchAlerts]);
+
+  useEffect(() => {
+    fetchTriggeredAlerts(triggeredPage);
+  }, [fetchTriggeredAlerts, triggeredPage]);
 
   // Check every 60 seconds
   useEffect(() => {
@@ -84,5 +120,17 @@ export function useAlerts() {
     return () => clearInterval(interval);
   }, [user, checkTriggered]);
 
-  return { alerts, loading, createAlert, deleteAlert, refetch: fetchAlerts };
+  return {
+    alerts,
+    loading,
+    createAlert,
+    deleteAlert,
+    refetch: fetchAlerts,
+    triggeredAlerts,
+    triggeredLoading,
+    triggeredPage,
+    triggeredPagination,
+    setTriggeredPage,
+    refetchTriggered: fetchTriggeredAlerts,
+  };
 }

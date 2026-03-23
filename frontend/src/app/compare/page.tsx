@@ -102,6 +102,17 @@ function CompareContent() {
     setInitialized(true);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Sync selection state back to URL for sharing/bookmarking
+  useEffect(() => {
+    if (!initialized) return;
+    const params = new URLSearchParams();
+    if (selectedCoins.length > 0) {
+      params.set("coins", selectedCoins.map((c) => c.symbol.toLowerCase()).join(","));
+    }
+    params.set("period", String(periodDays));
+    router.replace(`/compare?${params}`, { scroll: false });
+  }, [selectedCoins, periodDays, initialized, router]);
+
   // Fetch histories when selection or period changes
   const fetchHistories = useCallback(async () => {
     if (selectedCoins.length === 0) {
@@ -445,12 +456,14 @@ function CompareContent() {
             ) : analyticsLoading ? (
               <Skeleton className="h-48 w-full bg-slate-700" />
             ) : correlationData ? (
-              <PairwiseCorrelation
-                selectedSymbols={selectedCoins.map((c) => c.symbol)}
-                allSymbols={correlationData.coins}
-                matrix={correlationData.matrix}
-                colors={selectedCoins.map((_, i) => COIN_COLORS[i])}
-              />
+              <ChartErrorBoundary compact>
+                <PairwiseCorrelation
+                  selectedSymbols={selectedCoins.map((c) => c.symbol)}
+                  allSymbols={correlationData.coins}
+                  matrix={correlationData.matrix}
+                  colors={selectedCoins.map((_, i) => COIN_COLORS[i])}
+                />
+              </ChartErrorBoundary>
             ) : null}
           </CardContent>
         </Card>

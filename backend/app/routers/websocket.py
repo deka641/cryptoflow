@@ -4,6 +4,7 @@ import time
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from app.config import settings
 from app.websocket.manager import manager
 
 logger = logging.getLogger(__name__)
@@ -33,9 +34,25 @@ async def websocket_prices(websocket: WebSocket):
 async def websocket_status():
     """Return current WebSocket connection statistics."""
     last = manager.last_broadcast_time
+    stats = manager.stats
+
+    # Check if the real-time consumer is connected by pinging Redis
+    consumer_connected = False
+    try:
+        import redis.asyncio as aioredis
+
+        r = aioredis.from_url(settings.REDIS_URL, socket_connect_timeout=2)
+        await r.ping()
+        consumer_connected = True
+        await r.aclose()
+    except Exception:
+        consumer_connected = False
+
     return {
-        "active_connections": manager.connection_count,
+        "active_connections": stats["connection_count"],
         "last_broadcast_at": last,
         "seconds_since_broadcast": round(time.time() - last, 1) if last else None,
-        "total_messages_broadcast": manager.message_count,
+        "total_messages_broadcast": stats["message_count"],
+        "messages_per_minute": stats["messages_per_minute"],
+        "consumer_connected": consumer_connected,
     }

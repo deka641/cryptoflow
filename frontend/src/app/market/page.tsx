@@ -7,11 +7,13 @@ import { useWatchlist } from "@/hooks/use-watchlist";
 import { useAuth } from "@/providers/auth-provider";
 import { api } from "@/lib/api";
 import { MarketTable } from "@/components/market/MarketTable";
+import { SectorPerformance } from "@/components/market/SectorPerformance";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
+import { ChartErrorBoundary } from "@/components/ui/chart-error-boundary";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Search, ChevronLeft, ChevronRight, Star } from "lucide-react";
 import type { Coin } from "@/types";
@@ -254,6 +256,11 @@ export default function MarketPage() {
           </Tabs>
         ) : allCoinsTable;
       })()}
+
+      {/* Sector Performance */}
+      <ChartErrorBoundary>
+        <SectorPerformance />
+      </ChartErrorBoundary>
     </div>
   );
 }

@@ -236,6 +236,143 @@ def test_change_password_requires_auth(client):
     assert resp.status_code in (401, 403)
 
 
+def test_forgot_password_existing_user(client):
+    """Forgot-password for existing user returns dev_token."""
+    client.post("/api/v1/auth/register", json={
+        "email": "forgot@example.com", "password": "pass1234",
+    })
+    resp = client.post("/api/v1/auth/forgot-password", json={
+        "email": "forgot@example.com",
+    })
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "message" in data
+    assert "dev_token" in data
+    assert len(data["dev_token"]) > 0
+
+
+def test_forgot_password_nonexistent_user(client):
+    """Forgot-password for unknown user returns generic message, no dev_token."""
+    resp = client.post("/api/v1/auth/forgot-password", json={
+        "email": "nobody@example.com",
+    })
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "message" in data
+    assert "dev_token" not in data
+
+
+def test_reset_password_valid_token(client):
+    """Reset with valid token succeeds and clears the token."""
+    client.post("/api/v1/auth/register", json={
+        "email": "reset-ok@example.com", "password": "oldpass1A",
+    })
+    forgot_resp = client.post("/api/v1/auth/forgot-password", json={
+        "email": "reset-ok@example.com",
+    })
+    token = forgot_resp.json()["dev_token"]
+
+    resp = client.post("/api/v1/auth/reset-password", json={
+        "token": token, "new_password": "newpass1B",
+    })
+    assert resp.status_code == 200
+
+    # New password should work
+    login_resp = client.post("/api/v1/auth/login", json={
+        "email": "reset-ok@example.com", "password": "newpass1B",
+    })
+    assert login_resp.status_code == 200
+
+
+def test_reset_password_expired_token(client, db):
+    """Reset with expired token fails."""
+    from datetime import datetime, timezone, timedelta
+    from app.models.user import User
+
+    client.post("/api/v1/auth/register", json={
+        "email": "reset-exp@example.com", "password": "pass1234",
+    })
+    forgot_resp = client.post("/api/v1/auth/forgot-password", json={
+        "email": "reset-exp@example.com",
+    })
+    token = forgot_resp.json()["dev_token"]
+
+    # Expire the token manually
+    user = db.query(User).filter(User.email == "reset-exp@example.com").first()
+    user.reset_token_expires = datetime.now(timezone.utc) - timedelta(hours=2)
+    db.flush()
+
+    resp = client.post("/api/v1/auth/reset-password", json={
+        "token": token, "new_password": "newpass1B",
+    })
+    assert resp.status_code == 400
+    assert "expired" in resp.json()["detail"].lower()
+
+
+def test_reset_password_invalid_token(client):
+    """Reset with random/invalid token fails."""
+    resp = client.post("/api/v1/auth/reset-password", json={
+        "token": "totally-invalid-random-token", "new_password": "newpass1B",
+    })
+    assert resp.status_code == 400
+
+
+def test_reset_password_used_token(client):
+    """Reset token cannot be reused after successful reset."""
+    client.post("/api/v1/auth/register", json={
+        "email": "reset-reuse@example.com", "password": "oldpass1A",
+    })
+    forgot_resp = client.post("/api/v1/auth/forgot-password", json={
+        "email": "reset-reuse@example.com",
+    })
+    token = forgot_resp.json()["dev_token"]
+
+    # First reset should succeed
+    resp = client.post("/api/v1/auth/reset-password", json={
+        "token": token, "new_password": "newpass1B",
+    })
+    assert resp.status_code == 200
+
+    # Second reset with same token should fail
+    resp = client.post("/api/v1/auth/reset-password", json={
+        "token": token, "new_password": "anotherP1",
+    })
+    assert resp.status_code == 400
+
+
+def test_forgot_password_rate_limiting(client):
+    """Forgot-password should be rate-limited after 3 attempts."""
+    from app.routers.auth import _clear_rate_limits
+    _clear_rate_limits()
+
+    for _ in range(3):
+        client.post("/api/v1/auth/forgot-password", json={
+            "email": "ratelimit-forgot@example.com",
+        })
+
+    resp = client.post("/api/v1/auth/forgot-password", json={
+        "email": "ratelimit-forgot@example.com",
+    })
+    assert resp.status_code == 429
+
+
+def test_reset_password_weak_new_password(client):
+    """New password in reset must meet strength requirements."""
+    client.post("/api/v1/auth/register", json={
+        "email": "reset-weak@example.com", "password": "pass1234",
+    })
+    forgot_resp = client.post("/api/v1/auth/forgot-password", json={
+        "email": "reset-weak@example.com",
+    })
+    token = forgot_resp.json()["dev_token"]
+
+    # Too short
+    resp = client.post("/api/v1/auth/reset-password", json={
+        "token": token, "new_password": "Ab1",
+    })
+    assert resp.status_code == 422
+
+
 def test_me_expired_token(client):
     """An expired token should be rejected."""
     from unittest.mock import patch

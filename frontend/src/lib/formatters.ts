@@ -53,7 +53,9 @@ export function formatSupply(value: number | null | undefined): string {
  */
 export function formatPercentage(value: number | null): string {
   if (value === null || isInvalidNumber(value)) return "-";
-  return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
+  const rounded = Math.round(value * 100) / 100;
+  if (rounded === 0 || Object.is(rounded, -0)) return "0.00%";
+  return `${rounded > 0 ? "+" : ""}${rounded.toFixed(2)}%`;
 }
 
 /**

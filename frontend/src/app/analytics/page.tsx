@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { toast } from "sonner";
 import type { CorrelationMatrix, VolatilityEntry } from "@/types";
 import { CorrelationHeatmap } from "@/components/charts/CorrelationHeatmap";
 import { VolatilityChart } from "@/components/charts/VolatilityChart";
@@ -15,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { FadeIn } from "@/components/ui/fade-in";
 import { ChartErrorBoundary } from "@/components/ui/chart-error-boundary";
+import { DataFreshness } from "@/components/ui/data-freshness";
 
 const PERIODS = [
   { label: "30d", days: 30 },
@@ -30,13 +32,21 @@ export default function AnalyticsPage() {
   const [corrLoading, setCorrLoading] = useState(true);
   const [volLoading, setVolLoading] = useState(true);
 
+  const corrToastRef = useRef(false);
+  const volToastRef = useRef(false);
+
   const fetchCorrelation = useCallback(async () => {
     try {
       setCorrLoading(true);
       const result = await api.getCorrelation(correlationDays);
       setCorrelation(result);
+      corrToastRef.current = false;
     } catch {
       setCorrelation(null);
+      if (!corrToastRef.current) {
+        toast.error("Failed to load correlation data");
+        corrToastRef.current = true;
+      }
     } finally {
       setCorrLoading(false);
     }
@@ -47,8 +57,13 @@ export default function AnalyticsPage() {
       setVolLoading(true);
       const result = await api.getVolatility(volatilityDays);
       setVolatility(result);
+      volToastRef.current = false;
     } catch {
       setVolatility(null);
+      if (!volToastRef.current) {
+        toast.error("Failed to load analytics data");
+        volToastRef.current = true;
+      }
     } finally {
       setVolLoading(false);
     }
@@ -79,6 +94,9 @@ export default function AnalyticsPage() {
           Quantitative analytics computed daily by our batch pipeline from historical price data stored in the star-schema warehouse.
           These precomputed metrics demonstrate the separation of real-time streaming (live prices) from heavy analytical workloads (correlation, volatility).
         </p>
+        {correlation?.computed_at && (
+          <DataFreshness lastUpdated={correlation.computed_at} />
+        )}
       </div>
 
       <Tabs defaultValue="correlation">

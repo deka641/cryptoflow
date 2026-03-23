@@ -82,6 +82,20 @@ class ApiClient {
     return this.request<import("@/types").KpiSparklines>("/api/v1/market/kpi-sparklines");
   }
 
+  async getMarketDominance(days = 7) {
+    return this.request<import("@/types").DominancePoint[]>(
+      `/api/v1/market/dominance?days=${days}`
+    );
+  }
+
+  async getMarketSectors() {
+    return this.request<import("@/types").SectorData[]>("/api/v1/market/sectors");
+  }
+
+  async getMarketSentiment() {
+    return this.request<import("@/types").SentimentData>("/api/v1/market/sentiment");
+  }
+
   // Analytics
   async getCorrelation(periodDays = 30) {
     return this.request<import("@/types").CorrelationMatrix>(
@@ -210,8 +224,11 @@ class ApiClient {
     return this.request<import("@/types").PriceAlert[]>("/api/v1/alerts");
   }
 
-  async getTriggeredAlerts() {
-    return this.request<import("@/types").PriceAlert[]>("/api/v1/alerts/triggered");
+  async getTriggeredAlerts(page = 1, perPage = 20) {
+    const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
+    return this.request<import("@/types").PaginatedResponse<import("@/types").PriceAlert>>(
+      `/api/v1/alerts/triggered?${params}`
+    );
   }
 
   async createAlert(data: { coin_id: number; target_price: number; direction: string }) {
@@ -230,6 +247,18 @@ class ApiClient {
       "/api/v1/alerts/check",
       { method: "POST" }
     );
+  }
+
+  // WebSocket Status
+  async getWebSocketStatus() {
+    return this.request<{
+      active_connections: number;
+      last_broadcast_at: number | null;
+      seconds_since_broadcast: number | null;
+      total_messages_broadcast: number;
+      messages_per_minute: number;
+      consumer_connected: boolean;
+    }>("/api/v1/ws/status");
   }
 
   // Auth
