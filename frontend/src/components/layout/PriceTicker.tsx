@@ -73,7 +73,7 @@ export function PriceTicker() {
   });
 
   return (
-    <div className="hidden md:block relative border-b border-slate-700/50 bg-slate-950/50 backdrop-blur-sm overflow-hidden max-w-full">
+    <div className="hidden md:block relative border-b border-slate-700/50 bg-slate-950/50 backdrop-blur-sm overflow-hidden max-w-full" role="marquee" aria-label="Live cryptocurrency prices">
       {/* Fade edges */}
       <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-slate-950/90 to-transparent" />
       <div className="pointer-events-none absolute inset-y-0 right-8 z-10 w-12 bg-gradient-to-l from-slate-950/90 to-transparent" />

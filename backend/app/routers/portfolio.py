@@ -253,6 +253,8 @@ def export_portfolio_csv(
     output = io.StringIO()
     # UTF-8 BOM for Excel compatibility
     output.write("\ufeff")
+    export_date = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    output.write(f"# CryptoFlow Portfolio Export - {export_date} - All values in USD\n")
     writer = csv.writer(output)
     writer.writerow([
         "Coin", "Symbol", "Quantity", "Buy Price (USD)", "Current Price (USD)",
@@ -372,6 +374,66 @@ def get_portfolio_performance(
         data_points = [data_points[int(i * step)] for i in range(200)]
 
     return PortfolioPerformance(days=days, data_points=data_points)
+
+
+@router.get("/history")
+def get_portfolio_history(
+    days: int = Query(30, ge=1, le=365),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get portfolio total value timeline (hourly buckets)."""
+    holdings = (
+        db.query(PortfolioHolding)
+        .filter(PortfolioHolding.user_id == current_user.id)
+        .all()
+    )
+    if not holdings:
+        return []
+
+    coin_quantities: dict[int, float] = {}
+    for h in holdings:
+        # Sum quantities per coin (user may have multiple holdings of the same coin)
+        coin_quantities[h.coin_id] = coin_quantities.get(h.coin_id, 0.0) + float(h.quantity)
+    coin_ids = list(coin_quantities.keys())
+
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+
+    rows = db.execute(text("""
+        SELECT
+            date_trunc('hour', timestamp) AS bucket,
+            coin_id,
+            AVG(price_usd) AS avg_price
+        FROM fact_market_data
+        WHERE coin_id = ANY(:coin_ids)
+          AND timestamp >= :since
+          AND price_usd IS NOT NULL
+        GROUP BY bucket, coin_id
+        ORDER BY bucket
+    """), {"coin_ids": coin_ids, "since": since}).fetchall()
+
+    if not rows:
+        return []
+
+    # Aggregate: sum(quantity * avg_price) per bucket
+    from collections import defaultdict
+    bucket_values: dict[datetime, float] = defaultdict(float)
+    for row in rows:
+        qty = coin_quantities.get(row.coin_id, 0.0)
+        bucket_values[row.bucket] += qty * float(row.avg_price)
+
+    data_points = [
+        {"timestamp": bucket.isoformat(), "value": round(value, 2)}
+        for bucket, value in sorted(bucket_values.items())
+        if value > 0
+    ]
+
+    # Downsample to ~300 points max
+    if len(data_points) > 300:
+        step = len(data_points) / 300
+        data_points = [data_points[int(i * step)] for i in range(300)]
+
+    return data_points
 
 
 @router.get("/benchmark")

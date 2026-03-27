@@ -9,6 +9,7 @@ Usage: python -m realtime.consumer
 import asyncio
 import json
 import os
+import random
 import signal
 import logging
 
@@ -106,15 +107,18 @@ async def consume():
     """Connect to CoinCap WebSocket, publish prices to Redis."""
     r = aioredis.from_url(REDIS_URL)
     # In-memory cache of last published price per coin to filter redundant updates
-    last_prices: dict[str, float] = {}
+    last_prices: dict[str, str] = {}
 
     logger.info("Tracking %d coins via CoinCap WebSocket", len(COINCAP_TO_COINGECKO))
+
+    reconnect_attempt = 0
 
     while not shutdown_event.is_set():
         try:
             logger.info("Connecting to CoinCap WebSocket...")
             async with websockets.connect(COINCAP_WS_URL, ping_interval=30) as ws:
                 logger.info("Connected to CoinCap WebSocket")
+                reconnect_attempt = 0
 
                 while not shutdown_event.is_set():
                     try:
@@ -133,9 +137,9 @@ async def consume():
                                 if coingecko_id is None:
                                     continue
                                 price = float(price_str)
-                                if last_prices.get(coingecko_id) == price:
+                                if last_prices.get(coingecko_id) == price_str:
                                     continue
-                                last_prices[coingecko_id] = price
+                                last_prices[coingecko_id] = price_str
                                 mapped_prices[coingecko_id] = price
 
                             if mapped_prices:
@@ -152,11 +156,19 @@ async def consume():
                             break
 
         except websockets.ConnectionClosed:
-            logger.warning("WebSocket connection closed, reconnecting in 5s...")
-            await asyncio.sleep(5)
+            base_delay = min(2 ** reconnect_attempt * 2, 60)
+            jitter = random.random()
+            delay = base_delay + jitter
+            logger.warning("WebSocket connection closed, reconnecting in %.1fs...", delay)
+            await asyncio.sleep(delay)
+            reconnect_attempt += 1
         except Exception as e:
-            logger.error("Error: %s, reconnecting in 10s...", e)
-            await asyncio.sleep(10)
+            base_delay = min(2 ** reconnect_attempt * 2, 60)
+            jitter = random.random()
+            delay = base_delay + jitter
+            logger.error("Error: %s, reconnecting in %.1fs...", e, delay)
+            await asyncio.sleep(delay)
+            reconnect_attempt += 1
 
     await r.aclose()
     logger.info("Consumer shutdown complete")

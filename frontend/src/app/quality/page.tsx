@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
-import { ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDateTime } from "@/lib/formatters";
@@ -320,8 +320,16 @@ export default function QualityPage() {
               </TableBody>
             </Table>
           ) : (
-            <div className="flex h-32 items-center justify-center text-slate-500">
-              No quality checks recorded
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <ShieldCheck className="size-12 text-slate-600 mb-4" />
+              <h3 className="text-lg font-medium text-slate-300">No Quality Checks Yet</h3>
+              <p className="text-sm text-slate-500 mt-2 max-w-lg">
+                Data quality checks run every hour and validate: null rates, duplicate detection,
+                price staleness, volume anomalies, rank consistency, and timestamp gaps.
+              </p>
+              <p className="text-sm text-slate-500 mt-2 max-w-lg">
+                Results will appear here after the first hourly check completes.
+              </p>
             </div>
           )}
         </CardContent>

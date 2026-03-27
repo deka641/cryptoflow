@@ -87,6 +87,7 @@ app.add_middleware(
 
 # Cache-control headers by URL prefix
 _CACHE_RULES: list[tuple[str, str]] = [
+    ("/api/v1/public", "public, max-age=60"),
     ("/api/v1/analytics", "public, max-age=3600"),
     ("/api/v1/market", "public, max-age=60"),
     ("/api/v1/coins", "public, max-age=300"),

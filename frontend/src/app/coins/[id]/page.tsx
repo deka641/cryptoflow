@@ -65,12 +65,6 @@ const statCardAccents = [
   { border: "border-l-cyan-500", iconBg: "bg-cyan-500/15 text-cyan-400" },
 ];
 
-const extendedStatAccents = [
-  { border: "border-l-emerald-500", iconBg: "bg-emerald-500/15 text-emerald-400" },
-  { border: "border-l-red-500", iconBg: "bg-red-500/15 text-red-400" },
-  { border: "border-l-violet-500", iconBg: "bg-violet-500/15 text-violet-400" },
-  { border: "border-l-sky-500", iconBg: "bg-sky-500/15 text-sky-400" },
-];
 
 function LivePriceDisplay({ coin, livePrice }: { coin: Coin; livePrice?: number }) {
   const { displayPrice, flash, flashKey } = usePriceFlash(livePrice, coin.price_usd);
@@ -485,79 +479,159 @@ export default function CoinDetailPage() {
         })}
       </div>
 
-      {/* Extended Market Stats */}
-      {(coin.ath != null || coin.high_24h != null || coin.total_supply != null) && (() => {
-        const athPctFromAth = coin.ath && coin.price_usd
+      {/* Market Statistics */}
+      {(coin.high_24h != null || coin.ath != null || coin.atl != null || coin.circulating_supply != null) && (() => {
+        const athPct = coin.ath != null && coin.price_usd != null
           ? ((coin.price_usd - coin.ath) / coin.ath) * 100
           : null;
-        const extendedStats = [
-          {
-            label: "All-Time High",
-            value: formatCurrency(coin.ath ?? null),
-            sub: athPctFromAth != null ? `${athPctFromAth > 0 ? "+" : ""}${athPctFromAth.toFixed(1)}% from ATH` : coin.ath_date ? new Date(coin.ath_date).toLocaleDateString() : null,
-            subColor: athPctFromAth != null ? (athPctFromAth >= 0 ? "text-emerald-400" : "text-red-400") : "text-slate-500",
-            icon: <TrendingUp className="size-5" />,
-            tooltip: "The highest price ever recorded for this coin, with percentage distance from current price.",
-          },
-          {
-            label: "All-Time Low",
-            value: formatCurrency(coin.atl ?? null),
-            sub: coin.atl_date ? new Date(coin.atl_date).toLocaleDateString() : null,
-            subColor: "text-slate-500",
-            icon: <TrendingDown className="size-5" />,
-            tooltip: "The lowest price ever recorded for this coin.",
-          },
-          {
-            label: "24h Range",
-            value: coin.high_24h != null && coin.low_24h != null
-              ? `${formatCurrency(coin.low_24h)} — ${formatCurrency(coin.high_24h)}`
-              : "-",
-            sub: null,
-            subColor: "text-slate-500",
-            icon: <ArrowUpDown className="size-5" />,
-            tooltip: "Price range for the last 24 hours (low — high).",
-          },
-          {
-            label: "Supply",
-            value: formatSupply(coin.circulating_supply ?? null),
-            sub: coin.max_supply ? `Max: ${formatSupply(coin.max_supply)}` : coin.total_supply ? `Total: ${formatSupply(coin.total_supply)}` : null,
-            subColor: "text-slate-500",
-            icon: <Layers className="size-5" />,
-            tooltip: "Circulating supply vs. total or maximum supply. Circulating = coins currently available on the market.",
-          },
-        ];
+        const atlPct = coin.atl != null && coin.price_usd != null
+          ? ((coin.price_usd - coin.atl) / coin.atl) * 100
+          : null;
+        const rangePosition = coin.high_24h != null && coin.low_24h != null && coin.price_usd != null && coin.high_24h !== coin.low_24h
+          ? ((coin.price_usd - coin.low_24h) / (coin.high_24h - coin.low_24h)) * 100
+          : null;
+        const supplyRatio = coin.circulating_supply != null && coin.max_supply != null && coin.max_supply > 0
+          ? (coin.circulating_supply / coin.max_supply) * 100
+          : null;
+
         return (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {extendedStats.map((stat, i) => {
-              const accent = extendedStatAccents[i];
-              return (
-                <Tooltip key={stat.label}>
-                  <TooltipTrigger asChild>
-                    <Card className={`glass-card border-l-[3px] ${accent.border}`}>
-                      <CardContent className="flex items-center gap-3">
-                        <div className={`flex size-10 shrink-0 items-center justify-center rounded-lg ${accent.iconBg}`}>
-                          {stat.icon}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm text-slate-400">{stat.label}</p>
-                          <p className="text-lg font-bold text-white truncate">{stat.value}</p>
-                          {stat.sub && (
-                            <p className={`text-xs ${stat.subColor} truncate`}>{stat.sub}</p>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </TooltipTrigger>
-                  <TooltipContent
-                    side="bottom"
-                    sideOffset={6}
-                    className="max-w-xs border border-slate-700/50 bg-slate-800/95 backdrop-blur-md text-slate-300 shadow-xl shadow-black/20"
-                  >
-                    {stat.tooltip}
-                  </TooltipContent>
-                </Tooltip>
-              );
-            })}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Price Range (24h) */}
+            {coin.high_24h != null && coin.low_24h != null && (
+              <Card className="glass-card border-l-[3px] border-l-sky-500">
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sky-500/15 text-sky-400">
+                      <ArrowUpDown className="size-4" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-400">Price Range (24h)</p>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400">Low: <span className="text-white font-medium">{formatCurrency(coin.low_24h)}</span></span>
+                    <span className="text-slate-400">High: <span className="text-white font-medium">{formatCurrency(coin.high_24h)}</span></span>
+                  </div>
+                  <div className="relative h-2 w-full rounded-full bg-slate-700/60 overflow-hidden">
+                    <div
+                      className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-red-500 via-amber-500 to-emerald-500"
+                      style={{ width: "100%" }}
+                    />
+                    {rangePosition != null && (
+                      <div
+                        className="absolute top-1/2 -translate-y-1/2 size-3 rounded-full bg-white border-2 border-sky-400 shadow-md shadow-sky-500/30"
+                        style={{ left: `clamp(0%, ${rangePosition}%, 100%)` }}
+                      />
+                    )}
+                  </div>
+                  {coin.price_usd != null && (
+                    <p className="text-xs text-slate-500 text-center">
+                      Current: <span className="text-white font-medium">{formatCurrency(coin.price_usd)}</span>
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* All-Time High */}
+            {coin.ath != null && (
+              <Card className="glass-card border-l-[3px] border-l-emerald-500">
+                <CardContent className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400">
+                      <TrendingUp className="size-4" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-400">All-Time High</p>
+                  </div>
+                  <p className="text-xl font-bold text-white">{formatCurrency(coin.ath)}</p>
+                  <div className="flex items-center gap-3 text-xs">
+                    {athPct != null && (
+                      <span className={cn(
+                        "font-semibold",
+                        athPct >= 0 ? "text-emerald-400" : "text-red-400"
+                      )}>
+                        {formatPercentage(athPct)} from ATH
+                      </span>
+                    )}
+                    {coin.ath_date && (
+                      <span className="text-slate-500">
+                        {new Date(coin.ath_date).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* All-Time Low */}
+            {coin.atl != null && (
+              <Card className="glass-card border-l-[3px] border-l-red-500">
+                <CardContent className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-red-500/15 text-red-400">
+                      <TrendingDown className="size-4" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-400">All-Time Low</p>
+                  </div>
+                  <p className="text-xl font-bold text-white">{formatCurrency(coin.atl)}</p>
+                  <div className="flex items-center gap-3 text-xs">
+                    {atlPct != null && (
+                      <span className="text-emerald-400 font-semibold">
+                        {formatPercentage(atlPct)} from ATL
+                      </span>
+                    )}
+                    {coin.atl_date && (
+                      <span className="text-slate-500">
+                        {new Date(coin.atl_date).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Supply */}
+            {coin.circulating_supply != null && (
+              <Card className="glass-card border-l-[3px] border-l-violet-500">
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/15 text-violet-400">
+                      <Layers className="size-4" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-400">Supply</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-400">Circulating</span>
+                      <span className="text-white font-medium">{formatSupply(coin.circulating_supply)}</span>
+                    </div>
+                    {coin.total_supply != null && (
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-400">Total</span>
+                        <span className="text-white font-medium">{formatSupply(coin.total_supply)}</span>
+                      </div>
+                    )}
+                    {coin.max_supply != null && (
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-400">Max</span>
+                        <span className="text-white font-medium">{formatSupply(coin.max_supply)}</span>
+                      </div>
+                    )}
+                  </div>
+                  {supplyRatio != null && (
+                    <div className="space-y-1">
+                      <div className="relative h-2 w-full rounded-full bg-slate-700/60 overflow-hidden">
+                        <div
+                          className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-violet-500 to-violet-400"
+                          style={{ width: `${Math.min(supplyRatio, 100)}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-slate-500 text-center">
+                        {supplyRatio.toFixed(1)}% of max supply in circulation
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         );
       })()}

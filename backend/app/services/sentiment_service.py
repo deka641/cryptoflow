@@ -38,19 +38,37 @@ async def get_fear_greed_index() -> dict:
             logger.debug("Redis cache read failed for %s", _CACHE_KEY)
 
     # Fetch from Alternative.me API
-    async with httpx.AsyncClient(timeout=10) as client:
-        resp = await client.get(_FNG_API_URL, params={"limit": 30, "format": "json"})
-        resp.raise_for_status()
-        data = resp.json()
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(_FNG_API_URL, params={"limit": 30, "format": "json"})
+            resp.raise_for_status()
+            data = resp.json()
 
-    result = {
-        "value": int(data["data"][0]["value"]),
-        "value_classification": data["data"][0]["value_classification"],
-        "history": [
-            {"value": int(d["value"]), "timestamp": d["timestamp"]}
-            for d in data["data"]
-        ],
-    }
+        # Validate response structure before accessing
+        entries = data.get("data")
+        if not entries or not isinstance(entries, list) or len(entries) == 0:
+            raise ValueError("Unexpected API response structure")
+
+        result = {
+            "value": int(entries[0]["value"]),
+            "value_classification": entries[0]["value_classification"],
+            "history": [
+                {"value": int(d["value"]), "timestamp": d["timestamp"]}
+                for d in entries
+            ],
+        }
+    except Exception as exc:
+        logger.warning("Fear & Greed API fetch failed: %s", exc)
+        # Fall back to cached data if available
+        if r is not None:
+            try:
+                cached = r.get(_CACHE_KEY)
+                if cached:
+                    logger.info("Returning cached sentiment data after API failure")
+                    return json.loads(cached)
+            except Exception:
+                pass
+        raise
 
     # Cache the result
     if r is not None:

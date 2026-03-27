@@ -64,10 +64,10 @@ export default function PortfolioPage() {
       <div className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-28 bg-slate-800" />
+            <Skeleton key={i} className="h-28 bg-slate-700" />
           ))}
         </div>
-        <Skeleton className="h-96 bg-slate-800" />
+        <Skeleton className="h-96 bg-slate-700" />
       </div>
     );
   }
@@ -121,7 +121,7 @@ export default function PortfolioPage() {
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement("a");
                   a.href = url;
-                  const today = new Date().toISOString().split('T')[0];
+                  const today = new Date().toLocaleDateString('en-CA');
                   a.download = `cryptoflow-portfolio-${today}.csv`;
                   a.click();
                   URL.revokeObjectURL(url);

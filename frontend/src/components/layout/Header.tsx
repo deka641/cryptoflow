@@ -129,7 +129,7 @@ export function Header({ onOpenShortcuts }: HeaderProps) {
         {user ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+              <button className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" aria-label="User menu">
                 <Avatar size="sm">
                   <AvatarFallback className="bg-indigo-600 text-white text-xs">
                     {user.full_name

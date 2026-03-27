@@ -180,7 +180,7 @@ export function DominanceChart() {
 
       {/* Chart */}
       {loading ? (
-        <Skeleton className="h-80 w-full bg-slate-800" />
+        <Skeleton className="h-80 w-full bg-slate-700" />
       ) : error ? (
         <ErrorState compact message="Failed to load dominance data" onRetry={() => fetchData(days)} />
       ) : chartData.length === 0 ? (

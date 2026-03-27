@@ -38,7 +38,7 @@ export function useMarketOverview() {
   return { data, loading, error, refetch: fetch };
 }
 
-export function useCoins(page = 1, perPage = 20, search = "", sortBy = "market_cap_rank", sortDir = "asc") {
+export function useCoins(page = 1, perPage = 20, search = "", sortBy = "market_cap_rank", sortDir = "asc", category = "") {
   const [data, setData] = useState<PaginatedResponse<Coin> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +47,7 @@ export function useCoins(page = 1, perPage = 20, search = "", sortBy = "market_c
   const fetch = useCallback(async () => {
     try {
       setLoading(true);
-      const result = await api.getCoins(page, perPage, search, sortBy, sortDir);
+      const result = await api.getCoins(page, perPage, search, sortBy, sortDir, category);
       setData(result);
       setError(null);
       hasToasted.current = false;
@@ -60,7 +60,7 @@ export function useCoins(page = 1, perPage = 20, search = "", sortBy = "market_c
     } finally {
       setLoading(false);
     }
-  }, [page, perPage, search, sortBy, sortDir]);
+  }, [page, perPage, search, sortBy, sortDir, category]);
 
   useEffect(() => {
     fetch();

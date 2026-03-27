@@ -23,7 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
-import { ChevronLeft, ChevronRight, Clock, Radio, Wifi, WifiOff, Activity, MessageSquare } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, Radio, Wifi, WifiOff, Activity, MessageSquare, GitBranch } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDateTime } from "@/lib/formatters";
@@ -360,8 +360,15 @@ export default function PipelinePage() {
               </TableBody>
             </Table>
           ) : (
-            <div className="flex h-32 items-center justify-center text-slate-500">
-              No pipeline runs recorded
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <GitBranch className="size-12 text-slate-600 mb-4" />
+              <h3 className="text-lg font-medium text-slate-300">No Pipeline Runs Recorded</h3>
+              <p className="text-sm text-slate-500 mt-2 max-w-lg whitespace-pre-line">
+                {"Pipeline runs are logged automatically by the cron scheduler:\n\u2022 Data Ingest \u2014 every 10 minutes\n\u2022 Daily Aggregates \u2014 daily at 03:00 UTC\n\u2022 Analytics Computation \u2014 daily at 04:00 UTC\n\u2022 Data Quality Checks \u2014 every hour"}
+              </p>
+              <p className="text-sm text-slate-500 mt-2 max-w-lg">
+                The first runs will appear here after the scheduler starts.
+              </p>
             </div>
           )}
         </CardContent>

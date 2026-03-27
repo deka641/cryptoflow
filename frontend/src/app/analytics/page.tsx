@@ -17,6 +17,8 @@ import { ErrorState } from "@/components/ui/error-state";
 import { FadeIn } from "@/components/ui/fade-in";
 import { ChartErrorBoundary } from "@/components/ui/chart-error-boundary";
 import { DataFreshness } from "@/components/ui/data-freshness";
+import { BarChart3 } from "lucide-react";
+import Link from "next/link";
 
 const PERIODS = [
   { label: "30d", days: 30 },
@@ -98,6 +100,25 @@ export default function AnalyticsPage() {
           <DataFreshness lastUpdated={correlation.computed_at} />
         )}
       </div>
+
+      {!corrLoading && !volLoading && !correlation && !volatility && (
+        <Card className="glass-card">
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <BarChart3 className="size-12 text-slate-600 mb-4" />
+            <h3 className="text-lg font-medium text-slate-300">Analytics Data Not Yet Available</h3>
+            <p className="text-sm text-slate-500 mt-2 max-w-lg">
+              Correlation and volatility metrics are computed daily at 04:00 UTC by the analytics pipeline.
+              Check the Pipeline page to see when the last job ran.
+            </p>
+            <Link
+              href="/pipeline"
+              className="mt-4 text-sm font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
+            >
+              View Pipeline Status
+            </Link>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue="correlation">
         <TabsList className="bg-slate-800/80 border border-slate-700/50 backdrop-blur-sm">

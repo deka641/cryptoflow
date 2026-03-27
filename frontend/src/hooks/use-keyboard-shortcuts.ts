@@ -11,6 +11,7 @@ export const SHORTCUTS = [
   { keys: ["g", "c"], label: "Go to Compare", path: "/compare" },
   { keys: ["g", "q"], label: "Go to Quality", path: "/quality" },
   { keys: ["g", "i"], label: "Go to Pipeline", path: "/pipeline" },
+  { keys: ["g", "l"], label: "Go to Alerts", path: "/alerts" },
 ] as const;
 
 const SEQUENCE_TIMEOUT = 1000;

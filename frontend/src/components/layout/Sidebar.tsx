@@ -7,10 +7,12 @@ import {
   TrendingUp,
   GitCompareArrows,
   Briefcase,
+  Bell,
   BarChart3,
   GitBranch,
   ShieldCheck,
   Lightbulb,
+  Code,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,10 +21,12 @@ const navItems = [
   { href: "/market", label: "Market", icon: TrendingUp },
   { href: "/compare", label: "Compare", icon: GitCompareArrows },
   { href: "/portfolio", label: "Portfolio", icon: Briefcase },
+  { href: "/alerts", label: "Alerts", icon: Bell },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/pipeline", label: "Pipeline", icon: GitBranch },
   { href: "/quality", label: "Quality", icon: ShieldCheck },
   { href: "/how-it-works", label: "How It Works", icon: Lightbulb },
+  { href: "/api-docs", label: "API Docs", icon: Code },
 ];
 
 export function SidebarNav() {

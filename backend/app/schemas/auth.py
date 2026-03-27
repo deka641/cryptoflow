@@ -45,6 +45,7 @@ class UserResponse(BaseModel):
     email: str
     full_name: str | None
     is_active: bool
+    webhook_url: str | None = None
 
     class Config:
         from_attributes = True

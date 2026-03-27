@@ -71,6 +71,36 @@ function CustomTooltip({ active, payload, label, showBenchmark }: CustomTooltipP
   );
 }
 
+interface HistoryTooltipProps {
+  active?: boolean;
+  payload?: { value: number; dataKey: string; color: string }[];
+  label?: string;
+}
+
+function HistoryTooltip({ active, payload, label }: HistoryTooltipProps) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-lg border border-slate-700/50 bg-slate-800/90 backdrop-blur-md px-3 py-2 shadow-xl shadow-black/20">
+      <p className="text-xs text-slate-400">
+        {label
+          ? new Date(label).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : ""}
+      </p>
+      {payload.map((p) => (
+        <p key={p.dataKey} className="text-sm font-semibold text-indigo-300">
+          Value: {formatCurrency(p.value)}
+        </p>
+      ))}
+    </div>
+  );
+}
+
 interface PerformanceChartProps {
   hasHoldings: boolean;
 }
@@ -82,6 +112,9 @@ export function PerformanceChart({ hasHoldings }: PerformanceChartProps) {
   const [error, setError] = useState(false);
   const [activeBenchmark, setActiveBenchmark] = useState<string | null>(null);
   const [benchmarkData, setBenchmarkData] = useState<{ timestamp: string; value: number }[]>([]);
+  const [historyData, setHistoryData] = useState<{ timestamp: string; value: number }[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState(false);
 
   const fetchPerformance = useCallback(async (d: number) => {
     setLoading(true);
@@ -97,6 +130,20 @@ export function PerformanceChart({ hasHoldings }: PerformanceChartProps) {
     }
   }, []);
 
+  const fetchHistory = useCallback(async (d: number) => {
+    setHistoryLoading(true);
+    setHistoryError(false);
+    try {
+      const data = await api.getPortfolioHistory(d);
+      setHistoryData(data);
+    } catch {
+      setHistoryData([]);
+      setHistoryError(true);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
   const fetchBenchmark = useCallback(async (d: number, sym: string) => {
     try {
       const data = await api.getPortfolioBenchmark(d, sym);
@@ -109,7 +156,8 @@ export function PerformanceChart({ hasHoldings }: PerformanceChartProps) {
   useEffect(() => {
     if (!hasHoldings) return;
     fetchPerformance(days);
-  }, [days, hasHoldings, fetchPerformance]);
+    fetchHistory(days);
+  }, [days, hasHoldings, fetchPerformance, fetchHistory]);
 
   useEffect(() => {
     if (activeBenchmark) {
@@ -159,7 +207,8 @@ export function PerformanceChart({ hasHoldings }: PerformanceChartProps) {
   const benchInfo = BENCHMARKS.find((b) => b.symbol === activeBenchmark);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Period selector shared by both charts */}
       <div className="flex flex-wrap items-center gap-4">
         <div className="flex gap-1">
           {PERIODS.map((p) => (
@@ -203,116 +252,178 @@ export function PerformanceChart({ hasHoldings }: PerformanceChartProps) {
         </div>
       </div>
 
-      {loading ? (
-        <Skeleton className="h-80 w-full bg-slate-800" />
-      ) : error ? (
-        <ErrorState compact message="Failed to load performance data" onRetry={() => fetchPerformance(days)} />
-      ) : chartData.length === 0 ? (
-        <div className="flex h-80 items-center justify-center text-slate-500">
-          No performance data for this period
-        </div>
-      ) : showBenchmark ? (
-        <div className="h-80 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-              <XAxis
-                dataKey="timestamp"
-                tickFormatter={formatTimestamp}
-                stroke="#64748b"
-                fontSize={12}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                tickFormatter={(v: number) => `${v.toFixed(0)}`}
-                stroke="#64748b"
-                fontSize={12}
-                tickLine={false}
-                axisLine={false}
-                width={50}
-                domain={["auto", "auto"]}
-                label={{ value: "Base 100", angle: -90, position: "insideLeft", fill: "#64748b", fontSize: 10 }}
-              />
-              <Tooltip content={<CustomTooltip showBenchmark={showBenchmark} />} />
-              <Area
-                type="monotone"
-                dataKey="Portfolio"
-                stroke="#6366f1"
-                strokeWidth={2.5}
-                fill="url(#perfGradient)"
-              />
-              <Line
-                type="monotone"
-                dataKey={activeBenchmark!.toUpperCase()}
-                stroke={benchInfo?.color ?? "#f59e0b"}
-                strokeWidth={2}
-                strokeDasharray="6 3"
-                dot={false}
-              />
-              <defs>
-                <linearGradient id="perfGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#6366f1" stopOpacity={0.4} />
-                  <stop offset="50%" stopColor="#6366f1" stopOpacity={0.15} />
-                  <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-            </ComposedChart>
-          </ResponsiveContainer>
-          <div className="flex justify-center gap-6 mt-2 text-xs">
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block w-4 h-0.5 bg-indigo-500 rounded-full" />
-              <span className="text-slate-400">Portfolio</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block w-4 h-0.5 rounded-full" style={{ backgroundColor: benchInfo?.color, borderTop: "1px dashed" }} />
-              <span className="text-slate-400">{activeBenchmark?.toUpperCase()}</span>
-            </span>
+      {/* Portfolio Value Timeline */}
+      <div>
+        <h4 className="text-sm font-medium text-slate-300 mb-2">Portfolio Value</h4>
+        {historyLoading ? (
+          <Skeleton className="h-52 w-full bg-slate-700" />
+        ) : historyError ? (
+          <ErrorState compact message="Failed to load portfolio history" onRetry={() => fetchHistory(days)} />
+        ) : historyData.length === 0 ? (
+          <div className="flex h-52 items-center justify-center text-slate-500">
+            No history data for this period
           </div>
-        </div>
-      ) : (
-        <div className="h-80 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="perfGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#6366f1" stopOpacity={0.4} />
-                  <stop offset="50%" stopColor="#6366f1" stopOpacity={0.15} />
-                  <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-              <XAxis
-                dataKey="timestamp"
-                tickFormatter={formatTimestamp}
-                stroke="#64748b"
-                fontSize={12}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                tickFormatter={(v: number) => formatCompactCurrency(v)}
-                stroke="#64748b"
-                fontSize={12}
-                tickLine={false}
-                axisLine={false}
-                width={80}
-                domain={["auto", "auto"]}
-              />
-              <Tooltip content={<CustomTooltip showBenchmark={false} />} />
-              <Area
-                type="monotone"
-                dataKey="value"
-                stroke="#6366f1"
-                strokeWidth={2.5}
-                fill="url(#perfGradient)"
-                isAnimationActive={true}
-                animationDuration={500}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+        ) : (
+          <div className="h-52 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={historyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="historyGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#6366f1" stopOpacity={0.4} />
+                    <stop offset="50%" stopColor="#6366f1" stopOpacity={0.15} />
+                    <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                <XAxis
+                  dataKey="timestamp"
+                  tickFormatter={formatTimestamp}
+                  stroke="#64748b"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  tickFormatter={(v: number) => formatCompactCurrency(v)}
+                  stroke="#64748b"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  width={80}
+                  domain={["auto", "auto"]}
+                />
+                <Tooltip content={<HistoryTooltip />} />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#6366f1"
+                  strokeWidth={2.5}
+                  fill="url(#historyGradient)"
+                  isAnimationActive={true}
+                  animationDuration={500}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+
+      {/* Relative Performance / Benchmark Comparison */}
+      <div>
+        <h4 className="text-sm font-medium text-slate-300 mb-2">
+          {showBenchmark ? "Relative Performance" : "Performance"}
+        </h4>
+        {loading ? (
+          <Skeleton className="h-80 w-full bg-slate-700" />
+        ) : error ? (
+          <ErrorState compact message="Failed to load performance data" onRetry={() => fetchPerformance(days)} />
+        ) : chartData.length === 0 ? (
+          <div className="flex h-80 items-center justify-center text-slate-500">
+            No performance data for this period
+          </div>
+        ) : showBenchmark ? (
+          <div className="h-80 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                <XAxis
+                  dataKey="timestamp"
+                  tickFormatter={formatTimestamp}
+                  stroke="#64748b"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  tickFormatter={(v: number) => `${v.toFixed(0)}`}
+                  stroke="#64748b"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  width={50}
+                  domain={["auto", "auto"]}
+                  label={{ value: "Base 100", angle: -90, position: "insideLeft", fill: "#64748b", fontSize: 10 }}
+                />
+                <Tooltip content={<CustomTooltip showBenchmark={showBenchmark} />} />
+                <Area
+                  type="monotone"
+                  dataKey="Portfolio"
+                  stroke="#6366f1"
+                  strokeWidth={2.5}
+                  fill="url(#perfGradient)"
+                />
+                <Line
+                  type="monotone"
+                  dataKey={activeBenchmark!.toUpperCase()}
+                  stroke={benchInfo?.color ?? "#f59e0b"}
+                  strokeWidth={2}
+                  strokeDasharray="6 3"
+                  dot={false}
+                />
+                <defs>
+                  <linearGradient id="perfGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#6366f1" stopOpacity={0.4} />
+                    <stop offset="50%" stopColor="#6366f1" stopOpacity={0.15} />
+                    <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+              </ComposedChart>
+            </ResponsiveContainer>
+            <div className="flex justify-center gap-6 mt-2 text-xs">
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block w-4 h-0.5 bg-indigo-500 rounded-full" />
+                <span className="text-slate-400">Portfolio</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block w-4 h-0.5 rounded-full" style={{ backgroundColor: benchInfo?.color, borderTop: "1px dashed" }} />
+                <span className="text-slate-400">{activeBenchmark?.toUpperCase()}</span>
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="h-80 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="perfGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#6366f1" stopOpacity={0.4} />
+                    <stop offset="50%" stopColor="#6366f1" stopOpacity={0.15} />
+                    <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                <XAxis
+                  dataKey="timestamp"
+                  tickFormatter={formatTimestamp}
+                  stroke="#64748b"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  tickFormatter={(v: number) => formatCompactCurrency(v)}
+                  stroke="#64748b"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  width={80}
+                  domain={["auto", "auto"]}
+                />
+                <Tooltip content={<CustomTooltip showBenchmark={false} />} />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#6366f1"
+                  strokeWidth={2.5}
+                  fill="url(#perfGradient)"
+                  isAnimationActive={true}
+                  animationDuration={500}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

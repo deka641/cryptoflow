@@ -139,6 +139,7 @@ export interface User {
   email: string;
   full_name: string | null;
   is_active: boolean;
+  webhook_url?: string | null;
 }
 
 export interface SparklineData {

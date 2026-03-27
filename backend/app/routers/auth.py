@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
 from app.schemas.auth import UserRegister, UserLogin, UserResponse, Token, PasswordChange, ForgotPasswordRequest, ResetPasswordRequest
-from app.auth.jwt import hash_password, verify_password, create_access_token
+from app.auth.jwt import hash_password, verify_password, create_access_token, decode_access_token_for_refresh
 from app.auth.dependencies import get_current_user
 from app.config import settings
 
@@ -153,6 +153,44 @@ def login(payload: UserLogin, request: Request, db: Session = Depends(get_db)):
 
     access_token = create_access_token(data={"sub": str(user.id)})
     return Token(access_token=access_token)
+
+
+@router.post("/refresh", response_model=Token)
+def refresh_token(request: Request, db: Session = Depends(get_db)):
+    """Refresh an access token. Accepts tokens up to 24h past expiry."""
+    from fastapi.security import HTTPBearer
+    auth = HTTPBearer(auto_error=False)
+    # Extract token from Authorization header manually
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing token")
+    token = auth_header[7:]
+
+    payload = decode_access_token_for_refresh(token)
+    if payload is None or "sub" not in payload:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token cannot be refreshed")
+
+    user = db.query(User).filter(User.id == int(payload["sub"])).first()
+    if not user or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or deactivated")
+
+    new_token = create_access_token(data={"sub": str(user.id)})
+    return Token(access_token=new_token)
+
+
+@router.put("/webhook")
+def update_webhook(
+    request_body: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update the current user's webhook URL for alert notifications."""
+    webhook_url = request_body.get("webhook_url", "").strip()
+    if webhook_url and not webhook_url.startswith(("http://", "https://")):
+        raise HTTPException(status_code=400, detail="Invalid URL format")
+    current_user.webhook_url = webhook_url or None
+    db.commit()
+    return {"message": "Webhook URL updated", "webhook_url": current_user.webhook_url}
 
 
 @router.get("/me", response_model=UserResponse)

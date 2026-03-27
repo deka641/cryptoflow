@@ -59,9 +59,28 @@ def get_market_dominance(
     return market_service.get_market_dominance(db, days)
 
 
+@router.get("/summary")
+def get_market_summary(
+    period: int = Query(7, ge=1, le=30, description="Period in days"),
+    db: Session = Depends(get_db),
+):
+    """Get a market summary with top performers, losers, and volatility data."""
+    from app.services.report_service import get_market_summary as _get_summary
+
+    return _get_summary(db, period)
+
+
 @router.get("/sentiment")
 async def get_market_sentiment():
     """Get the Fear & Greed Index (cached for 1 hour)."""
+    from fastapi.responses import JSONResponse
     from app.services.sentiment_service import get_fear_greed_index
 
-    return await get_fear_greed_index()
+    try:
+        return await get_fear_greed_index()
+    except Exception:
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "Sentiment data temporarily unavailable"},
+            headers={"Retry-After": "300"},
+        )

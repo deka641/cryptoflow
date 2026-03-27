@@ -24,8 +24,15 @@ export default function MarketPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortBy, setSortBy] = useState("market_cap_rank");
   const [sortDir, setSortDir] = useState("asc");
+  const [category, setCategory] = useState("");
+  const [categories, setCategories] = useState<string[]>([]);
   const perPage = 20;
-  const { data, loading, error, refetch } = useCoins(page, perPage, debouncedSearch, sortBy, sortDir);
+  const { data, loading, error, refetch } = useCoins(page, perPage, debouncedSearch, sortBy, sortDir, category);
+
+  // Fetch available categories on mount
+  useEffect(() => {
+    api.getCoinCategories().then(setCategories).catch(() => {});
+  }, []);
   const { prices } = useLivePricesContext();
   const { user } = useAuth();
   const { watchlist, toggle, isWatched } = useWatchlist();
@@ -113,15 +120,50 @@ export default function MarketPage() {
         </p>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
-        <Input
-          placeholder="Search coins..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-10 bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500/50 focus:ring-indigo-500/20 transition-all duration-200"
-        />
+      {/* Search & Filter */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative max-w-md flex-1">
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
+          <Input
+            placeholder="Search coins..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10 bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500/50 focus:ring-indigo-500/20 transition-all duration-200"
+          />
+        </div>
+        {categories.length > 0 && (
+          <div className="flex items-center gap-2">
+            <select
+              value={category}
+              onChange={(e) => {
+                setCategory(e.target.value);
+                setPage(1);
+              }}
+              className="h-9 rounded-md border border-slate-700 bg-slate-800/50 px-3 text-sm text-white focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/20"
+              aria-label="Filter by category"
+            >
+              <option value="">All Categories</option>
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+            {category && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setCategory("");
+                  setPage(1);
+                }}
+                className="text-slate-400 hover:text-white h-9 px-2"
+              >
+                Clear
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Tabs + Market Table */}

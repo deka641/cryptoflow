@@ -25,11 +25,25 @@ _SORT_COLUMN_MAP = {
 }
 
 
+@router.get("/categories")
+def list_categories(db: Session = Depends(get_db)):
+    """List all distinct coin categories."""
+    rows = (
+        db.query(DimCoin.category)
+        .filter(DimCoin.category.isnot(None))
+        .distinct()
+        .order_by(DimCoin.category)
+        .all()
+    )
+    return [row[0] for row in rows]
+
+
 @router.get("", response_model=PaginatedResponse)
 def list_coins(
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(20, ge=1, le=100, description="Items per page"),
     search: str | None = Query(None, description="Search by name or symbol"),
+    category: str | None = Query(None, description="Filter by category"),
     sort_by: str = Query("market_cap_rank", description="Sort field"),
     sort_dir: str = Query("asc", description="Sort direction: asc or desc"),
     db: Session = Depends(get_db),
@@ -46,6 +60,9 @@ def list_coins(
         query = query.filter(
             (DimCoin.name.ilike(pattern)) | (DimCoin.symbol.ilike(pattern))
         )
+
+    if category:
+        query = query.filter(DimCoin.category == category)
 
     total = query.count()
     pages = math.ceil(total / per_page) if total > 0 else 1

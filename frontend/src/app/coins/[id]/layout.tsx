@@ -16,9 +16,14 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const coin = await getCoinData(id);
   if (coin) {
+    const priceStr = coin.price_usd != null ? `$${Number(coin.price_usd).toLocaleString()}` : "";
     return {
       title: `${coin.name} (${coin.symbol.toUpperCase()})`,
       description: `Live price, charts, risk metrics, and analytics for ${coin.name} (${coin.symbol.toUpperCase()}).`,
+      openGraph: {
+        title: `${coin.name} (${coin.symbol.toUpperCase()})${priceStr ? ` — ${priceStr}` : ""}`,
+        description: `View ${coin.name} price charts, volatility, correlations, and analytics on CryptoFlow.`,
+      },
     };
   }
   return {

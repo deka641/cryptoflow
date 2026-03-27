@@ -52,18 +52,18 @@ def get_market_overview(db: Session) -> dict:
     if prev_volume and prev_volume > 0:
         volume_change_pct = round((total_volume - prev_volume) / prev_volume * 100, 2)
 
-    # BTC dominance
-    btc_coin = db.query(DimCoin).filter(DimCoin.symbol == "btc").first()
-    btc_cap = 0
-    if btc_coin:
-        for r in latest:
-            if r.coin_id == btc_coin.id:
-                btc_cap = float(r.market_cap or 0)
-                break
-    btc_dominance = (btc_cap / total_market_cap * 100) if total_market_cap > 0 else 0
+    # Build coin map only for IDs present in latest data
+    coin_ids = [r.coin_id for r in latest]
+    coins = {c.id: c for c in db.query(DimCoin).filter(DimCoin.id.in_(coin_ids)).all()} if coin_ids else {}
 
-    # Build coin map for names
-    coins = {c.id: c for c in db.query(DimCoin).all()}
+    # BTC dominance (using already-fetched coins)
+    btc_cap = 0
+    for r in latest:
+        coin = coins.get(r.coin_id)
+        if coin and coin.symbol == "btc":
+            btc_cap = float(r.market_cap or 0)
+            break
+    btc_dominance = (btc_cap / total_market_cap * 100) if total_market_cap > 0 else 0
 
     movers = []
     for r in latest:

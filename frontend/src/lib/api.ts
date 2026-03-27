@@ -2,6 +2,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 class ApiClient {
   private baseUrl: string;
+  private _refreshing: Promise<boolean> | null = null;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
@@ -12,7 +13,42 @@ class ApiClient {
     return localStorage.getItem("access_token");
   }
 
-  private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  /** Try to refresh the access token. Returns true if successful. */
+  private async tryRefreshToken(): Promise<boolean> {
+    const token = this.getToken();
+    if (!token) return false;
+
+    try {
+      const res = await fetch(`${this.baseUrl}/api/v1/auth/refresh`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!res.ok) return false;
+      const data = await res.json();
+      if (data.access_token && typeof window !== "undefined") {
+        localStorage.setItem("access_token", data.access_token);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Deduplicated refresh: only one refresh request at a time. */
+  private async refreshOnce(): Promise<boolean> {
+    if (!this._refreshing) {
+      this._refreshing = this.tryRefreshToken().finally(() => {
+        this._refreshing = null;
+      });
+    }
+    return this._refreshing;
+  }
+
+  private async request<T>(endpoint: string, options?: RequestInit, _isRetry = false): Promise<T> {
     const token = this.getToken();
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -29,8 +65,12 @@ class ApiClient {
 
     if (!res.ok) {
       const error = await res.json().catch(() => ({ detail: res.statusText }));
-      // Auto-logout on 401 (expired or invalid token)
-      if (res.status === 401 && typeof window !== "undefined") {
+      // On 401: attempt token refresh once before logging out
+      if (res.status === 401 && typeof window !== "undefined" && !_isRetry) {
+        const refreshed = await this.refreshOnce();
+        if (refreshed) {
+          return this.request<T>(endpoint, options, true);
+        }
         localStorage.removeItem("access_token");
         window.dispatchEvent(new Event("auth:logout"));
       }
@@ -47,14 +87,19 @@ class ApiClient {
   }
 
   // Coins
-  async getCoins(page = 1, perPage = 20, search = "", sortBy = "market_cap_rank", sortDir = "asc") {
+  async getCoins(page = 1, perPage = 20, search = "", sortBy = "market_cap_rank", sortDir = "asc", category = "") {
     const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
     if (search) params.set("search", search);
+    if (category) params.set("category", category);
     if (sortBy !== "market_cap_rank") params.set("sort_by", sortBy);
     if (sortDir !== "asc") params.set("sort_dir", sortDir);
     return this.request<import("@/types").PaginatedResponse<import("@/types").Coin>>(
       `/api/v1/coins?${params}`
     );
+  }
+
+  async getCoinCategories() {
+    return this.request<string[]>("/api/v1/coins/categories");
   }
 
   async getCoin(id: number) {
@@ -90,6 +135,16 @@ class ApiClient {
 
   async getMarketSectors() {
     return this.request<import("@/types").SectorData[]>("/api/v1/market/sectors");
+  }
+
+  async getMarketSummary(period = 7) {
+    return this.request<{
+      period_days: number;
+      top_performers: { coin_id: number; symbol: string; name: string; image_url: string | null; return_pct: number }[];
+      top_losers: { coin_id: number; symbol: string; name: string; image_url: string | null; return_pct: number }[];
+      market_cap: { current: number | null; change_pct: number | null };
+      most_volatile: { symbol: string; name: string; image_url: string | null; volatility: number }[];
+    }>(`/api/v1/market/summary?period=${period}`);
   }
 
   async getMarketSentiment() {
@@ -213,6 +268,12 @@ class ApiClient {
     return this.request<import("@/types").PortfolioPerformance>(`/api/v1/portfolio/performance?days=${days}`);
   }
 
+  async getPortfolioHistory(days = 30) {
+    return this.request<{ timestamp: string; value: number }[]>(
+      `/api/v1/portfolio/history?days=${days}`
+    );
+  }
+
   async getPortfolioBenchmark(days = 30, symbol = "btc") {
     return this.request<{ symbol: string; days: number; data_points: { timestamp: string; value: number }[] }>(
       `/api/v1/portfolio/benchmark?days=${days}&symbol=${symbol}`
@@ -285,6 +346,13 @@ class ApiClient {
 
   async getMe() {
     return this.request<import("@/types").User>("/api/v1/auth/me");
+  }
+
+  async updateWebhook(webhookUrl: string) {
+    return this.request<{ message: string; webhook_url: string | null }>("/api/v1/auth/webhook", {
+      method: "PUT",
+      body: JSON.stringify({ webhook_url: webhookUrl }),
+    });
   }
 
   async changePassword(currentPassword: string, newPassword: string) {

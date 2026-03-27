@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { User as UserIcon, Lock, Bell, Briefcase, Shield, History } from "lucide-react";
+import { User as UserIcon, Lock, Bell, Briefcase, Shield, History, Webhook } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { useAuth } from "@/providers/auth-provider";
@@ -24,6 +24,9 @@ export default function ProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
   const [triggeredAlerts, setTriggeredAlerts] = useState<PriceAlert[]>([]);
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [savingWebhook, setSavingWebhook] = useState(false);
+  const [testingWebhook, setTestingWebhook] = useState(false);
 
   const fetchTriggered = useCallback(async () => {
     try {
@@ -37,6 +40,55 @@ export default function ProfilePage() {
   useEffect(() => {
     if (user) fetchTriggered();
   }, [user, fetchTriggered]);
+
+  useEffect(() => {
+    if (user?.webhook_url) {
+      setWebhookUrl(user.webhook_url);
+    }
+  }, [user]);
+
+  const handleSaveWebhook = async () => {
+    setSavingWebhook(true);
+    try {
+      const result = await api.updateWebhook(webhookUrl);
+      toast.success(result.message);
+    } catch (err) {
+      toast.error((err as Error).message || "Failed to update webhook URL");
+    } finally {
+      setSavingWebhook(false);
+    }
+  };
+
+  const handleTestWebhook = async () => {
+    if (!webhookUrl) {
+      toast.error("Enter a webhook URL first");
+      return;
+    }
+    setTestingWebhook(true);
+    try {
+      const res = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: "CryptoFlow Test Notification - Your webhook is working!",
+          embeds: [{
+            title: "CryptoFlow Webhook Test",
+            description: "This is a test notification from CryptoFlow price alerts.",
+            color: 5763719,
+          }],
+        }),
+      });
+      if (res.ok) {
+        toast.success("Test notification sent successfully");
+      } else {
+        toast.error(`Webhook test failed (HTTP ${res.status})`);
+      }
+    } catch {
+      toast.error("Failed to send test notification. Check the URL and try again.");
+    } finally {
+      setTestingWebhook(false);
+    }
+  };
 
   if (!user) {
     return (
@@ -180,6 +232,51 @@ export default function ProfilePage() {
                   {changingPassword ? "Updating..." : "Update Password"}
                 </Button>
               </form>
+            </CardContent>
+          </Card>
+
+          {/* Webhook Notifications */}
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-white">
+                <Webhook className="size-5 text-pink-400" />
+                Webhook Notifications
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-slate-400">
+                Receive price alert notifications via webhook (e.g. Discord, Slack).
+              </p>
+              <div className="space-y-2">
+                <Label className="text-slate-300">Webhook URL</Label>
+                <Input
+                  type="url"
+                  placeholder="https://discord.com/api/webhooks/..."
+                  value={webhookUrl}
+                  onChange={(e) => setWebhookUrl(e.target.value)}
+                  className="bg-slate-800 border-slate-700 text-white"
+                />
+                <p className="text-xs text-slate-500">
+                  Supports Discord, Slack, or any service that accepts JSON POST requests.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleSaveWebhook}
+                  disabled={savingWebhook}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white flex-1"
+                >
+                  {savingWebhook ? "Saving..." : "Save"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleTestWebhook}
+                  disabled={testingWebhook || !webhookUrl}
+                  className="border-slate-700 text-slate-300 hover:text-white flex-1"
+                >
+                  {testingWebhook ? "Sending..." : "Test"}
+                </Button>
+              </div>
             </CardContent>
           </Card>
 

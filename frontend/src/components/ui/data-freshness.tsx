@@ -21,12 +21,16 @@ export function DataFreshness({ lastUpdated }: { lastUpdated: string }) {
         ? "bg-yellow-400"
         : "bg-red-400";
 
+  const hours = Math.floor(minutesAgo / 60);
+  const remainingMinutes = minutesAgo % 60;
   const label =
     minutesAgo < 1
       ? "just now"
       : minutesAgo < 60
-        ? `${minutesAgo} min ago`
-        : `${Math.floor(minutesAgo / 60)}h ${minutesAgo % 60}m ago`;
+        ? `${minutesAgo}m ago`
+        : remainingMinutes === 0
+          ? `${hours}h ago`
+          : `${hours}h ${remainingMinutes}m ago`;
 
   return (
     <div className="flex items-center gap-2 text-xs text-slate-500">

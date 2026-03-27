@@ -297,6 +297,20 @@ function CompareContent() {
     });
   }, [selectedCoins, histories, volatilityData]);
 
+  // Show loading state while resolving URL params
+  if (!initialized && searchParams.get("coins")) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <Skeleton className="h-8 w-48 bg-slate-700" />
+          <Skeleton className="h-4 w-96 bg-slate-700 mt-2" />
+        </div>
+        <Skeleton className="h-10 w-full max-w-md bg-slate-700" />
+        <Skeleton className="h-[400px] w-full bg-slate-700 rounded-lg" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Intro */}
@@ -332,6 +346,20 @@ function CompareContent() {
           ))}
         </div>
       </div>
+
+      {/* Summary Banner */}
+      {selectedCoins.length >= 2 && (
+        <div className="flex items-center gap-2 text-sm text-slate-400 bg-slate-800/50 rounded-lg px-4 py-2 border border-slate-700/50">
+          <GitCompareArrows className="size-4 text-indigo-400 shrink-0" />
+          <span>
+            Comparing{" "}
+            <span className="text-white font-medium">
+              {selectedCoins.map((c) => c.symbol.toUpperCase()).join(" vs ")}
+            </span>
+            {" "}&mdash; {PERIODS.find((p) => p.days === periodDays)?.label || `${periodDays}d`}
+          </span>
+        </div>
+      )}
 
       {/* Empty State */}
       {selectedCoins.length === 0 && (

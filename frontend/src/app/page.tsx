@@ -23,6 +23,7 @@ import { DominanceChart } from "@/components/dashboard/DominanceChart";
 import { SentimentGauge } from "@/components/dashboard/SentimentGauge";
 import { ChartErrorBoundary } from "@/components/ui/chart-error-boundary";
 import { DataFreshness } from "@/components/ui/data-freshness";
+import { MarketSummary } from "@/components/dashboard/MarketSummary";
 
 function KpiSkeleton() {
   return (
@@ -150,6 +151,9 @@ export default function DashboardPage() {
 
       {/* Watchlist Widget (only visible when logged in with watchlist items) */}
       <WatchlistWidget />
+
+      {/* 7-Day Market Summary */}
+      <MarketSummary />
 
       {/* Sentiment & Market Dominance */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
