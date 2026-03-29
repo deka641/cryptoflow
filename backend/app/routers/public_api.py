@@ -9,6 +9,13 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.coin import DimCoin
+from app.schemas.public_api import (
+    PublicCoinDetail,
+    PublicCoinListItem,
+    PublicCorrelationResponse,
+    PublicMarketOverview,
+    PublicVolatilityItem,
+)
 from app.services import market_service
 
 router = APIRouter()
@@ -32,7 +39,7 @@ def _rate_limit(request: Request):
     _requests[ip].append(now)
 
 
-@router.get("/coins")
+@router.get("/coins", response_model=list[PublicCoinListItem])
 def public_coins(
     request: Request,
     page: int = Query(1, ge=1),
@@ -74,7 +81,7 @@ def public_coins(
     ]
 
 
-@router.get("/coins/{coin_id}")
+@router.get("/coins/{coin_id}", response_model=PublicCoinDetail)
 def public_coin(
     coin_id: int,
     request: Request,
@@ -107,7 +114,7 @@ def public_coin(
     }
 
 
-@router.get("/market/overview")
+@router.get("/market/overview", response_model=PublicMarketOverview)
 def public_market_overview(
     request: Request,
     db: Session = Depends(get_db),
@@ -117,7 +124,7 @@ def public_market_overview(
     return market_service.get_market_overview(db)
 
 
-@router.get("/analytics/correlation")
+@router.get("/analytics/correlation", response_model=PublicCorrelationResponse)
 def public_correlation(
     request: Request,
     period_days: int = Query(30, ge=1, le=90),
@@ -129,7 +136,7 @@ def public_correlation(
     return get_correlation_matrix(db, period_days)
 
 
-@router.get("/analytics/volatility")
+@router.get("/analytics/volatility", response_model=list[PublicVolatilityItem])
 def public_volatility(
     request: Request,
     period_days: int = Query(30, ge=1, le=90),

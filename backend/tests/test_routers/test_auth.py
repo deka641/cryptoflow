@@ -389,3 +389,21 @@ def test_me_expired_token(client):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 401
+
+
+def test_forgot_password_production_no_dev_token(client):
+    """In production mode, dev_token should not be returned."""
+    from unittest.mock import patch
+    client.post("/api/v1/auth/register", json={
+        "email": "prod-forgot@example.com", "password": "pass1234",
+    })
+    with patch("app.routers.auth.settings") as mock_settings:
+        mock_settings.ENVIRONMENT = "production"
+        mock_settings.REDIS_URL = "redis://localhost:6379/0"
+        resp = client.post("/api/v1/auth/forgot-password", json={
+            "email": "prod-forgot@example.com",
+        })
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "message" in data
+    assert "dev_token" not in data

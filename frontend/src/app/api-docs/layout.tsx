@@ -15,5 +15,26 @@ export default function ApiDocsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebAPI",
+    "name": "CryptoFlow Public API",
+    "description": "Free, unauthenticated API for cryptocurrency market data, analytics, and correlation metrics",
+    "url": "https://cryptoflow.deka-labs.dev/api-docs",
+    "documentation": "https://cryptoflow.deka-labs.dev/api/docs",
+    "provider": {
+      "@type": "Organization",
+      "name": "CryptoFlow",
+    },
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      {children}
+    </>
+  );
 }

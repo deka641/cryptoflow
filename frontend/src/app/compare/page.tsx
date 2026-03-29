@@ -335,6 +335,7 @@ function CompareContent() {
               variant={periodDays === period.days ? "default" : "ghost"}
               size="sm"
               onClick={() => setPeriodDays(period.days)}
+              aria-pressed={periodDays === period.days}
               className={
                 periodDays === period.days
                   ? "bg-indigo-600 text-white hover:bg-indigo-700"

@@ -123,6 +123,7 @@ export function MarketTable({
           <TableHead
             className="cursor-pointer select-none w-16"
             onClick={() => handleSort("market_cap_rank")}
+            aria-sort={sortField === "market_cap_rank" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
           >
             <span className="flex items-center gap-1">
               # <SortIcon field="market_cap_rank" sortField={sortField} sortDirection={sortDirection} />
@@ -131,6 +132,7 @@ export function MarketTable({
           <TableHead
             className="cursor-pointer select-none"
             onClick={() => handleSort("name")}
+            aria-sort={sortField === "name" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
           >
             <span className="flex items-center gap-1">
               Coin <SortIcon field="name" sortField={sortField} sortDirection={sortDirection} />
@@ -139,6 +141,7 @@ export function MarketTable({
           <TableHead
             className="cursor-pointer select-none text-right"
             onClick={() => handleSort("price_usd")}
+            aria-sort={sortField === "price_usd" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
           >
             <span className="flex items-center justify-end gap-1">
               Price <SortIcon field="price_usd" sortField={sortField} sortDirection={sortDirection} />
@@ -147,6 +150,7 @@ export function MarketTable({
           <TableHead
             className="cursor-pointer select-none text-right"
             onClick={() => handleSort("price_change_24h_pct")}
+            aria-sort={sortField === "price_change_24h_pct" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
           >
             <span className="flex items-center justify-end gap-1">
               24h% <SortIcon field="price_change_24h_pct" sortField={sortField} sortDirection={sortDirection} />
@@ -158,6 +162,7 @@ export function MarketTable({
           <TableHead
             className="cursor-pointer select-none text-right hidden md:table-cell"
             onClick={() => handleSort("market_cap")}
+            aria-sort={sortField === "market_cap" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
           >
             <span className="flex items-center justify-end gap-1">
               Market Cap <SortIcon field="market_cap" sortField={sortField} sortDirection={sortDirection} />
@@ -166,6 +171,7 @@ export function MarketTable({
           <TableHead
             className="cursor-pointer select-none text-right hidden lg:table-cell"
             onClick={() => handleSort("total_volume")}
+            aria-sort={sortField === "total_volume" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
           >
             <span className="flex items-center justify-end gap-1">
               Volume <SortIcon field="total_volume" sortField={sortField} sortDirection={sortDirection} />

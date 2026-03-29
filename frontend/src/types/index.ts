@@ -254,3 +254,34 @@ export interface SentimentData {
   value_classification: string;
   history: { value: number; timestamp: string }[];
 }
+
+export interface AttributionHolding {
+  coin_id: number;
+  symbol: string;
+  name: string;
+  image_url: string | null;
+  category: string | null;
+  quantity: number;
+  cost_basis: number;
+  current_value: number;
+  pnl: number;
+  return_pct: number;
+  weight: number;
+  contribution: number;
+}
+
+export interface AttributionSector {
+  category: string;
+  total_value: number;
+  contribution: number;
+  holding_count: number;
+}
+
+export interface PortfolioAttribution {
+  total_value: number;
+  total_cost_basis: number;
+  total_pnl: number;
+  total_return_pct: number;
+  holdings: AttributionHolding[];
+  sectors: AttributionSector[];
+}

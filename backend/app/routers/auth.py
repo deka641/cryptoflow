@@ -13,6 +13,7 @@ from app.schemas.auth import UserRegister, UserLogin, UserResponse, Token, Passw
 from app.auth.jwt import hash_password, verify_password, create_access_token, decode_access_token_for_refresh
 from app.auth.dependencies import get_current_user
 from app.config import settings
+from app.utils.url_validation import validate_webhook_url
 
 _logger = logging.getLogger(__name__)
 
@@ -186,8 +187,8 @@ def update_webhook(
 ):
     """Update the current user's webhook URL for alert notifications."""
     webhook_url = request_body.get("webhook_url", "").strip()
-    if webhook_url and not webhook_url.startswith(("http://", "https://")):
-        raise HTTPException(status_code=400, detail="Invalid URL format")
+    if webhook_url:
+        validate_webhook_url(webhook_url)
     current_user.webhook_url = webhook_url or None
     db.commit()
     return {"message": "Webhook URL updated", "webhook_url": current_user.webhook_url}
@@ -232,13 +233,13 @@ def forgot_password(payload: ForgotPasswordRequest, request: Request, db: Sessio
     user.reset_token_expires = datetime.now(timezone.utc) + timedelta(hours=1)
     db.commit()
 
-    _logger.info("Password reset token generated for user %s: %s", user.email, token)
+    _logger.info("Password reset token generated for user %s", user.email)
 
-    # Return token in response for dev purposes (no email service configured)
-    return {
-        "message": "If an account with that email exists, a password reset token has been generated.",
-        "dev_token": token,
-    }
+    # Return token in response only in development (no email service configured)
+    response = {"message": "If an account with that email exists, a password reset token has been generated."}
+    if settings.ENVIRONMENT != "production":
+        response["dev_token"] = token
+    return response
 
 
 @router.post("/reset-password")

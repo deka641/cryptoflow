@@ -19,3 +19,6 @@
 
 # Run data quality checks (every hour)
 0 * * * * cd /opt/cryptoflow && .venv/bin/python scripts/jobs/data_quality_checks.py >> /tmp/cryptoflow-quality.log 2>&1
+
+# Check price alerts and send webhook notifications (every 5 minutes)
+*/5 * * * * cd /opt/cryptoflow && .venv/bin/python scripts/jobs/check_alerts.py >> /tmp/cryptoflow-alerts.log 2>&1

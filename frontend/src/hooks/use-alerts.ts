@@ -28,6 +28,7 @@ export function useAlerts() {
       setLoading(true);
       const data = await api.getAlerts();
       setAlerts(data);
+      toastRef.current = false;
     } catch {
       if (!toastRef.current) {
         toast.error("Failed to load alerts");
@@ -95,6 +96,7 @@ export function useAlerts() {
         pages: data.pages,
       });
       setTriggeredPage(data.page);
+      toastRef.current = false;
     } catch {
       if (!toastRef.current) {
         toast.error("Failed to load triggered alerts");

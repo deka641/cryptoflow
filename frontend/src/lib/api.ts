@@ -280,6 +280,10 @@ class ApiClient {
     );
   }
 
+  async getPortfolioAttribution(): Promise<import("@/types").PortfolioAttribution> {
+    return this.request<import("@/types").PortfolioAttribution>("/api/v1/portfolio/attribution");
+  }
+
   // Alerts
   async getAlerts() {
     return this.request<import("@/types").PriceAlert[]>("/api/v1/alerts");

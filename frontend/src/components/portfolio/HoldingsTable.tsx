@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -25,7 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatQuantity, formatPercentage } from "@/lib/formatters";
-import { Loader2, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import type { PortfolioHolding } from "@/types";
 
 interface HoldingsTableProps {
@@ -37,6 +38,8 @@ interface HoldingsTableProps {
 }
 
 export function HoldingsTable({ holdings, livePrices, onEdit, onDelete, deletingId }: HoldingsTableProps) {
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+
   if (holdings.length === 0) return null;
 
   return (
@@ -51,6 +54,7 @@ export function HoldingsTable({ holdings, livePrices, onEdit, onDelete, deleting
           <TableHead className="text-right">P&L</TableHead>
           <TableHead className="text-right hidden sm:table-cell">P&L %</TableHead>
           <TableHead className="text-right w-20">Actions</TableHead>
+          <TableHead className="w-8 md:hidden"><span className="sr-only">Expand</span></TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -63,91 +67,123 @@ export function HoldingsTable({ holdings, livePrices, onEdit, onDelete, deleting
             ? (pnl / holding.cost_basis_usd) * 100
             : null;
           const isPositive = pnl != null && pnl >= 0;
+          const isExpanded = expandedId === holding.id;
+          const costBasis = holding.quantity * holding.buy_price_usd;
 
           return (
-            <TableRow
-              key={holding.id}
-              className="border-slate-800 hover:bg-slate-700/30 transition-colors duration-200"
-            >
-              <TableCell>
-                <Link href={`/coins/${holding.coin_id}`} className="flex items-center gap-3 hover:underline">
-                  {holding.image_url ? (
-                    <Image src={holding.image_url} alt={holding.name} width={24} height={24} className="size-6 rounded-full" />
-                  ) : (
-                    <div className="flex size-6 items-center justify-center rounded-full bg-slate-700 text-xs font-bold text-slate-300">
-                      {holding.symbol[0]?.toUpperCase()}
-                    </div>
-                  )}
-                  <div>
-                    <p className="font-medium text-white">{holding.name}</p>
-                    <p className="text-xs text-slate-400 uppercase">{holding.symbol}</p>
-                  </div>
-                </Link>
-              </TableCell>
-              <TableCell className="text-right text-slate-300 hidden md:table-cell">
-                {formatQuantity(holding.quantity)}
-              </TableCell>
-              <TableCell className="text-right text-slate-300 hidden md:table-cell">
-                {formatCurrency(holding.buy_price_usd)}
-              </TableCell>
-              <PriceCell id={holding.id} livePrice={livePrice} fallbackPrice={holding.current_price_usd} />
-              <TableCell className="text-right font-medium text-white">
-                {currentValue != null ? formatCurrency(currentValue) : "-"}
-              </TableCell>
-              <TableCell className={cn("text-right font-medium", isPositive ? "text-emerald-400" : "text-red-400")}>
-                {pnl != null
-                  ? `${isPositive ? "+" : "-"}${formatCurrency(Math.abs(pnl))}`
-                  : "-"}
-              </TableCell>
-              <TableCell className={cn("text-right font-medium hidden sm:table-cell", isPositive ? "text-emerald-400" : "text-red-400")}>
-                {formatPercentage(pnlPct)}
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-7 text-slate-400 hover:text-white"
-                    onClick={() => onEdit(holding)}
-                    aria-label="Edit holding"
+            <Fragment key={holding.id}>
+              <TableRow
+                className="border-slate-800 hover:bg-slate-700/30 transition-colors duration-200 cursor-pointer md:cursor-default"
+                aria-expanded={isExpanded}
+                onClick={() => setExpandedId(isExpanded ? null : holding.id)}
+              >
+                <TableCell>
+                  <Link
+                    href={`/coins/${holding.coin_id}`}
+                    className="flex items-center gap-3 hover:underline"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <Pencil className="size-3.5" />
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-7 text-slate-400 hover:text-red-400"
-                        aria-label="Delete holding"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="bg-slate-900 border-slate-700">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="text-white">Remove {holding.name}?</AlertDialogTitle>
-                        <AlertDialogDescription className="text-slate-400">
-                          This will permanently remove this holding from your portfolio. This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white">Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => onDelete(holding.id)}
-                          disabled={deletingId === holding.id}
-                          className="bg-red-600 text-white hover:bg-red-700"
+                    {holding.image_url ? (
+                      <Image src={holding.image_url} alt={holding.name} width={24} height={24} className="size-6 rounded-full" />
+                    ) : (
+                      <div className="flex size-6 items-center justify-center rounded-full bg-slate-700 text-xs font-bold text-slate-300">
+                        {holding.symbol[0]?.toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-medium text-white">{holding.name}</p>
+                      <p className="text-xs text-slate-400 uppercase">{holding.symbol}</p>
+                    </div>
+                  </Link>
+                </TableCell>
+                <TableCell className="text-right text-slate-300 hidden md:table-cell">
+                  {formatQuantity(holding.quantity)}
+                </TableCell>
+                <TableCell className="text-right text-slate-300 hidden md:table-cell">
+                  {formatCurrency(holding.buy_price_usd)}
+                </TableCell>
+                <PriceCell id={holding.id} livePrice={livePrice} fallbackPrice={holding.current_price_usd} />
+                <TableCell className="text-right font-medium text-white">
+                  {currentValue != null ? formatCurrency(currentValue) : "-"}
+                </TableCell>
+                <TableCell className={cn("text-right font-medium", isPositive ? "text-emerald-400" : "text-red-400")}>
+                  {pnl != null
+                    ? `${isPositive ? "+" : "-"}${formatCurrency(Math.abs(pnl))}`
+                    : "-"}
+                </TableCell>
+                <TableCell className={cn("text-right font-medium hidden sm:table-cell", isPositive ? "text-emerald-400" : "text-red-400")}>
+                  {formatPercentage(pnlPct)}
+                </TableCell>
+                <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7 text-slate-400 hover:text-white"
+                      onClick={() => onEdit(holding)}
+                      aria-label="Edit holding"
+                    >
+                      <Pencil className="size-3.5" />
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-7 text-slate-400 hover:text-red-400"
+                          aria-label="Delete holding"
                         >
-                          {deletingId === holding.id ? (
-                            <><Loader2 className="size-3.5 mr-1.5 animate-spin" />Removing...</>
-                          ) : "Remove"}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </TableCell>
-            </TableRow>
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="bg-slate-900 border-slate-700">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="text-white">Remove {holding.name}?</AlertDialogTitle>
+                          <AlertDialogDescription className="text-slate-400">
+                            This will permanently remove this holding from your portfolio. This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white">Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => onDelete(holding.id)}
+                            disabled={deletingId === holding.id}
+                            className="bg-red-600 text-white hover:bg-red-700"
+                          >
+                            {deletingId === holding.id ? (
+                              <><Loader2 className="size-3.5 mr-1.5 animate-spin" />Removing...</>
+                            ) : "Remove"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </TableCell>
+                <TableCell className="md:hidden text-slate-400 px-2">
+                  {isExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+                </TableCell>
+              </TableRow>
+              {isExpanded && (
+                <tr className="md:hidden border-b border-slate-800 bg-slate-800/20">
+                  <td colSpan={8} className="px-4 py-3">
+                    <div className="grid grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <p className="text-slate-500 text-xs mb-1">Quantity</p>
+                        <p className="text-slate-200">{formatQuantity(holding.quantity)}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 text-xs mb-1">Buy Price</p>
+                        <p className="text-slate-200">{formatCurrency(holding.buy_price_usd)}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 text-xs mb-1">Cost Basis</p>
+                        <p className="text-slate-200">{formatCurrency(costBasis)}</p>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </Fragment>
           );
         })}
       </TableBody>

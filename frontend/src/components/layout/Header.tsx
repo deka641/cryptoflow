@@ -53,7 +53,7 @@ export function Header({ onOpenShortcuts }: HeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
-  const { connected } = useLivePricesContext();
+  const { connected, stale } = useLivePricesContext();
   const title = getPageTitle(pathname);
 
   return (
@@ -116,13 +116,15 @@ export function Header({ onOpenShortcuts }: HeaderProps) {
         <div className="flex items-center gap-2 text-sm text-slate-400">
           <span
             className={`size-2.5 rounded-full transition-all duration-300 ${
-              connected
-                ? "bg-emerald-500 animate-[pulse-dot_2s_infinite_ease-in-out] shadow-[0_0_8px_rgba(52,211,153,0.5)]"
-                : "bg-slate-600"
+              connected && stale
+                ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]"
+                : connected
+                  ? "bg-emerald-500 animate-[pulse-dot_2s_infinite_ease-in-out] shadow-[0_0_8px_rgba(52,211,153,0.5)]"
+                  : "bg-slate-600"
             }`}
           />
           <span className="hidden sm:inline">
-            {connected ? "Live" : "Offline"}
+            {connected && stale ? "Stale" : connected ? "Live" : "Offline"}
           </span>
         </div>
 

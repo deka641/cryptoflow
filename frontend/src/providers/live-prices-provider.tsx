@@ -6,11 +6,13 @@ import { useLivePrices } from "@/hooks/use-live-prices";
 interface LivePricesContextValue {
   prices: Record<string, number>;
   connected: boolean;
+  stale: boolean;
 }
 
 const LivePricesContext = createContext<LivePricesContextValue>({
   prices: {},
   connected: false,
+  stale: false,
 });
 
 export function LivePricesProvider({ children }: { children: React.ReactNode }) {

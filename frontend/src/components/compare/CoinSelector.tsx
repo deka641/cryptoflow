@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Image from "next/image";
 import { Search, X, ChevronDown, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,8 @@ export function CoinSelector({
   const [allCoins, setAllCoins] = useState<Coin[]>([]);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     api
@@ -54,20 +56,76 @@ export function CoinSelector({
     );
   }, [allCoins, search]);
 
-  const selectedIds = new Set(selectedCoins.map((c) => c.id));
+  const selectedIds = useMemo(() => new Set(selectedCoins.map((c) => c.id)), [selectedCoins]);
   const atMax = selectedCoins.length >= MAX_COINS;
 
-  function toggleCoin(coin: Coin) {
-    if (selectedIds.has(coin.id)) {
-      onSelectionChange(selectedCoins.filter((c) => c.id !== coin.id));
-    } else if (!atMax) {
-      onSelectionChange([...selectedCoins, coin]);
-    }
-  }
+  const toggleCoin = useCallback(
+    (coin: Coin) => {
+      if (selectedIds.has(coin.id)) {
+        onSelectionChange(selectedCoins.filter((c) => c.id !== coin.id));
+      } else if (!atMax) {
+        onSelectionChange([...selectedCoins, coin]);
+      }
+    },
+    [selectedIds, selectedCoins, atMax, onSelectionChange]
+  );
 
   function removeCoin(coinId: number) {
     onSelectionChange(selectedCoins.filter((c) => c.id !== coinId));
   }
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    setHighlightedIndex(-1);
+  }, []);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (filteredCoins.length === 0) return;
+
+      switch (e.key) {
+        case "ArrowDown": {
+          e.preventDefault();
+          setHighlightedIndex((prev) =>
+            prev >= filteredCoins.length - 1 ? 0 : prev + 1
+          );
+          break;
+        }
+        case "ArrowUp": {
+          e.preventDefault();
+          setHighlightedIndex((prev) =>
+            prev <= 0 ? filteredCoins.length - 1 : prev - 1
+          );
+          break;
+        }
+        case "Enter": {
+          e.preventDefault();
+          if (highlightedIndex >= 0 && highlightedIndex < filteredCoins.length) {
+            const coin = filteredCoins[highlightedIndex];
+            const isDisabled = atMax && !selectedIds.has(coin.id);
+            if (!isDisabled) {
+              toggleCoin(coin);
+            }
+          }
+          break;
+        }
+        default:
+          break;
+      }
+    },
+    [filteredCoins, highlightedIndex, atMax, selectedIds, toggleCoin]
+  );
+
+  // Scroll highlighted item into view
+  useEffect(() => {
+    if (highlightedIndex < 0 || !listRef.current) return;
+    const item = listRef.current.querySelector(
+      `[data-coin-index="${highlightedIndex}"]`
+    );
+    if (item) {
+      item.scrollIntoView({ block: "nearest" });
+    }
+  }, [highlightedIndex]);
 
   return (
     <div className="flex-1 max-w-md space-y-2">
@@ -91,6 +149,7 @@ export function CoinSelector({
               <button
                 onClick={() => removeCoin(coin.id)}
                 className="ml-0.5 rounded-full p-0.5 hover:bg-slate-700 transition-colors"
+                aria-label={`Remove ${coin.symbol || coin.name}`}
               >
                 <X className="size-3" />
               </button>
@@ -123,23 +182,38 @@ export function CoinSelector({
               <Input
                 placeholder="Search by name or symbol..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                onKeyDown={handleKeyDown}
                 className="pl-8 bg-slate-900/50 border-slate-700/50 text-white placeholder:text-slate-500 h-9"
+                role="combobox"
+                aria-expanded={true}
+                aria-controls="coin-selector-listbox"
+                aria-activedescendant={
+                  highlightedIndex >= 0
+                    ? `coin-option-${filteredCoins[highlightedIndex]?.id}`
+                    : undefined
+                }
               />
             </div>
+            <span className="text-xs text-slate-600 mt-1 block">Arrow keys to navigate, Enter to select</span>
           </div>
-          <div className="max-h-64 overflow-y-auto p-1">
+          <div ref={listRef} className="max-h-64 overflow-y-auto p-1" id="coin-selector-listbox" role="listbox">
             {filteredCoins.length === 0 ? (
               <div className="px-3 py-6 text-center text-sm text-slate-500">
                 No coins found
               </div>
             ) : (
-              filteredCoins.map((coin) => {
+              filteredCoins.map((coin, idx) => {
                 const isSelected = selectedIds.has(coin.id);
                 const isDisabled = atMax && !isSelected;
+                const isHighlighted = idx === highlightedIndex;
                 return (
                   <button
                     key={coin.id}
+                    id={`coin-option-${coin.id}`}
+                    data-coin-index={idx}
+                    role="option"
+                    aria-selected={isSelected}
                     onClick={() => toggleCoin(coin)}
                     disabled={isDisabled}
                     className={cn(
@@ -147,6 +221,8 @@ export function CoinSelector({
                       isSelected
                         ? "bg-indigo-600/15 text-white"
                         : "text-slate-300 hover:bg-slate-700/50 hover:text-white",
+                      isHighlighted && !isSelected && "bg-slate-700",
+                      isHighlighted && isSelected && "ring-1 ring-slate-500",
                       isDisabled && "opacity-40 cursor-not-allowed"
                     )}
                   >

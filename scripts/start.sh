@@ -118,27 +118,16 @@ cd "$PROJECT_DIR/frontend"
 info "Building production bundle..."
 if npm run build > /tmp/cryptoflow-frontend-build.log 2>&1; then
     info "Build complete"
+    nohup npm run start -- -p 3000 > /tmp/cryptoflow-frontend.log 2>&1 &
+    frontend_pid=$!
+    info "PID: $frontend_pid  Log: /tmp/cryptoflow-frontend.log"
+    if wait_for "Next.js" "curl -sf http://localhost:3000 > /dev/null" 20; then
+        ok "Started"
+    else
+        fail "Next.js failed to start — check /tmp/cryptoflow-frontend.log"
+    fi
 else
     fail "Next.js build failed — check /tmp/cryptoflow-frontend-build.log"
-    cd "$PROJECT_DIR"
-    # Continue to remaining services
-    step 6 "Cron scheduler"
-    fail "Skipped (frontend build failed)"
-    step 7 "pgAdmin4"
-    fail "Skipped (frontend build failed)"
-    echo ""
-    echo -e "${B}${C}══════════════════════════════════════════${N}"
-    echo -e "  ${R}✗${N} ${B}$started started${N}, ${R}$failed failed${N}"
-    echo -e "${B}${C}══════════════════════════════════════════${N}"
-    exit 1
-fi
-nohup npm run start -- -p 3000 > /tmp/cryptoflow-frontend.log 2>&1 &
-frontend_pid=$!
-info "PID: $frontend_pid  Log: /tmp/cryptoflow-frontend.log"
-if wait_for "Next.js" "curl -sf http://localhost:3000 > /dev/null" 20; then
-    ok "Started"
-else
-    fail "Next.js failed to start — check /tmp/cryptoflow-frontend.log"
 fi
 cd "$PROJECT_DIR"
 
@@ -155,7 +144,7 @@ else
     fi
 fi
 crontab "$PROJECT_DIR/scripts/crontab"
-info "Installed CryptoFlow crontab (4 batch jobs)"
+info "Installed CryptoFlow crontab (5 batch jobs)"
 
 # ── 7. pgAdmin4 ──────────────────────────────
 step 7 "pgAdmin4 ${D}(:5050)${N}"

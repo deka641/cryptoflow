@@ -17,6 +17,7 @@ import {
   Coins,
 } from "lucide-react";
 import { formatCompactCurrency, formatInteger } from "@/lib/formatters";
+import { UnavailableBadge } from "@/components/ui/unavailable-badge";
 import { useCountUp } from "@/hooks/use-count-up";
 import { WatchlistWidget } from "@/components/dashboard/WatchlistWidget";
 import { DominanceChart } from "@/components/dashboard/DominanceChart";
@@ -101,7 +102,9 @@ export default function DashboardPage() {
                 <ChartErrorBoundary compact>
                   <KpiSparkline data={sparklines.market_cap} positive={(data.market_cap_change_24h_pct ?? 0) >= 0} />
                 </ChartErrorBoundary>
-              ) : undefined}
+              ) : (
+                <UnavailableBadge message="Sparkline unavailable" />
+              )}
             />
             <KpiCard
               title="24h Volume"
@@ -115,7 +118,9 @@ export default function DashboardPage() {
                 <ChartErrorBoundary compact>
                   <KpiSparkline data={sparklines.volume} positive={(data.volume_change_24h_pct ?? 0) >= 0} />
                 </ChartErrorBoundary>
-              ) : undefined}
+              ) : (
+                <UnavailableBadge message="Sparkline unavailable" />
+              )}
             />
             <KpiCard
               title="BTC Dominance"
@@ -131,7 +136,9 @@ export default function DashboardPage() {
                     positive={sparklines.btc_dominance[sparklines.btc_dominance.length - 1] >= sparklines.btc_dominance[0]}
                   />
                 </ChartErrorBoundary>
-              ) : undefined}
+              ) : (
+                <UnavailableBadge message="Sparkline unavailable" />
+              )}
             />
             <KpiCard
               title="Active Coins"

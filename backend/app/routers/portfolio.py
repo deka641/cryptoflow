@@ -228,6 +228,16 @@ def delete_holding(
     return None
 
 
+@router.get("/attribution")
+def get_portfolio_attribution(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get portfolio performance attribution analysis."""
+    from app.services.attribution_service import compute_attribution
+    return compute_attribution(db, current_user.id)
+
+
 @router.get("/export")
 def export_portfolio_csv(
     current_user: User = Depends(get_current_user),
@@ -261,6 +271,9 @@ def export_portfolio_csv(
         "Cost Basis (USD)", "Current Value (USD)", "P&L (USD)", "P&L (%)", "Notes", "Added",
     ])
 
+    total_cost_basis = 0.0
+    total_value = 0.0
+
     for h in holdings:
         coin = coins.get(h.coin_id)
         if not coin:
@@ -287,10 +300,27 @@ def export_portfolio_csv(
             h.created_at.strftime("%Y-%m-%d") if h.created_at else "",
         ])
 
+        total_cost_basis += cost_basis
+        if current_value is not None:
+            total_value += current_value
+
+    total_pnl = total_value - total_cost_basis
+    total_pnl_pct = (total_pnl / total_cost_basis * 100) if total_cost_basis > 0 else None
+
+    writer.writerow([])  # blank line
+    writer.writerow([
+        "TOTAL", "", "", "", "",
+        round(total_cost_basis, 2),
+        round(total_value, 2),
+        round(total_pnl, 2),
+        round(total_pnl_pct, 2) if total_pnl_pct is not None else "",
+        "", "",
+    ])
+
     output.seek(0)
     return StreamingResponse(
         iter([output.getvalue()]),
-        media_type="text/csv",
+        media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="cryptoflow-portfolio-{date.today().isoformat()}.csv"'},
     )
 

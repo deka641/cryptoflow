@@ -39,8 +39,27 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "CryptoFlow",
+    "url": "https://cryptoflow.deka-labs.dev",
+    "description": "Real-time cryptocurrency data pipeline and analytics platform",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://cryptoflow.deka-labs.dev/market?search={search_term_string}",
+      "query-input": "required name=search_term_string",
+    },
+  };
+
   return (
     <html lang="en" className="dark">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body className={`${inter.variable} font-sans antialiased bg-slate-950 text-white`}>
         <ClientLayout>{children}</ClientLayout>
       </body>

@@ -12,6 +12,7 @@ from starlette.middleware.gzip import GZipMiddleware
 
 from app.config import settings
 from app.routers import api_router
+from app.routers.health import router as health_router
 from app.websocket.manager import manager
 
 logger = logging.getLogger(__name__)
@@ -92,6 +93,7 @@ _CACHE_RULES: list[tuple[str, str]] = [
     ("/api/v1/market", "public, max-age=60"),
     ("/api/v1/coins", "public, max-age=300"),
     ("/api/v1/auth", "no-store"),
+    ("/health", "no-store"),
 ]
 
 
@@ -119,6 +121,7 @@ async def request_logging_and_cache(request: Request, call_next):
 
 
 app.include_router(api_router)
+app.include_router(health_router)
 
 
 @app.exception_handler(Exception)
@@ -144,6 +147,3 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 
-@app.get("/health")
-def health_check():
-    return {"status": "ok"}

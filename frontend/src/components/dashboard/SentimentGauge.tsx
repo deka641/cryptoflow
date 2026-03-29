@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import type { SentimentData } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FadeIn } from "@/components/ui/fade-in";
+import { UnavailableBadge } from "@/components/ui/unavailable-badge";
 
 /** Map a 0-100 value to an arc angle (left = 180deg, right = 0deg). */
 function valueToAngle(value: number): number {
@@ -84,6 +85,7 @@ function SentimentGaugeSkeleton() {
 export function SentimentGauge() {
   const [data, setData] = useState<SentimentData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -93,7 +95,7 @@ export function SentimentGauge() {
         if (!cancelled) setData(result);
       })
       .catch(() => {
-        /* sentiment is non-critical, fail silently */
+        /* sentiment is non-critical */
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -101,10 +103,22 @@ export function SentimentGauge() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [retryCount]);
 
   if (loading) return <SentimentGaugeSkeleton />;
-  if (!data) return null;
+  if (!data) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <UnavailableBadge
+          message="Sentiment data unavailable"
+          onRetry={() => {
+            setLoading(true);
+            setRetryCount((c) => c + 1);
+          }}
+        />
+      </div>
+    );
+  }
 
   const { value, value_classification, history } = data;
 

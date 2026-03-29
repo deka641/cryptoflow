@@ -10,5 +10,25 @@ export const metadata: Metadata = {
 };
 
 export default function MarketLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "DataCatalog",
+    "name": "CryptoFlow Market Data",
+    "description": "Real-time market data for top 50 cryptocurrencies including prices, market cap, and trading volume",
+    "url": "https://cryptoflow.deka-labs.dev/market",
+    "provider": {
+      "@type": "Organization",
+      "name": "CryptoFlow",
+    },
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      {children}
+    </>
+  );
 }

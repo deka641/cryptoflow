@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Briefcase, Download, Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -12,13 +12,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
+import { FadeIn } from "@/components/ui/fade-in";
 import { ChartErrorBoundary } from "@/components/ui/chart-error-boundary";
 import { PortfolioSummaryCards } from "@/components/portfolio/PortfolioSummaryCards";
 import { HoldingsTable } from "@/components/portfolio/HoldingsTable";
 import { AllocationChart } from "@/components/portfolio/AllocationChart";
 import { PerformanceChart } from "@/components/portfolio/PerformanceChart";
+import { AttributionChart } from "@/components/portfolio/AttributionChart";
 import { AddHoldingDialog } from "@/components/portfolio/AddHoldingDialog";
-import type { PortfolioHolding } from "@/types";
+import type { PortfolioHolding, PortfolioAttribution } from "@/types";
 
 export default function PortfolioPage() {
   const { user } = useAuth();
@@ -27,6 +29,26 @@ export default function PortfolioPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editHolding, setEditHolding] = useState<PortfolioHolding | null>(null);
   const [csvExporting, setCsvExporting] = useState(false);
+  const [attribution, setAttribution] = useState<PortfolioAttribution | null>(null);
+  const [attributionLoading, setAttributionLoading] = useState(false);
+
+  const fetchAttribution = useCallback(async () => {
+    setAttributionLoading(true);
+    try {
+      const data = await api.getPortfolioAttribution();
+      setAttribution(data);
+    } catch {
+      setAttribution(null);
+    } finally {
+      setAttributionLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user && holdings.length > 0) {
+      fetchAttribution();
+    }
+  }, [user, holdings.length, fetchAttribution]);
 
   const handleEdit = (holding: PortfolioHolding) => {
     setEditHolding(holding);
@@ -194,6 +216,23 @@ export default function PortfolioPage() {
           </ChartErrorBoundary>
         </CardContent>
       </Card>
+
+      {attributionLoading && (
+        <Skeleton className="h-96 bg-slate-700" />
+      )}
+
+      {attribution && attribution.holdings.length > 0 && !attributionLoading && (
+        <FadeIn>
+          <Card className="glass-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-white text-base">Performance Attribution</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AttributionChart attribution={attribution} />
+            </CardContent>
+          </Card>
+        </FadeIn>
+      )}
 
       <AddHoldingDialog
         open={dialogOpen}

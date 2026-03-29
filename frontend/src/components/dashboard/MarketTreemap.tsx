@@ -236,7 +236,7 @@ export function MarketTreemap({ coins, livePrices }: MarketTreemapProps) {
   }
 
   return (
-    <div ref={containerRef} className="relative w-full">
+    <div ref={containerRef} className="relative w-full" role="img" aria-label="Market capitalization treemap">
       {width > 0 && (
         <Treemap
           width={width}

@@ -60,7 +60,7 @@ export function CorrelationHeatmap({ coins, matrix, onCellClick }: CorrelationHe
   const maxLabelLen = 5; // truncate long symbols
 
   return (
-    <div className="relative overflow-x-auto">
+    <div className="relative overflow-x-auto" role="img" aria-label="Correlation matrix heatmap">
       <div className="inline-block">
         {/* Header row */}
         <div className="flex" style={{ marginLeft: cellSize + 16 }}>

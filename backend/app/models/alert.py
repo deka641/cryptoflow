@@ -21,3 +21,5 @@ class PriceAlert(Base):
     triggered: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
     triggered_at: Mapped[datetime | None] = mapped_column(default=None)
+    webhook_status: Mapped[str | None] = mapped_column(default=None)  # "pending", "sent", "failed"
+    webhook_attempts: Mapped[int] = mapped_column(default=0)
