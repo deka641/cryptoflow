@@ -1,8 +1,21 @@
 """Pydantic response models for the Public API endpoints."""
 
 from datetime import datetime
+from typing import Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict
+
+T = TypeVar("T")
+
+
+class PublicPaginatedResponse(BaseModel, Generic[T]):
+    """Paginated response wrapper for public API endpoints."""
+
+    items: list[T]
+    total: int
+    page: int
+    per_page: int
+    pages: int
 
 
 class PublicCoinListItem(BaseModel):

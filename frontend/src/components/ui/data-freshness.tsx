@@ -33,7 +33,7 @@ export function DataFreshness({ lastUpdated }: { lastUpdated: string }) {
           : `${hours}h ${remainingMinutes}m ago`;
 
   return (
-    <div className="flex items-center gap-2 text-xs text-slate-500" role="status" aria-live="polite">
+    <div className="flex items-center gap-2 text-xs text-slate-400" role="status" aria-live="polite">
       <span className={`inline-block size-2 rounded-full ${dotColor}`} />
       <span>Last updated: {label}</span>
     </div>

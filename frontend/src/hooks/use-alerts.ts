@@ -53,6 +53,16 @@ export function useAlerts() {
     []
   );
 
+  const updateAlert = useCallback(
+    async (id: number, data: { target_price?: number; direction?: string }) => {
+      const result = await api.updateAlert(id, data);
+      setAlerts((prev) => prev.map((a) => (a.id === id ? result : a)));
+      toast.success("Alert updated");
+      return result;
+    },
+    []
+  );
+
   const deleteAlert = useCallback(async (id: number) => {
     setAlerts((prev) => prev.filter((a) => a.id !== id));
     try {
@@ -126,6 +136,7 @@ export function useAlerts() {
     alerts,
     loading,
     createAlert,
+    updateAlert,
     deleteAlert,
     refetch: fetchAlerts,
     triggeredAlerts,

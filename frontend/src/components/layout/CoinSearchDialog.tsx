@@ -109,23 +109,23 @@ export function CoinSearchDialog() {
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Search coins..."
-              className="border-0 bg-transparent text-white placeholder:text-slate-500 focus-visible:ring-0 p-0 h-auto"
+              className="border-0 bg-transparent text-white placeholder:text-slate-400 focus-visible:ring-0 p-0 h-auto"
             />
           </div>
 
           <div className="max-h-80 overflow-y-auto py-2">
             {loading && (
-              <div className="px-4 py-6 text-center text-sm text-slate-500">
+              <div className="px-4 py-6 text-center text-sm text-slate-400">
                 Searching...
               </div>
             )}
             {!loading && query && results.length === 0 && (
-              <div className="px-4 py-6 text-center text-sm text-slate-500">
+              <div className="px-4 py-6 text-center text-sm text-slate-400">
                 No coins found
               </div>
             )}
             {!loading && !query && (
-              <div className="px-4 py-6 text-center text-sm text-slate-500">
+              <div className="px-4 py-6 text-center text-sm text-slate-400">
                 Type to search coins...
               </div>
             )}
@@ -160,14 +160,14 @@ export function CoinSearchDialog() {
                 <div className="text-right">
                   <p className="text-sm font-medium">{formatCurrency(coin.price_usd)}</p>
                   {coin.market_cap_rank && (
-                    <p className="text-xs text-slate-500">#{coin.market_cap_rank}</p>
+                    <p className="text-xs text-slate-400">#{coin.market_cap_rank}</p>
                   )}
                 </div>
               </button>
             ))}
           </div>
 
-          <div className="border-t border-slate-700/50 px-4 py-2 flex items-center gap-4 text-[10px] text-slate-500">
+          <div className="border-t border-slate-700/50 px-4 py-2 flex items-center gap-4 text-[10px] text-slate-400">
             <span><kbd className="rounded border border-slate-600 px-1 py-0.5">↑↓</kbd> Navigate</span>
             <span><kbd className="rounded border border-slate-600 px-1 py-0.5">↵</kbd> Open</span>
             <span><kbd className="rounded border border-slate-600 px-1 py-0.5">Esc</kbd> Close</span>

@@ -1,53 +1,49 @@
 """Public API endpoints — no authentication required, rate-limited per IP."""
 
-import time
-from collections import defaultdict
-
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.coin import DimCoin
+import math
+
 from app.schemas.public_api import (
     PublicCoinDetail,
     PublicCoinListItem,
     PublicCorrelationResponse,
     PublicMarketOverview,
+    PublicPaginatedResponse,
     PublicVolatilityItem,
 )
 from app.services import market_service
+from app.utils.rate_limiter import check_rate_limit
 
 router = APIRouter()
 
-# Simple in-memory rate limiter: 60 requests per minute per IP
-_requests: dict[str, list[float]] = defaultdict(list)
-_WINDOW = 60
-_MAX_REQUESTS = 60
-
 
 def _rate_limit(request: Request):
-    ip = request.client.host if request.client else "unknown"
-    now = time.monotonic()
-    reqs = _requests[ip]
-    _requests[ip] = [t for t in reqs if now - t < _WINDOW]
-    if len(_requests[ip]) >= _MAX_REQUESTS:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Rate limit exceeded. Maximum 60 requests per minute.",
-        )
-    _requests[ip].append(now)
+    check_rate_limit(
+        request,
+        prefix="public_api",
+        max_requests=60,
+        window_seconds=60,
+        detail="Rate limit exceeded. Maximum 60 requests per minute.",
+    )
 
 
-@router.get("/coins", response_model=list[PublicCoinListItem])
+@router.get("/coins", response_model=PublicPaginatedResponse[PublicCoinListItem])
 def public_coins(
     request: Request,
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=50),
     db: Session = Depends(get_db),
 ):
-    """List coins with latest market data."""
+    """List coins with latest market data (paginated)."""
     _rate_limit(request)
+
+    total = db.query(DimCoin).count()
+    pages = math.ceil(total / per_page) if total > 0 else 1
 
     coins = (
         db.query(DimCoin)
@@ -66,7 +62,7 @@ def public_coins(
         ).fetchall()
         latest = {r.coin_id: r for r in rows}
 
-    return [
+    items = [
         {
             "id": c.id,
             "symbol": c.symbol,
@@ -79,6 +75,14 @@ def public_coins(
         }
         for c in coins
     ]
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "pages": pages,
+    }
 
 
 @router.get("/coins/{coin_id}", response_model=PublicCoinDetail)

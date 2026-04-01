@@ -184,7 +184,7 @@ export function DominanceChart() {
       ) : error ? (
         <ErrorState compact message="Failed to load dominance data" onRetry={() => fetchData(days)} />
       ) : chartData.length === 0 ? (
-        <div className="flex h-80 items-center justify-center text-slate-500">
+        <div className="flex h-80 items-center justify-center text-slate-400">
           No dominance data available
         </div>
       ) : (

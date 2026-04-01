@@ -195,7 +195,7 @@ export default function ApiDocsPage() {
                     <td className="py-3 pr-4 text-slate-400">
                       {ep.description}
                     </td>
-                    <td className="py-3 text-xs text-slate-500">
+                    <td className="py-3 text-xs text-slate-400">
                       {ep.params}
                     </td>
                   </tr>

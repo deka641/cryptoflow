@@ -58,21 +58,94 @@ def _attempt_webhook_delivery(webhook_url: str, payload: dict) -> bool:
     return send_webhook(webhook_url, payload)
 
 
-def _build_webhook_payload(name: str, symbol: str, direction: str, target: float, price: float) -> dict:
-    """Build a Discord/Slack-compatible webhook payload."""
-    return {
-        "content": f"Price Alert Triggered: {name} ({symbol.upper()}) {direction} ${target:,.2f} - Current price: ${price:,.2f}",
-        "embeds": [{
-            "title": f"{name} ({symbol.upper()}) Alert",
-            "description": f"Price went {direction} ${target:,.2f}",
-            "fields": [
-                {"name": "Target", "value": f"${target:,.2f}", "inline": True},
-                {"name": "Current", "value": f"${price:,.2f}", "inline": True},
-                {"name": "Direction", "value": direction.capitalize(), "inline": True},
-            ],
-            "color": 5763719 if direction == "above" else 15548997,
-        }],
+def _detect_platform(url: str) -> str:
+    """Detect webhook platform from URL."""
+    if "discord.com/api/webhooks/" in url:
+        return "discord"
+    if "hooks.slack.com/" in url:
+        return "slack"
+    return "generic"
+
+
+def _build_discord_payload(name: str, symbol: str, direction: str, target: float, price: float, image_url: str | None) -> dict:
+    """Build a Discord embed webhook payload."""
+    embed = {
+        "title": f"\U0001f514 Price Alert: {name} ({symbol.upper()})",
+        "description": (
+            f"{symbol.upper()} has {'risen above' if direction == 'above' else 'fallen below'} "
+            f"your target of ${target:,.2f}"
+        ),
+        "color": 0x34d399 if direction == "above" else 0xf87171,
+        "fields": [
+            {"name": "Current Price", "value": f"${price:,.2f}", "inline": True},
+            {"name": "Target Price", "value": f"${target:,.2f}", "inline": True},
+            {"name": "Direction", "value": direction.capitalize(), "inline": True},
+        ],
+        "footer": {"text": "CryptoFlow Alerts"},
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+    if image_url:
+        embed["thumbnail"] = {"url": image_url}
+    return {"embeds": [embed]}
+
+
+def _build_slack_payload(name: str, symbol: str, direction: str, target: float, price: float) -> dict:
+    """Build a Slack Block Kit webhook payload."""
+    return {
+        "blocks": [
+            {
+                "type": "header",
+                "text": {"type": "plain_text", "text": f"\U0001f514 Price Alert: {name}"},
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": (
+                        f"*{symbol.upper()}* has {'risen above' if direction == 'above' else 'fallen below'} "
+                        f"your target of *${target:,.2f}*"
+                    ),
+                },
+            },
+            {
+                "type": "section",
+                "fields": [
+                    {"type": "mrkdwn", "text": f"*Current Price:* ${price:,.2f}"},
+                    {"type": "mrkdwn", "text": f"*Target Price:* ${target:,.2f}"},
+                    {"type": "mrkdwn", "text": f"*Direction:* {direction.capitalize()}"},
+                ],
+            },
+        ]
+    }
+
+
+def _build_generic_payload(name: str, symbol: str, direction: str, target: float, price: float, image_url: str | None) -> dict:
+    """Build a generic structured JSON webhook payload."""
+    return {
+        "event": "price_alert_triggered",
+        "coin_name": name,
+        "symbol": symbol.upper(),
+        "direction": direction,
+        "target_price": target,
+        "current_price": price,
+        "image_url": image_url,
+        "message": (
+            f"{name} ({symbol.upper()}) has {'risen above' if direction == 'above' else 'fallen below'} "
+            f"your target of ${target:,.2f} - Current price: ${price:,.2f}"
+        ),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "platform_hint": "generic",
+    }
+
+
+def _build_webhook_payload(name: str, symbol: str, direction: str, target: float, price: float, image_url: str | None = None, webhook_url: str = "") -> dict:
+    """Build a platform-specific webhook payload based on the URL."""
+    platform = _detect_platform(webhook_url)
+    if platform == "discord":
+        return _build_discord_payload(name, symbol, direction, target, price, image_url)
+    if platform == "slack":
+        return _build_slack_payload(name, symbol, direction, target, price)
+    return _build_generic_payload(name, symbol, direction, target, price, image_url)
 
 
 def main():
@@ -136,7 +209,7 @@ def main():
             # --- Second pass: deliver pending webhooks ---
             cur.execute("""
                 SELECT a.id, a.target_price, a.direction, a.webhook_attempts,
-                       u.webhook_url, c.symbol, c.name, a.coin_id
+                       u.webhook_url, c.symbol, c.name, a.coin_id, c.image_url
                 FROM price_alerts a
                 JOIN users u ON u.id = a.user_id
                 JOIN dim_coin c ON c.id = a.coin_id
@@ -146,10 +219,10 @@ def main():
             """, (MAX_WEBHOOK_ATTEMPTS,))
             pending = cur.fetchall()
 
-            for alert_id, target_price, direction, attempts, webhook_url, symbol, name, coin_id in pending:
+            for alert_id, target_price, direction, attempts, webhook_url, symbol, name, coin_id, image_url in pending:
                 target = float(target_price)
                 price = prices.get(coin_id, 0.0)
-                payload = _build_webhook_payload(name, symbol, direction, target, price)
+                payload = _build_webhook_payload(name, symbol, direction, target, price, image_url=image_url, webhook_url=webhook_url)
 
                 if _attempt_webhook_delivery(webhook_url, payload):
                     cur.execute(

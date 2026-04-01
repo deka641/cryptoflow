@@ -57,7 +57,7 @@ export function KpiCard({ title, value, change, changeLabel, icon, accentColor =
                 )}
               >
                 {formatPercentage(change)}
-                {changeLabel && <span className="ml-1 text-xs font-normal text-slate-500">{changeLabel}</span>}
+                {changeLabel && <span className="ml-1 text-xs font-normal text-slate-400">{changeLabel}</span>}
               </p>
             )}
             {sparkline}

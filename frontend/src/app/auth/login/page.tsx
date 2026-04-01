@@ -9,6 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LogIn, Eye, EyeOff } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+function validateEmail(value: string): string | null {
+  if (!value) return "Email is required";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Please enter a valid email address";
+  return null;
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -16,8 +23,19 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({});
   const { login } = useAuth();
   const router = useRouter();
+
+  const handleBlur = (field: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    if (field === "email") {
+      setFieldErrors((prev) => ({ ...prev, email: validateEmail(email) }));
+    } else if (field === "password") {
+      setFieldErrors((prev) => ({ ...prev, password: password ? null : "Password is required" }));
+    }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -32,8 +50,8 @@ export default function LoginPage() {
       setLoading(true);
       await login(email, password);
       router.push("/");
-    } catch (err: any) {
-      setError(err.message || "Login failed. Please check your credentials.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Login failed. Please check your credentials.");
     } finally {
       setLoading(false);
     }
@@ -69,10 +87,19 @@ export default function LoginPage() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-slate-900/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500/50 focus:ring-indigo-500/20 transition-all duration-200"
+                onBlur={() => handleBlur("email")}
+                aria-invalid={touched.email && !!fieldErrors.email}
+                aria-describedby={touched.email && fieldErrors.email ? "email-error" : undefined}
+                className={cn(
+                  "bg-slate-900/50 border-slate-700 text-white placeholder:text-slate-400 focus:border-indigo-500/50 focus:ring-indigo-500/20 transition-all duration-200",
+                  touched.email && fieldErrors.email && "border-red-500"
+                )}
                 autoComplete="email"
                 required
               />
+              {touched.email && fieldErrors.email && (
+                <p id="email-error" className="text-xs text-red-400">{fieldErrors.email}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -86,7 +113,13 @@ export default function LoginPage() {
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-slate-900/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500/50 focus:ring-indigo-500/20 transition-all duration-200 pr-10"
+                  onBlur={() => handleBlur("password")}
+                  aria-invalid={touched.password && !!fieldErrors.password}
+                  aria-describedby={touched.password && fieldErrors.password ? "password-error" : undefined}
+                  className={cn(
+                    "bg-slate-900/50 border-slate-700 text-white placeholder:text-slate-400 focus:border-indigo-500/50 focus:ring-indigo-500/20 transition-all duration-200 pr-10",
+                    touched.password && fieldErrors.password && "border-red-500"
+                  )}
                   autoComplete="current-password"
                   required
                 />
@@ -99,6 +132,9 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
               </div>
+              {touched.password && fieldErrors.password && (
+                <p id="password-error" className="text-xs text-red-400">{fieldErrors.password}</p>
+              )}
             </div>
 
             <div className="flex justify-end">

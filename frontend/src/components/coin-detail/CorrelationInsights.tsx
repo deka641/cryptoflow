@@ -69,7 +69,7 @@ export function CorrelationInsights({ mostCorrelated, leastCorrelated, loading }
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-slate-500">No correlation data available</p>
+                <p className="text-sm text-slate-400">No correlation data available</p>
               )}
             </div>
 
@@ -83,7 +83,7 @@ export function CorrelationInsights({ mostCorrelated, leastCorrelated, loading }
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-slate-500">No correlation data available</p>
+                <p className="text-sm text-slate-400">No correlation data available</p>
               )}
             </div>
           </div>

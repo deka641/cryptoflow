@@ -69,7 +69,7 @@ export function WatchlistWidget() {
           <div className="flex flex-col items-center justify-center py-6 text-center">
             <Star className="size-8 text-slate-600 mb-2" />
             <p className="text-sm text-slate-400">Your watchlist is empty</p>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-slate-400 mt-1">
               Star coins from the{" "}
               <Link href="/market" className="text-indigo-400 hover:text-indigo-300 underline-offset-2 hover:underline">
                 Market page

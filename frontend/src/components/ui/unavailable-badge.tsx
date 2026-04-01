@@ -9,7 +9,7 @@ interface UnavailableBadgeProps {
 
 export function UnavailableBadge({ message = "Data unavailable", onRetry }: UnavailableBadgeProps) {
   return (
-    <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+    <span className="inline-flex items-center gap-1 text-xs text-slate-400">
       <AlertCircle className="size-3" />
       {message}
       {onRetry && (

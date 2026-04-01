@@ -78,6 +78,39 @@ function scoreLabel(score: number): { text: string; color: string } {
   return { text: "Critical", color: "text-red-400" };
 }
 
+// Descriptions for known quality checks
+const CHECK_DESCRIPTIONS: Record<string, string> = {
+  null_price_check: "Verifies no NULL price values exist in market data records",
+  null_volume_check: "Ensures trading volume is recorded for all data points",
+  null_market_cap_check: "Checks that market capitalization is present for all coins",
+  duplicate_check: "Detects duplicate entries (same coin + timestamp combination)",
+  freshness_check: "Validates that the most recent data is less than 30 minutes old",
+  staleness_check: "Flags coins whose data hasn't been updated within expected intervals",
+  price_anomaly_check: "Detects unusual price spikes or drops (>50% in a single interval)",
+  volume_anomaly_check: "Identifies abnormal trading volume patterns (>10x average)",
+  rank_consistency_check: "Ensures market cap rankings are consistent with actual market cap values",
+  referential_integrity_check: "Verifies all fact table records reference valid dimension entries",
+  timestamp_gap_check: "Detects gaps in the time series data (missing intervals)",
+  completeness_check: "Confirms all tracked coins have recent market data entries",
+};
+
+const TABLE_DESCRIPTIONS: Record<string, string> = {
+  fact_market_data: "10-minute price snapshots — checks for nulls, duplicates, freshness, and price anomalies",
+  fact_daily_ohlcv: "Daily aggregates (open/high/low/close/volume) — checks for completeness and consistency",
+  dim_coin: "Coin dimension table — checks for referential integrity and missing metadata",
+  mv_latest_market_data: "Materialized view with latest prices — checks for staleness and data freshness",
+};
+
+function getCheckDescription(checkName: string): string {
+  // Try exact match first, then fuzzy match on key parts
+  if (CHECK_DESCRIPTIONS[checkName]) return CHECK_DESCRIPTIONS[checkName];
+  const lower = checkName.toLowerCase();
+  for (const [key, desc] of Object.entries(CHECK_DESCRIPTIONS)) {
+    if (lower.includes(key.replace(/_check$/, "").replace(/_/g, " "))) return desc;
+  }
+  return "Data quality validation check";
+}
+
 function SummaryCard({ summary }: { summary: QualitySummary }) {
   const label = scoreLabel(summary.score);
   return (
@@ -106,9 +139,15 @@ function SummaryCard({ summary }: { summary: QualitySummary }) {
       <TooltipContent
         side="bottom"
         sideOffset={6}
-        className="max-w-xs border border-slate-700/50 bg-slate-800/95 backdrop-blur-md text-slate-300 shadow-xl shadow-black/20"
+        className="max-w-sm border border-slate-700/50 bg-slate-800/95 backdrop-blur-md text-slate-300 shadow-xl shadow-black/20"
       >
-        Quality score = passed checks / total checks. Excellent (&ge;90%), Good (&ge;70%), Warning (&ge;50%), Critical (&lt;50%).
+        <p className="font-medium text-white mb-1">{summary.table_name}</p>
+        <p className="text-xs mb-1.5">
+          {TABLE_DESCRIPTIONS[summary.table_name] ?? "Quality checks for this table"}
+        </p>
+        <p className="text-xs text-slate-400">
+          Score = passed / total checks. Excellent (&ge;90%), Good (&ge;70%), Warning (&ge;50%), Critical (&lt;50%).
+        </p>
       </TooltipContent>
     </Tooltip>
   );
@@ -197,12 +236,39 @@ export default function QualityPage() {
         </p>
       </div>
 
+      {/* Methodology */}
+      <Card className="glass-card">
+        <CardContent className="py-4">
+          <h3 className="text-sm font-semibold text-white mb-2">How Quality Scores Work</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <div className="flex items-start gap-2">
+              <span className="inline-block size-2 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
+              <div>
+                <span className="font-medium text-emerald-400">Passed</span>
+                <span className="text-slate-400"> — Check assertion is met. Data meets expected quality criteria.</span>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="inline-block size-2 rounded-full bg-yellow-400 mt-1.5 shrink-0" />
+              <div>
+                <span className="font-medium text-yellow-400">Warning</span>
+                <span className="text-slate-400"> — Minor deviation detected. Data is usable but degraded.</span>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="inline-block size-2 rounded-full bg-red-400 mt-1.5 shrink-0" />
+              <div>
+                <span className="font-medium text-red-400">Failed</span>
+                <span className="text-slate-400"> — Check assertion violated. Data may be unreliable.</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Summary Cards */}
       <div>
         <h2 className="text-lg font-semibold text-white mb-4">Quality Summary</h2>
-        <p className="text-xs text-slate-400 -mt-2 mb-4">
-          Aggregate quality score per table. The score represents the percentage of checks that passed. Green (&ge;80%), yellow (&ge;60%), red (&lt;60%).
-        </p>
         {summaryLoading ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -219,7 +285,7 @@ export default function QualityPage() {
           </div>
         ) : (
           <Card className="glass-card">
-            <CardContent className="flex h-24 items-center justify-center text-slate-500">
+            <CardContent className="flex h-24 items-center justify-center text-slate-400">
               No quality summary data available
             </CardContent>
           </Card>
@@ -290,8 +356,9 @@ export default function QualityPage() {
                     key={check.id}
                     className="border-slate-800 hover:bg-slate-700/30 transition-colors duration-200"
                   >
-                    <TableCell className="font-medium text-white">
-                      {check.check_name}
+                    <TableCell>
+                      <p className="font-medium text-white">{check.check_name}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{getCheckDescription(check.check_name)}</p>
                     </TableCell>
                     <TableCell className="text-slate-400">
                       {check.table_name}
@@ -308,7 +375,7 @@ export default function QualityPage() {
                           <span className="truncate max-w-[200px]">
                             {JSON.stringify(check.details).slice(0, 80)}
                           </span>
-                          <Eye className="size-3.5 shrink-0 text-slate-500 group-hover:text-indigo-400 transition-colors" />
+                          <Eye className="size-3.5 shrink-0 text-slate-400 group-hover:text-indigo-400 transition-colors" />
                         </button>
                       ) : "-"}
                     </TableCell>
@@ -323,11 +390,11 @@ export default function QualityPage() {
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <ShieldCheck className="size-12 text-slate-600 mb-4" />
               <h3 className="text-lg font-medium text-slate-300">No Quality Checks Yet</h3>
-              <p className="text-sm text-slate-500 mt-2 max-w-lg">
+              <p className="text-sm text-slate-400 mt-2 max-w-lg">
                 Data quality checks run every hour and validate: null rates, duplicate detection,
                 price staleness, volume anomalies, rank consistency, and timestamp gaps.
               </p>
-              <p className="text-sm text-slate-500 mt-2 max-w-lg">
+              <p className="text-sm text-slate-400 mt-2 max-w-lg">
                 Results will appear here after the first hourly check completes.
               </p>
             </div>
@@ -354,7 +421,7 @@ export default function QualityPage() {
                 : "No details available"}
             </pre>
             {detailCheck?.executed_at && (
-              <p className="mt-3 text-xs text-slate-500">
+              <p className="mt-3 text-xs text-slate-400">
                 Executed: {formatDateTime(detailCheck.executed_at)}
               </p>
             )}

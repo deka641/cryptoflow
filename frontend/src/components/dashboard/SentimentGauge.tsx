@@ -227,7 +227,7 @@ export function SentimentGauge() {
         {/* 30-day sparkline */}
         {spark.line && (
           <div className="w-full mt-1">
-            <p className="text-xs text-slate-500 mb-1 text-center">30-day trend</p>
+            <p className="text-xs text-slate-400 mb-1 text-center">30-day trend</p>
             <svg
               width="100%"
               height={sparkH}

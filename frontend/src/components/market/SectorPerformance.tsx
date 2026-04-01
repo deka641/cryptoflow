@@ -107,7 +107,7 @@ export function SectorPerformance() {
         ) : error ? (
           <ErrorState message="Failed to load sector data" onRetry={fetchSectors} compact />
         ) : chartData.length === 0 ? (
-          <div className="flex h-48 items-center justify-center text-slate-500">
+          <div className="flex h-48 items-center justify-center text-slate-400">
             No sector data available
           </div>
         ) : (

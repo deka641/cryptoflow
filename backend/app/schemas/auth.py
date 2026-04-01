@@ -1,6 +1,6 @@
 import re
 
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 def _validate_password_strength(v: str) -> str:
@@ -65,3 +65,15 @@ class ResetPasswordRequest(BaseModel):
     @classmethod
     def password_strength(cls, v: str) -> str:
         return _validate_password_strength(v)
+
+
+class WebhookUpdate(BaseModel):
+    webhook_url: str = Field("", max_length=500)
+
+    @field_validator("webhook_url")
+    @classmethod
+    def validate_url_format(cls, v: str) -> str:
+        v = v.strip()
+        if v and not v.startswith(("https://", "http://")):
+            raise ValueError("Webhook URL must start with http:// or https://")
+        return v

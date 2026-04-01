@@ -83,7 +83,7 @@ function CustomTooltip({ active, payload, label, coins }: CustomTooltipProps) {
 export function NormalizedChart({ chartData, coins }: NormalizedChartProps) {
   if (!chartData.length || !coins.length) {
     return (
-      <div className="flex h-[400px] items-center justify-center text-slate-500">
+      <div className="flex h-[400px] items-center justify-center text-slate-400">
         No chart data available
       </div>
     );

@@ -238,6 +238,64 @@ def get_portfolio_attribution(
     return compute_attribution(db, current_user.id)
 
 
+@router.get("/insights")
+def get_portfolio_insights(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate AI-powered portfolio insights."""
+    holdings = (
+        db.query(PortfolioHolding)
+        .filter(PortfolioHolding.user_id == current_user.id)
+        .all()
+    )
+
+    if not holdings:
+        return {"insights": "Add holdings to your portfolio to get AI-powered insights."}
+
+    coin_ids = list({h.coin_id for h in holdings})
+    prices, coins = _get_prices_and_coins(db, coin_ids)
+
+    total_value = 0.0
+    total_cost = 0.0
+    holdings_data = []
+
+    for h in holdings:
+        coin = coins.get(h.coin_id)
+        if not coin:
+            continue
+        qty = float(h.quantity)
+        buy_price = float(h.buy_price_usd) if h.buy_price_usd else 0.0
+        current_price = prices.get(h.coin_id, 0)
+        cost_basis = qty * buy_price
+        current_value = qty * current_price
+        pnl_pct = ((current_value - cost_basis) / cost_basis * 100) if cost_basis > 0 else 0.0
+
+        total_value += current_value
+        total_cost += cost_basis
+        holdings_data.append({
+            "name": coin.name,
+            "symbol": coin.symbol.upper(),
+            "quantity": qty,
+            "cost_basis": cost_basis,
+            "current_value": current_value,
+            "pnl_pct": pnl_pct,
+            "weight": 0,  # Will be calculated below
+        })
+
+    # Calculate weights
+    for h in holdings_data:
+        h["weight"] = (h["current_value"] / total_value * 100) if total_value > 0 else 0
+
+    total_pnl = total_value - total_cost
+    total_pnl_pct = (total_pnl / total_cost * 100) if total_cost > 0 else None
+
+    from app.services.insights_service import generate_portfolio_insights
+    insights = generate_portfolio_insights(holdings_data, total_value, total_pnl, total_pnl_pct)
+
+    return {"insights": insights}
+
+
 @router.get("/export")
 def export_portfolio_csv(
     current_user: User = Depends(get_current_user),
@@ -263,16 +321,32 @@ def export_portfolio_csv(
     output = io.StringIO()
     # UTF-8 BOM for Excel compatibility
     output.write("\ufeff")
-    export_date = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    output.write(f"# CryptoFlow Portfolio Export - {export_date} - All values in USD\n")
+    export_date = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     writer = csv.writer(output)
+
+    # Metadata rows
+    writer.writerow(["CryptoFlow Portfolio Export", "", "", "", "", "", "", "", "", "", "", ""])
+    writer.writerow(["Date", export_date, "Currency", "USD", "Holdings", str(len(holdings)), "", "", "", "", "", ""])
+    writer.writerow([])
+
+    # Header row
     writer.writerow([
-        "Coin", "Symbol", "Quantity", "Buy Price (USD)", "Current Price (USD)",
-        "Cost Basis (USD)", "Current Value (USD)", "P&L (USD)", "P&L (%)", "Notes", "Added",
+        "Coin", "Symbol", "Currency", "Quantity", "Buy Price", "Current Price",
+        "Cost Basis", "Current Value", "P&L", "P&L %", "Notes", "Added",
+    ])
+    # Description row
+    writer.writerow([
+        "Coin name", "Ticker", "Quote currency", "Units held", "Per-unit purchase price",
+        "Per-unit live price", "Quantity x Buy Price", "Quantity x Current Price",
+        "Value - Cost", "(P&L / Cost) x 100", "User notes", "Date added (ISO 8601)",
     ])
 
     total_cost_basis = 0.0
     total_value = 0.0
+    best_pnl_pct = None
+    best_coin = ""
+    worst_pnl_pct = None
+    worst_coin = ""
 
     for h in holdings:
         coin = coins.get(h.coin_id)
@@ -289,6 +363,7 @@ def export_portfolio_csv(
         writer.writerow([
             coin.name,
             coin.symbol.upper(),
+            "USD",
             qty,
             round(buy_price, 2),
             round(current_price, 2) if current_price is not None else "",
@@ -304,18 +379,30 @@ def export_portfolio_csv(
         if current_value is not None:
             total_value += current_value
 
+        if pnl_pct is not None:
+            if best_pnl_pct is None or pnl_pct > best_pnl_pct:
+                best_pnl_pct = pnl_pct
+                best_coin = coin.symbol.upper()
+            if worst_pnl_pct is None or pnl_pct < worst_pnl_pct:
+                worst_pnl_pct = pnl_pct
+                worst_coin = coin.symbol.upper()
+
     total_pnl = total_value - total_cost_basis
     total_pnl_pct = (total_pnl / total_cost_basis * 100) if total_cost_basis > 0 else None
 
-    writer.writerow([])  # blank line
+    writer.writerow([])
     writer.writerow([
-        "TOTAL", "", "", "", "",
+        "TOTAL", "", "USD", "", "",  "",
         round(total_cost_basis, 2),
         round(total_value, 2),
         round(total_pnl, 2),
         round(total_pnl_pct, 2) if total_pnl_pct is not None else "",
         "", "",
     ])
+    if best_coin:
+        writer.writerow(["Best Performer", best_coin, "", "", "", "", "", "", "", round(best_pnl_pct, 2) if best_pnl_pct is not None else "", "", ""])
+    if worst_coin:
+        writer.writerow(["Worst Performer", worst_coin, "", "", "", "", "", "", "", round(worst_pnl_pct, 2) if worst_pnl_pct is not None else "", "", ""])
 
     output.seek(0)
     return StreamingResponse(
@@ -341,64 +428,67 @@ def get_portfolio_performance(
     if not holdings:
         return PortfolioPerformance(days=days, data_points=[])
 
-    coin_ids = list({h.coin_id for h in holdings})
     since = datetime.now(timezone.utc) - timedelta(days=days)
+    # Use hourly buckets for ≤90 days, daily for longer periods
+    interval = "hour" if days <= 90 else "day"
 
-    # Fetch historical prices for all coins in the portfolio
-    rows = (
-        db.query(FactMarketData.coin_id, FactMarketData.timestamp, FactMarketData.price_usd)
-        .filter(
-            FactMarketData.coin_id.in_(coin_ids),
-            FactMarketData.timestamp >= since,
-            FactMarketData.price_usd.isnot(None),
-        )
-        .order_by(FactMarketData.timestamp.asc())
-        .all()
-    )
+    # Build holdings data for SQL: (coin_id, quantity, created_at)
+    holdings_data = [
+        {"cid": h.coin_id, "qty": float(h.quantity), "created": h.created_at}
+        for h in holdings
+    ]
+
+    # SQL pushdown: aggregate prices into time buckets and compute portfolio value
+    # This avoids loading all raw rows into Python
+    rows = db.execute(
+        text("""
+            WITH buckets AS (
+                SELECT
+                    date_trunc(:interval, timestamp) AS bucket,
+                    coin_id,
+                    AVG(price_usd) AS avg_price
+                FROM fact_market_data
+                WHERE coin_id = ANY(:coin_ids)
+                  AND timestamp >= :since
+                  AND price_usd IS NOT NULL
+                GROUP BY bucket, coin_id
+            )
+            SELECT
+                b.bucket,
+                SUM(h.qty * b.avg_price) AS portfolio_value
+            FROM buckets b
+            JOIN (
+                SELECT
+                    unnest(:h_coin_ids) AS coin_id,
+                    unnest(:h_quantities) AS qty,
+                    unnest(:h_created_ats) AS created_at
+            ) h ON h.coin_id = b.coin_id AND h.created_at <= b.bucket
+            GROUP BY b.bucket
+            HAVING SUM(h.qty * b.avg_price) > 0
+            ORDER BY b.bucket
+        """),
+        {
+            "interval": interval,
+            "coin_ids": list({h.coin_id for h in holdings}),
+            "since": since,
+            "h_coin_ids": [d["cid"] for d in holdings_data],
+            "h_quantities": [d["qty"] for d in holdings_data],
+            "h_created_ats": [d["created"] for d in holdings_data],
+        },
+    ).fetchall()
 
     if not rows:
         return PortfolioPerformance(days=days, data_points=[])
 
-    # Group prices by timestamp
-    from collections import defaultdict
-    ts_prices: dict[datetime, dict[int, float]] = defaultdict(dict)
-    for coin_id, ts, price in rows:
-        ts_prices[ts][coin_id] = float(price)
+    data_points = [
+        PerformancePoint(
+            timestamp=row.bucket.isoformat(),
+            value_usd=round(float(row.portfolio_value), 2),
+        )
+        for row in rows
+    ]
 
-    # Calculate portfolio value at each timestamp
-    # Sort holdings by created_at so we can use a pointer to track active holdings
-    # instead of checking every holding against every timestamp (O(n+m) vs O(n×m))
-    sorted_holdings = sorted(
-        holdings,
-        key=lambda h: h.created_at.replace(tzinfo=None) if h.created_at else datetime.min,
-    )
-    sorted_timestamps = sorted(ts_prices.keys())
-    data_points = []
-    active_holdings: list[PortfolioHolding] = []
-    h_ptr = 0
-    for ts in sorted_timestamps:
-        ts_naive = ts.replace(tzinfo=None)
-        # Advance pointer: add holdings whose created_at <= current timestamp
-        while h_ptr < len(sorted_holdings):
-            h = sorted_holdings[h_ptr]
-            h_created = h.created_at.replace(tzinfo=None) if h.created_at else datetime.min
-            if h_created > ts_naive:
-                break
-            active_holdings.append(h)
-            h_ptr += 1
-        prices_at_ts = ts_prices[ts]
-        value = 0.0
-        for h in active_holdings:
-            price = prices_at_ts.get(h.coin_id)
-            if price is not None:
-                value += float(h.quantity) * price
-        if value > 0:
-            data_points.append(PerformancePoint(
-                timestamp=ts.isoformat(),
-                value_usd=round(value, 2),
-            ))
-
-    # Downsample to ~200 points
+    # Downsample to ~200 points if needed
     if len(data_points) > 200:
         step = len(data_points) / 200
         data_points = [data_points[int(i * step)] for i in range(200)]

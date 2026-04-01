@@ -66,25 +66,14 @@ export default function ProfilePage() {
     }
     setTestingWebhook(true);
     try {
-      const res = await fetch(webhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content: "CryptoFlow Test Notification - Your webhook is working!",
-          embeds: [{
-            title: "CryptoFlow Webhook Test",
-            description: "This is a test notification from CryptoFlow price alerts.",
-            color: 5763719,
-          }],
-        }),
-      });
-      if (res.ok) {
+      const result = await api.testWebhook();
+      if (result.status_code < 400) {
         toast.success("Test notification sent successfully");
       } else {
-        toast.error(`Webhook test failed (HTTP ${res.status})`);
+        toast.error(`Webhook test failed (HTTP ${result.status_code})`);
       }
-    } catch {
-      toast.error("Failed to send test notification. Check the URL and try again.");
+    } catch (err) {
+      toast.error((err as Error).message || "Failed to send test notification. Check the URL and try again.");
     } finally {
       setTestingWebhook(false);
     }
@@ -212,7 +201,7 @@ export default function ProfilePage() {
                     minLength={8}
                     className="bg-slate-800 border-slate-700 text-white"
                   />
-                  <p className="text-xs text-slate-500">Min 8 characters, at least one letter and one digit</p>
+                  <p className="text-xs text-slate-400">Min 8 characters, at least one letter and one digit</p>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-slate-300">Confirm New Password</Label>
@@ -256,7 +245,7 @@ export default function ProfilePage() {
                   onChange={(e) => setWebhookUrl(e.target.value)}
                   className="bg-slate-800 border-slate-700 text-white"
                 />
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-400">
                   Supports Discord, Slack, or any service that accepts JSON POST requests.
                 </p>
               </div>
@@ -295,7 +284,7 @@ export default function ProfilePage() {
             </CardHeader>
             <CardContent>
               {activeAlerts.length === 0 ? (
-                <p className="text-sm text-slate-500">No active alerts. Set alerts from any coin detail page.</p>
+                <p className="text-sm text-slate-400">No active alerts. Set alerts from any coin detail page.</p>
               ) : (
                 <div className="space-y-2">
                   {activeAlerts.slice(0, 5).map((alert) => (
@@ -313,7 +302,7 @@ export default function ProfilePage() {
                     </div>
                   ))}
                   {activeAlerts.length > 5 && (
-                    <p className="text-xs text-slate-500 text-center">+{activeAlerts.length - 5} more</p>
+                    <p className="text-xs text-slate-400 text-center">+{activeAlerts.length - 5} more</p>
                   )}
                 </div>
               )}
@@ -335,7 +324,7 @@ export default function ProfilePage() {
             </CardHeader>
             <CardContent>
               {triggeredAlerts.length === 0 ? (
-                <p className="text-sm text-slate-500">No triggered alerts yet.</p>
+                <p className="text-sm text-slate-400">No triggered alerts yet.</p>
               ) : (
                 <div className="space-y-2">
                   {triggeredAlerts.slice(0, 10).map((alert) => (
@@ -350,11 +339,11 @@ export default function ProfilePage() {
                         </span>
                         <span className="text-sm text-slate-300">{formatCurrency(alert.target_price)}</span>
                       </div>
-                      <span className="text-xs text-slate-500">{alert.triggered_at ? formatDateTime(alert.triggered_at) : ""}</span>
+                      <span className="text-xs text-slate-400">{alert.triggered_at ? formatDateTime(alert.triggered_at) : ""}</span>
                     </div>
                   ))}
                   {triggeredAlerts.length > 10 && (
-                    <p className="text-xs text-slate-500 text-center">+{triggeredAlerts.length - 10} more</p>
+                    <p className="text-xs text-slate-400 text-center">+{triggeredAlerts.length - 10} more</p>
                   )}
                 </div>
               )}

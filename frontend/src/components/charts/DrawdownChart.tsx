@@ -53,7 +53,7 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
           {entry.drawdownPct.toFixed(2)}%
         </span>
       </p>
-      <p className="text-xs text-slate-500 mt-1">
+      <p className="text-xs text-slate-400 mt-1">
         Worst peak-to-trough decline in this period
       </p>
     </div>
@@ -67,7 +67,7 @@ export function DrawdownChart({ data }: DrawdownChartProps) {
 
   if (filtered.length === 0) {
     return (
-      <div className="flex h-64 items-center justify-center text-slate-500">
+      <div className="flex h-64 items-center justify-center text-slate-400">
         No drawdown data available
       </div>
     );
@@ -162,7 +162,7 @@ export function DrawdownChart({ data }: DrawdownChartProps) {
           <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "#dc2626" }} />
           <span>Severe (&gt;75%)</span>
         </div>
-        <span className="ml-2 text-slate-500">Severity relative to worst coin</span>
+        <span className="ml-2 text-slate-400">Severity relative to worst coin</span>
       </div>
     </div>
   );

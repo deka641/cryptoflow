@@ -11,6 +11,12 @@ import { Label } from "@/components/ui/label";
 import { UserPlus, Check, X, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+function validateEmail(value: string): string | null {
+  if (!value) return "Email is required";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Please enter a valid email address";
+  return null;
+}
+
 export default function RegisterPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -18,8 +24,23 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({});
   const { register } = useAuth();
   const router = useRouter();
+
+  const handleBlur = (field: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    if (field === "email") {
+      setFieldErrors((prev) => ({ ...prev, email: validateEmail(email) }));
+    } else if (field === "password") {
+      let pwError: string | null = null;
+      if (!password) pwError = "Password is required";
+      else if (password.length < 8 || !/[a-zA-Z]/.test(password) || !/[0-9]/.test(password))
+        pwError = "Password does not meet all requirements";
+      setFieldErrors((prev) => ({ ...prev, password: pwError }));
+    }
+  };
 
   const pwChecks = useMemo(() => {
     const hasLength = password.length >= 8;
@@ -60,8 +81,8 @@ export default function RegisterPage() {
       setLoading(true);
       await register(email, password, fullName || undefined);
       router.push("/");
-    } catch (err: any) {
-      setError(err.message || "Registration failed. Please try again.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Registration failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -97,7 +118,7 @@ export default function RegisterPage() {
                 placeholder="John Doe"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="bg-slate-900/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500/50 focus:ring-indigo-500/20 transition-all duration-200"
+                className="bg-slate-900/50 border-slate-700 text-white placeholder:text-slate-400 focus:border-indigo-500/50 focus:ring-indigo-500/20 transition-all duration-200"
                 autoComplete="name"
               />
             </div>
@@ -112,10 +133,19 @@ export default function RegisterPage() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-slate-900/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500/50 focus:ring-indigo-500/20 transition-all duration-200"
+                onBlur={() => handleBlur("email")}
+                aria-invalid={touched.email && !!fieldErrors.email}
+                aria-describedby={touched.email && fieldErrors.email ? "email-error" : undefined}
+                className={cn(
+                  "bg-slate-900/50 border-slate-700 text-white placeholder:text-slate-400 focus:border-indigo-500/50 focus:ring-indigo-500/20 transition-all duration-200",
+                  touched.email && fieldErrors.email && "border-red-500"
+                )}
                 autoComplete="email"
                 required
               />
+              {touched.email && fieldErrors.email && (
+                <p id="email-error" className="text-xs text-red-400">{fieldErrors.email}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -129,7 +159,13 @@ export default function RegisterPage() {
                   placeholder="At least 8 characters (letter + digit)"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-slate-900/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500/50 focus:ring-indigo-500/20 transition-all duration-200 pr-10"
+                  onBlur={() => handleBlur("password")}
+                  aria-invalid={touched.password && !!fieldErrors.password}
+                  aria-describedby="password-requirements"
+                  className={cn(
+                    "bg-slate-900/50 border-slate-700 text-white placeholder:text-slate-400 focus:border-indigo-500/50 focus:ring-indigo-500/20 transition-all duration-200 pr-10",
+                    touched.password && fieldErrors.password && "border-red-500"
+                  )}
                   autoComplete="new-password"
                   required
                 />
@@ -142,13 +178,13 @@ export default function RegisterPage() {
                   {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
               </div>
-              {password.length > 0 && (
+              {(password.length > 0 || touched.password) && (
                 <div className="space-y-2 pt-1">
-                  <div className="space-y-1">
+                  <div id="password-requirements" className="space-y-1">
                     {[
                       { met: pwChecks.hasLength, label: "8+ characters" },
-                      { met: pwChecks.hasLetter, label: "Contains a letter" },
-                      { met: pwChecks.hasDigit, label: "Contains a digit" },
+                      { met: pwChecks.hasLetter, label: "At least one letter" },
+                      { met: pwChecks.hasDigit, label: "At least one digit" },
                     ].map((rule) => (
                       <div key={rule.label} className="flex items-center gap-1.5 text-xs">
                         {rule.met ? (
@@ -156,7 +192,7 @@ export default function RegisterPage() {
                         ) : (
                           <X className="size-3.5 text-red-400" />
                         )}
-                        <span className={rule.met ? "text-emerald-400" : "text-red-400"}>
+                        <span className={rule.met ? "text-emerald-400" : "text-slate-400"}>
                           {rule.label}
                         </span>
                       </div>

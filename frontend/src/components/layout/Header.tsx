@@ -58,7 +58,7 @@ export function Header({ onOpenShortcuts }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-slate-700/50 bg-slate-950/70 backdrop-blur-xl px-4 lg:px-6">
-      <Sheet>
+      <Sheet key={pathname}>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" className="lg:hidden text-slate-400 hover:text-white">
             <Menu className="size-5" />

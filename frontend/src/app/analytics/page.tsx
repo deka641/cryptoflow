@@ -21,8 +21,11 @@ import { BarChart3 } from "lucide-react";
 import Link from "next/link";
 
 const PERIODS = [
+  { label: "7d", days: 7 },
   { label: "30d", days: 30 },
   { label: "90d", days: 90 },
+  { label: "180d", days: 180 },
+  { label: "1y", days: 365 },
 ];
 
 export default function AnalyticsPage() {
@@ -106,7 +109,7 @@ export default function AnalyticsPage() {
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <BarChart3 className="size-12 text-slate-600 mb-4" />
             <h3 className="text-lg font-medium text-slate-300">Analytics Data Not Yet Available</h3>
-            <p className="text-sm text-slate-500 mt-2 max-w-lg">
+            <p className="text-sm text-slate-400 mt-2 max-w-lg">
               Correlation and volatility metrics are computed daily at 04:00 UTC by the analytics pipeline.
               Check the Pipeline page to see when the last job ran.
             </p>

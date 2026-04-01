@@ -80,7 +80,7 @@ export function AttributionChart({ attribution }: AttributionChartProps) {
             Contribution to Portfolio Return
           </h4>
           {chartData.length === 0 ? (
-            <div className="flex h-64 items-center justify-center text-slate-500 text-sm">
+            <div className="flex h-64 items-center justify-center text-slate-400 text-sm">
               No attribution data available
             </div>
           ) : (

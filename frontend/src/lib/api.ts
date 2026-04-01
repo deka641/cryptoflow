@@ -284,6 +284,10 @@ class ApiClient {
     return this.request<import("@/types").PortfolioAttribution>("/api/v1/portfolio/attribution");
   }
 
+  async getPortfolioInsights() {
+    return this.request<{ insights: string }>("/api/v1/portfolio/insights");
+  }
+
   // Alerts
   async getAlerts() {
     return this.request<import("@/types").PriceAlert[]>("/api/v1/alerts");
@@ -299,6 +303,13 @@ class ApiClient {
   async createAlert(data: { coin_id: number; target_price: number; direction: string }) {
     return this.request<import("@/types").PriceAlert>("/api/v1/alerts", {
       method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateAlert(id: number, data: { target_price?: number; direction?: string }) {
+    return this.request<import("@/types").PriceAlert>(`/api/v1/alerts/${id}`, {
+      method: "PUT",
       body: JSON.stringify(data),
     });
   }
@@ -356,6 +367,12 @@ class ApiClient {
     return this.request<{ message: string; webhook_url: string | null }>("/api/v1/auth/webhook", {
       method: "PUT",
       body: JSON.stringify({ webhook_url: webhookUrl }),
+    });
+  }
+
+  async testWebhook() {
+    return this.request<{ message: string; status_code: number }>("/api/v1/auth/webhook/test", {
+      method: "POST",
     });
   }
 

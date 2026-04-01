@@ -191,7 +191,7 @@ export function CandlestickChart({ data }: CandlestickChartProps) {
 
   if (candles.length === 0) {
     return (
-      <div className="flex h-80 items-center justify-center text-slate-500">
+      <div className="flex h-80 items-center justify-center text-slate-400">
         No OHLCV data available
       </div>
     );
@@ -290,7 +290,7 @@ export function CandlestickChart({ data }: CandlestickChartProps) {
             <line x1="7" y1="20" x2="7" y2="26" stroke="#34d399" strokeWidth="1" />
             <rect x="3" y="8" width="8" height="12" rx="1" fill="#34d399" />
           </svg>
-          <div className="flex flex-col text-[10px] leading-tight text-slate-500">
+          <div className="flex flex-col text-[10px] leading-tight text-slate-400">
             <span>Wick = High/Low range</span>
             <span>Body = Open/Close range</span>
             <span className="text-slate-600">Background bars = Volume</span>

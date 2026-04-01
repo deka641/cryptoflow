@@ -35,6 +35,25 @@ class AlertCreate(BaseModel):
         return v
 
 
+class AlertUpdate(BaseModel):
+    target_price: float | None = None
+    direction: str | None = None
+
+    @field_validator("direction")
+    @classmethod
+    def validate_direction(cls, v: str | None) -> str | None:
+        if v is not None and v not in ("above", "below"):
+            raise ValueError("direction must be 'above' or 'below'")
+        return v
+
+    @field_validator("target_price")
+    @classmethod
+    def validate_price(cls, v: float | None) -> float | None:
+        if v is not None and v <= 0:
+            raise ValueError("target_price must be positive")
+        return v
+
+
 class AlertResponse(BaseModel):
     id: int
     coin_id: int
@@ -147,6 +166,52 @@ def delete_alert(
     if not deleted:
         raise HTTPException(status_code=404, detail="Alert not found")
     return None
+
+
+@router.put("/{alert_id}", response_model=AlertResponse)
+def update_alert(
+    alert_id: int,
+    data: AlertUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update a price alert (only own untriggered alerts)."""
+    alert = (
+        db.query(PriceAlert)
+        .filter(PriceAlert.id == alert_id, PriceAlert.user_id == current_user.id)
+        .first()
+    )
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+
+    if alert.triggered:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot edit a triggered alert",
+        )
+
+    if data.target_price is not None:
+        alert.target_price = data.target_price
+    if data.direction is not None:
+        alert.direction = data.direction
+
+    db.commit()
+    db.refresh(alert)
+
+    coin = db.query(DimCoin).filter(DimCoin.id == alert.coin_id).first()
+    return AlertResponse(
+        id=alert.id,
+        coin_id=alert.coin_id,
+        coingecko_id=coin.coingecko_id if coin else "",
+        symbol=coin.symbol if coin else "",
+        name=coin.name if coin else "",
+        image_url=coin.image_url if coin else None,
+        target_price=float(alert.target_price),
+        direction=alert.direction,
+        triggered=alert.triggered,
+        created_at=alert.created_at.isoformat() if alert.created_at else "",
+        triggered_at=alert.triggered_at.isoformat() if alert.triggered_at else None,
+    )
 
 
 @router.get("/triggered")

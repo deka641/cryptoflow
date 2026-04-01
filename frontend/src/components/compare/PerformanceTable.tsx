@@ -78,7 +78,7 @@ export function PerformanceTable({ metrics }: PerformanceTableProps) {
                 )}
                 <div>
                   <span className="font-medium text-white">{m.name}</span>
-                  <span className="ml-1.5 text-xs text-slate-500 uppercase">
+                  <span className="ml-1.5 text-xs text-slate-400 uppercase">
                     {m.symbol}
                   </span>
                 </div>

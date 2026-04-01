@@ -50,7 +50,7 @@ function SortIcon({
   sortField: SortField;
   sortDirection: SortDirection;
 }) {
-  if (sortField !== field) return <ArrowUpDown className="size-3.5 text-slate-500" />;
+  if (sortField !== field) return <ArrowUpDown className="size-3.5 text-slate-400" />;
   return sortDirection === "asc" ? (
     <ArrowUp className="size-3.5 text-white" />
   ) : (

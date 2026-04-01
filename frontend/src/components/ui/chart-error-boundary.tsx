@@ -46,7 +46,7 @@ export class ChartErrorBoundary extends Component<Props, State> {
             <p className="text-sm font-medium text-slate-300">
               Chart could not be rendered
             </p>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-slate-400 mt-1">
               An error occurred while rendering this chart.
             </p>
           </div>

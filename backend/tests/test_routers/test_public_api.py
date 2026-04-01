@@ -1,11 +1,6 @@
 """Tests for the public API endpoints (/api/v1/public/...)."""
 
-from app.routers.public_api import _requests
-
-
-def _clear_public_rate_limits():
-    """Clear the in-memory rate limit store used by the public API."""
-    _requests.clear()
+from app.utils.rate_limiter import clear_all as _clear_public_rate_limits
 
 
 def test_public_coins_list(client):
@@ -13,10 +8,16 @@ def test_public_coins_list(client):
     resp = client.get("/api/v1/public/coins")
     assert resp.status_code == 200
     data = resp.json()
-    assert isinstance(data, list)
+    # Paginated response with metadata
+    assert "items" in data
+    assert "total" in data
+    assert "page" in data
+    assert "per_page" in data
+    assert "pages" in data
+    assert isinstance(data["items"], list)
     # If there are coins in the DB, validate structure
-    if len(data) > 0:
-        item = data[0]
+    if len(data["items"]) > 0:
+        item = data["items"][0]
         assert "id" in item
         assert "symbol" in item
         assert "name" in item
@@ -33,7 +34,7 @@ def test_public_coin_detail(client):
     # First get a real coin ID from the list
     list_resp = client.get("/api/v1/public/coins")
     assert list_resp.status_code == 200
-    coins = list_resp.json()
+    coins = list_resp.json()["items"]
     if len(coins) == 0:
         # No coins in DB, nothing to test for detail
         return

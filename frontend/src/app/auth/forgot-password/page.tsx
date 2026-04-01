@@ -8,6 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { KeyRound, ArrowLeft } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+function validateEmail(value: string): string | null {
+  if (!value) return "Email is required";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Please enter a valid email address";
+  return null;
+}
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -15,6 +22,15 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [devToken, setDevToken] = useState<string | null>(null);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({});
+
+  const handleBlur = (field: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    if (field === "email") {
+      setFieldErrors((prev) => ({ ...prev, email: validateEmail(email) }));
+    }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -61,7 +77,7 @@ export default function ForgotPasswordPage() {
               </div>
               {devToken && (
                 <div className="space-y-2">
-                  <p className="text-xs text-slate-500">Dev mode — reset token:</p>
+                  <p className="text-xs text-slate-400">Dev mode — reset token:</p>
                   <code className="block rounded-lg border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs text-amber-400 break-all">
                     {devToken}
                   </code>
@@ -99,10 +115,19 @@ export default function ForgotPasswordPage() {
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="bg-slate-900/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500/50 focus:ring-indigo-500/20 transition-all duration-200"
+                  onBlur={() => handleBlur("email")}
+                  aria-invalid={touched.email && !!fieldErrors.email}
+                  aria-describedby={touched.email && fieldErrors.email ? "email-error" : undefined}
+                  className={cn(
+                    "bg-slate-900/50 border-slate-700 text-white placeholder:text-slate-400 focus:border-indigo-500/50 focus:ring-indigo-500/20 transition-all duration-200",
+                    touched.email && fieldErrors.email && "border-red-500"
+                  )}
                   autoComplete="email"
                   required
                 />
+                {touched.email && fieldErrors.email && (
+                  <p id="email-error" className="text-xs text-red-400">{fieldErrors.email}</p>
+                )}
               </div>
 
               <Button

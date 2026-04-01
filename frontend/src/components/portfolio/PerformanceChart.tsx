@@ -169,7 +169,7 @@ export function PerformanceChart({ hasHoldings }: PerformanceChartProps) {
 
   if (!hasHoldings) {
     return (
-      <div className="flex h-80 items-center justify-center text-slate-500">
+      <div className="flex h-80 items-center justify-center text-slate-400">
         Add holdings to see performance history
       </div>
     );
@@ -229,7 +229,7 @@ export function PerformanceChart({ hasHoldings }: PerformanceChartProps) {
           ))}
         </div>
         <div className="flex items-center gap-1 border-l border-slate-700 pl-4">
-          <span className="text-xs text-slate-500 mr-1">vs</span>
+          <span className="text-xs text-slate-400 mr-1">vs</span>
           {BENCHMARKS.map((b) => (
             <Button
               key={b.symbol}
@@ -239,7 +239,7 @@ export function PerformanceChart({ hasHoldings }: PerformanceChartProps) {
                 "h-7 px-2.5 text-xs",
                 activeBenchmark === b.symbol
                   ? "text-white"
-                  : "text-slate-500 hover:text-white"
+                  : "text-slate-400 hover:text-white"
               )}
               style={activeBenchmark === b.symbol ? { backgroundColor: `${b.color}30`, color: b.color } : undefined}
               onClick={() =>
@@ -260,7 +260,7 @@ export function PerformanceChart({ hasHoldings }: PerformanceChartProps) {
         ) : historyError ? (
           <ErrorState compact message="Failed to load portfolio history" onRetry={() => fetchHistory(days)} />
         ) : historyData.length === 0 ? (
-          <div className="flex h-52 items-center justify-center text-slate-500">
+          <div className="flex h-52 items-center justify-center text-slate-400">
             No history data for this period
           </div>
         ) : (
@@ -318,7 +318,7 @@ export function PerformanceChart({ hasHoldings }: PerformanceChartProps) {
         ) : error ? (
           <ErrorState compact message="Failed to load performance data" onRetry={() => fetchPerformance(days)} />
         ) : chartData.length === 0 ? (
-          <div className="flex h-80 items-center justify-center text-slate-500">
+          <div className="flex h-80 items-center justify-center text-slate-400">
             No performance data for this period
           </div>
         ) : showBenchmark ? (

@@ -109,7 +109,7 @@ export function RiskReturnScatter({ data }: RiskReturnScatterProps) {
 
   if (filtered.length < 2) {
     return (
-      <div className="flex h-64 items-center justify-center text-slate-500">
+      <div className="flex h-64 items-center justify-center text-slate-400">
         Insufficient analytics data for scatter plot
       </div>
     );
@@ -134,7 +134,7 @@ export function RiskReturnScatter({ data }: RiskReturnScatterProps) {
       <div className="absolute top-6 right-10 text-[10px] text-amber-400/40 font-medium pointer-events-none z-10">
         High Risk, High Return
       </div>
-      <div className="absolute bottom-16 left-16 text-[10px] text-slate-500/50 font-medium pointer-events-none z-10">
+      <div className="absolute bottom-16 left-16 text-[10px] text-slate-400/50 font-medium pointer-events-none z-10">
         Low Risk, Negative Return
       </div>
       <div className="absolute bottom-16 right-10 text-[10px] text-red-400/40 font-medium pointer-events-none z-10">
@@ -218,7 +218,7 @@ export function RiskReturnScatter({ data }: RiskReturnScatterProps) {
       {/* Legend */}
       <div className="mt-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-xs text-slate-400">
         <div className="flex items-center gap-2">
-          <span className="text-slate-500">Sharpe:</span>
+          <span className="text-slate-400">Sharpe:</span>
           <div className="flex items-center gap-1">
             <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "#f87171" }} />
             <span>&lt;-0.5</span>
@@ -241,8 +241,8 @@ export function RiskReturnScatter({ data }: RiskReturnScatterProps) {
           </div>
         </div>
         <div className="flex items-center gap-1.5 border-l border-slate-700/50 pl-4">
-          <svg width="10" height="10" className="text-slate-500"><circle cx="3" cy="5" r="3" fill="currentColor" /></svg>
-          <svg width="18" height="12" className="text-slate-500"><circle cx="9" cy="6" r="6" fill="currentColor" /></svg>
+          <svg width="10" height="10" className="text-slate-400"><circle cx="3" cy="5" r="3" fill="currentColor" /></svg>
+          <svg width="18" height="12" className="text-slate-400"><circle cx="9" cy="6" r="6" fill="currentColor" /></svg>
           <span>Bubble size = market cap</span>
         </div>
       </div>

@@ -15,16 +15,22 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-indigo-600 focus:text-white focus:px-4 focus:py-2 focus:rounded focus:top-2 focus:left-2"
+      >
+        Skip to main content
+      </a>
       <div className="flex min-h-screen">
         <Sidebar />
         <div className="flex flex-1 flex-col lg:pl-64 min-w-0">
           <Header onOpenShortcuts={() => setShowHelp(true)} />
           <PriceTicker />
-          <main className="flex-1 p-4 lg:p-6">
+          <main id="main-content" className="flex-1 p-4 lg:p-6">
             <div className="animate-[fade-in_0.3s_ease-out]">{children}</div>
           </main>
           <footer className="border-t border-slate-800 px-4 py-4 lg:px-6">
-            <div className="flex flex-col items-center gap-1 text-xs text-slate-500 sm:flex-row sm:justify-between">
+            <div className="flex flex-col items-center gap-1 text-xs text-slate-400 sm:flex-row sm:justify-between">
               <span>CryptoFlow &mdash; Real-Time Crypto Analytics Platform</span>
               <span>Market data provided by CoinGecko &middot; Prices may be delayed</span>
             </div>

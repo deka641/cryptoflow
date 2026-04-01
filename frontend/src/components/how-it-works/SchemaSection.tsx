@@ -40,7 +40,7 @@ function TableCard({
       <p className="text-xs text-slate-400 mb-3">{description}</p>
       <ul className="space-y-1">
         {columns.map((col) => (
-          <li key={col} className="flex items-center gap-2 text-xs text-slate-500 font-mono">
+          <li key={col} className="flex items-center gap-2 text-xs text-slate-400 font-mono">
             <span className="text-slate-600">&#8226;</span>
             {col}
           </li>
@@ -55,7 +55,7 @@ function ConnectorDown() {
     <div className="flex justify-center py-3">
       <div className="flex flex-col items-center">
         <div className="w-px h-4 bg-slate-600" />
-        <ArrowDown className="size-3 text-slate-500" />
+        <ArrowDown className="size-3 text-slate-400" />
       </div>
     </div>
   );

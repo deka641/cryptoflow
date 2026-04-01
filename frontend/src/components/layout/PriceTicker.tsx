@@ -102,7 +102,7 @@ export function PriceTicker() {
       {/* Dismiss button */}
       <button
         onClick={handleDismiss}
-        className="absolute right-1 top-1/2 -translate-y-1/2 z-20 p-1 rounded text-slate-500 hover:text-slate-300 hover:bg-slate-800/50 transition-colors"
+        className="absolute right-1 top-1/2 -translate-y-1/2 z-20 p-1 rounded text-slate-400 hover:text-slate-300 hover:bg-slate-800/50 transition-colors"
         aria-label="Dismiss ticker"
       >
         <X className="size-3.5" />

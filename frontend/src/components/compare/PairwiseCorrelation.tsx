@@ -42,7 +42,7 @@ export function PairwiseCorrelation({
 
   if (validCount < 2) {
     return (
-      <div className="flex h-32 items-center justify-center text-sm text-slate-500">
+      <div className="flex h-32 items-center justify-center text-sm text-slate-400">
         Correlation data requires coins in the top 15 by market cap. Select at
         least 2 qualifying coins to see pairwise correlations.
       </div>

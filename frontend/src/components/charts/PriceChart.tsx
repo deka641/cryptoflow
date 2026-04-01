@@ -14,6 +14,27 @@ import { formatCurrency } from "@/lib/formatters";
 interface PriceChartProps {
   data: { timestamp: string; price: number }[];
   color?: string;
+  showVolatilityBands?: boolean;
+}
+
+function computeVolatilityBands(
+  data: { timestamp: string; price: number }[],
+  window = 20
+): { timestamp: string; price: number; upperBand: number; lowerBand: number }[] {
+  return data.map((point, i) => {
+    const start = Math.max(0, i - window + 1);
+    const windowSlice = data.slice(start, i + 1).map((d) => d.price);
+    const mean = windowSlice.reduce((a, b) => a + b, 0) / windowSlice.length;
+    const variance =
+      windowSlice.reduce((sum, p) => sum + (p - mean) ** 2, 0) / windowSlice.length;
+    const std = Math.sqrt(variance);
+    return {
+      timestamp: point.timestamp,
+      price: point.price,
+      upperBand: mean + std,
+      lowerBand: mean - std,
+    };
+  });
 }
 
 function formatTimestamp(timestamp: string): string {
@@ -53,22 +74,23 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   );
 }
 
-export function PriceChart({ data, color = "#6366f1" }: PriceChartProps) {
+export function PriceChart({ data, color = "#6366f1", showVolatilityBands = false }: PriceChartProps) {
   if (!data || data.length === 0) {
     return (
-      <div className="flex h-80 items-center justify-center text-slate-500">
+      <div className="flex h-80 items-center justify-center text-slate-400">
         No price data available
       </div>
     );
   }
 
   const gradientId = `priceGradient-${color.replace("#", "")}`;
+  const chartData = showVolatilityBands ? computeVolatilityBands(data) : data;
 
   return (
     <div className="h-80 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
-          data={data}
+          data={chartData}
           margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
         >
           <defs>
@@ -97,6 +119,26 @@ export function PriceChart({ data, color = "#6366f1" }: PriceChartProps) {
             domain={["auto", "auto"]}
           />
           <Tooltip content={<CustomTooltip />} />
+          {showVolatilityBands && (
+            <>
+              <Area
+                type="monotone"
+                dataKey="upperBand"
+                stroke="none"
+                fill="#6366f1"
+                fillOpacity={0.08}
+                isAnimationActive={false}
+              />
+              <Area
+                type="monotone"
+                dataKey="lowerBand"
+                stroke="none"
+                fill="#020617"
+                fillOpacity={0.8}
+                isAnimationActive={false}
+              />
+            </>
+          )}
           <Area
             type="monotone"
             dataKey="price"

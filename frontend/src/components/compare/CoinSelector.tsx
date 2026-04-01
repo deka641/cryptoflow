@@ -178,13 +178,13 @@ export function CoinSelector({
         >
           <div className="p-2 border-b border-slate-700/50">
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-slate-500" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
               <Input
                 placeholder="Search by name or symbol..."
                 value={search}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="pl-8 bg-slate-900/50 border-slate-700/50 text-white placeholder:text-slate-500 h-9"
+                className="pl-8 bg-slate-900/50 border-slate-700/50 text-white placeholder:text-slate-400 h-9"
                 role="combobox"
                 aria-expanded={true}
                 aria-controls="coin-selector-listbox"
@@ -199,7 +199,7 @@ export function CoinSelector({
           </div>
           <div ref={listRef} className="max-h-64 overflow-y-auto p-1" id="coin-selector-listbox" role="listbox">
             {filteredCoins.length === 0 ? (
-              <div className="px-3 py-6 text-center text-sm text-slate-500">
+              <div className="px-3 py-6 text-center text-sm text-slate-400">
                 No coins found
               </div>
             ) : (
@@ -241,7 +241,7 @@ export function CoinSelector({
                     )}
                     <div className="flex-1 text-left">
                       <span className="font-medium">{coin.name}</span>
-                      <span className="ml-1.5 text-xs text-slate-500 uppercase">
+                      <span className="ml-1.5 text-xs text-slate-400 uppercase">
                         {coin.symbol}
                       </span>
                     </div>

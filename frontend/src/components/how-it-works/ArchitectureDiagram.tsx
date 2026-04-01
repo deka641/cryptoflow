@@ -83,7 +83,7 @@ function FlowArrowRight({ color = "slate" }: { color?: string }) {
     <div className="hidden lg:flex items-center justify-center px-1">
       <div className="relative flex items-center">
         <div className="h-0.5 w-8 bg-slate-600" />
-        <ArrowRight className={cn("size-4", color === "emerald" ? "text-emerald-500/60" : "text-slate-500")} />
+        <ArrowRight className={cn("size-4", color === "emerald" ? "text-emerald-500/60" : "text-slate-400")} />
         <span
           className={cn(
             "absolute top-1/2 -translate-y-1/2 size-1.5 rounded-full",
@@ -101,7 +101,7 @@ function FlowArrowDown() {
     <div className="flex lg:hidden items-center justify-center py-2">
       <div className="flex flex-col items-center">
         <div className="w-0.5 h-6 bg-slate-600" />
-        <ArrowDown className="size-4 text-slate-500" />
+        <ArrowDown className="size-4 text-slate-400" />
       </div>
     </div>
   );
@@ -109,7 +109,7 @@ function FlowArrowDown() {
 
 function LayerLabel({ label }: { label: string }) {
   return (
-    <p className="text-[10px] font-medium uppercase tracking-widest text-slate-500 mb-2 text-center">
+    <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400 mb-2 text-center">
       {label}
     </p>
   );
@@ -298,7 +298,7 @@ export function ArchitectureDiagram() {
       </div>
 
       {/* Legend */}
-      <div className="mt-6 flex flex-wrap gap-4 text-xs text-slate-500">
+      <div className="mt-6 flex flex-wrap gap-4 text-xs text-slate-400">
         <div className="flex items-center gap-1.5">
           <span className="size-2 rounded-full bg-indigo-500" />
           Batch pipeline

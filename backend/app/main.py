@@ -18,6 +18,79 @@ from app.websocket.manager import manager
 logger = logging.getLogger(__name__)
 
 
+async def _check_realtime_alerts(price_data: dict):
+    """Check if any live price updates trigger user alerts and push via WebSocket."""
+    if not manager.user_connections:
+        return
+    try:
+        from app.database import SessionLocal
+        from app.models.alert import PriceAlert
+        from app.models.coin import DimCoin
+        from datetime import datetime, timezone
+
+        db = SessionLocal()
+        try:
+            # Map coingecko_id to price from the broadcast data
+            # price_data is {coingecko_id: price_string, ...}
+            if not isinstance(price_data, dict):
+                return
+
+            # Get all user IDs with active connections
+            connected_user_ids = list(manager.user_connections.keys())
+            if not connected_user_ids:
+                return
+
+            # Fetch untriggered alerts for connected users
+            alerts = (
+                db.query(PriceAlert)
+                .filter(
+                    PriceAlert.user_id.in_(connected_user_ids),
+                    PriceAlert.triggered == False,  # noqa: E712
+                )
+                .all()
+            )
+            if not alerts:
+                return
+
+            # Build coin_id -> coingecko_id mapping for alerts
+            coin_ids = list({a.coin_id for a in alerts})
+            coins = {c.id: c for c in db.query(DimCoin).filter(DimCoin.id.in_(coin_ids)).all()}
+
+            for alert in alerts:
+                coin = coins.get(alert.coin_id)
+                if not coin or coin.coingecko_id not in price_data:
+                    continue
+                try:
+                    current_price = float(price_data[coin.coingecko_id])
+                except (ValueError, TypeError):
+                    continue
+
+                should_trigger = (
+                    (alert.direction == "above" and current_price >= float(alert.target_price))
+                    or (alert.direction == "below" and current_price <= float(alert.target_price))
+                )
+                if should_trigger:
+                    alert.triggered = True
+                    alert.triggered_at = datetime.now(timezone.utc)
+                    await manager.send_to_user(alert.user_id, {
+                        "type": "alert_triggered",
+                        "data": {
+                            "alert_id": alert.id,
+                            "coin_id": alert.coin_id,
+                            "symbol": coin.symbol,
+                            "name": coin.name,
+                            "direction": alert.direction,
+                            "target_price": float(alert.target_price),
+                            "current_price": current_price,
+                        },
+                    })
+            db.commit()
+        finally:
+            db.close()
+    except Exception:
+        logger.debug("Realtime alert check error", exc_info=True)
+
+
 async def _redis_subscriber(redis_url: str, channel: str):
     """Subscribe to Redis pub/sub and broadcast price updates to WebSocket clients."""
     import redis.asyncio as aioredis
@@ -34,6 +107,8 @@ async def _redis_subscriber(redis_url: str, channel: str):
                 try:
                     data = json.loads(message["data"])
                     await manager.broadcast(data)
+                    # Check if any live prices trigger user alerts
+                    await _check_realtime_alerts(data)
                 except json.JSONDecodeError:
                     logger.warning("Malformed JSON from Redis, skipping")
                 except Exception:
@@ -98,6 +173,21 @@ _CACHE_RULES: list[tuple[str, str]] = [
 
 
 @app.middleware("http")
+async def origin_validation(request: Request, call_next):
+    """Validate Origin header on state-changing requests to prevent CSRF."""
+    if request.method in ("POST", "PUT", "DELETE", "PATCH"):
+        origin = request.headers.get("origin")
+        if origin:
+            allowed = settings.CORS_ORIGINS
+            if origin not in allowed:
+                return JSONResponse(
+                    status_code=403,
+                    content={"detail": "Origin not allowed"},
+                )
+    return await call_next(request)
+
+
+@app.middleware("http")
 async def request_logging_and_cache(request: Request, call_next):
     """Log requests with timing and add cache-control headers."""
     start = time.monotonic()
@@ -126,6 +216,14 @@ app.include_router(health_router)
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
+    # Handle database statement timeout as 504
+    from sqlalchemy.exc import OperationalError
+    if isinstance(exc, OperationalError) and "statement timeout" in str(exc):
+        logger.warning("Statement timeout on %s %s", request.method, request.url.path)
+        return JSONResponse(
+            status_code=504,
+            content={"detail": "Query took too long. Try a shorter time range or fewer items."},
+        )
     logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
     return JSONResponse(
         status_code=500,

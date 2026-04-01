@@ -1,6 +1,9 @@
+import logging
 import time
 
 from fastapi import WebSocket
+
+logger = logging.getLogger(__name__)
 
 
 class ConnectionManager:
@@ -8,6 +11,7 @@ class ConnectionManager:
 
     def __init__(self):
         self.active_connections: list[WebSocket] = []
+        self.user_connections: dict[int, list[WebSocket]] = {}
         self._last_broadcast_time: float | None = None
         self._message_count: int = 0
         self._recent_broadcasts: list[float] = []
@@ -43,15 +47,36 @@ class ConnectionManager:
             "messages_per_minute": self.messages_per_minute,
         }
 
-    async def connect(self, websocket: WebSocket):
+    async def connect(self, websocket: WebSocket, user_id: int | None = None):
         await websocket.accept()
         self.active_connections.append(websocket)
+        if user_id is not None:
+            self.user_connections.setdefault(user_id, []).append(websocket)
 
     def disconnect(self, websocket: WebSocket):
         try:
             self.active_connections.remove(websocket)
         except ValueError:
             pass
+        # Clean up user_connections
+        for uid, conns in list(self.user_connections.items()):
+            if websocket in conns:
+                conns.remove(websocket)
+                if not conns:
+                    del self.user_connections[uid]
+                break
+
+    async def send_to_user(self, user_id: int, message: dict):
+        """Send a message to all connections for a specific user."""
+        conns = self.user_connections.get(user_id, [])
+        disconnected = []
+        for conn in list(conns):
+            try:
+                await conn.send_json(message)
+            except Exception:
+                disconnected.append(conn)
+        for conn in disconnected:
+            self.disconnect(conn)
 
     async def broadcast(self, message: dict):
         now = time.time()

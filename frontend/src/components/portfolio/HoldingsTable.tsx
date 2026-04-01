@@ -26,8 +26,28 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatQuantity, formatPercentage } from "@/lib/formatters";
-import { Loader2, Pencil, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, Pencil, Trash2, ChevronDown, ChevronUp, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import type { PortfolioHolding } from "@/types";
+
+export type HoldingSortField = "current_value" | "pnl" | "pnl_pct" | "quantity";
+export type HoldingSortDirection = "asc" | "desc";
+
+function SortIcon({
+  field,
+  sortField,
+  sortDirection,
+}: {
+  field: HoldingSortField;
+  sortField: HoldingSortField;
+  sortDirection: HoldingSortDirection;
+}) {
+  if (sortField !== field) return <ArrowUpDown className="size-3.5 text-slate-400" />;
+  return sortDirection === "asc" ? (
+    <ArrowUp className="size-3.5 text-white" />
+  ) : (
+    <ArrowDown className="size-3.5 text-white" />
+  );
+}
 
 interface HoldingsTableProps {
   holdings: PortfolioHolding[];
@@ -35,24 +55,69 @@ interface HoldingsTableProps {
   onEdit: (holding: PortfolioHolding) => void;
   onDelete: (id: number) => void;
   deletingId?: number | null;
+  sortField: HoldingSortField;
+  sortDirection: HoldingSortDirection;
+  onSortChange: (field: HoldingSortField, direction: HoldingSortDirection) => void;
 }
 
-export function HoldingsTable({ holdings, livePrices, onEdit, onDelete, deletingId }: HoldingsTableProps) {
+export function HoldingsTable({ holdings, livePrices, onEdit, onDelete, deletingId, sortField, sortDirection, onSortChange }: HoldingsTableProps) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   if (holdings.length === 0) return null;
+
+  const handleSort = (field: HoldingSortField) => {
+    let newDir: HoldingSortDirection;
+    if (sortField === field) {
+      newDir = sortDirection === "asc" ? "desc" : "asc";
+    } else {
+      newDir = "desc";
+    }
+    onSortChange(field, newDir);
+  };
 
   return (
     <Table>
       <TableHeader>
         <TableRow className="border-slate-700 hover:bg-transparent bg-slate-800/30">
           <TableHead>Coin</TableHead>
-          <TableHead className="text-right hidden md:table-cell">Quantity</TableHead>
+          <TableHead
+            className="text-right hidden md:table-cell cursor-pointer select-none"
+            onClick={() => handleSort("quantity")}
+            aria-sort={sortField === "quantity" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+          >
+            <span className="flex items-center justify-end gap-1">
+              Quantity <SortIcon field="quantity" sortField={sortField} sortDirection={sortDirection} />
+            </span>
+          </TableHead>
           <TableHead className="text-right hidden md:table-cell">Buy Price</TableHead>
           <TableHead className="text-right">Current Price</TableHead>
-          <TableHead className="text-right">Value</TableHead>
-          <TableHead className="text-right">P&L</TableHead>
-          <TableHead className="text-right hidden sm:table-cell">P&L %</TableHead>
+          <TableHead
+            className="text-right cursor-pointer select-none"
+            onClick={() => handleSort("current_value")}
+            aria-sort={sortField === "current_value" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+          >
+            <span className="flex items-center justify-end gap-1">
+              Value <SortIcon field="current_value" sortField={sortField} sortDirection={sortDirection} />
+            </span>
+          </TableHead>
+          <TableHead
+            className="text-right cursor-pointer select-none"
+            onClick={() => handleSort("pnl")}
+            aria-sort={sortField === "pnl" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+          >
+            <span className="flex items-center justify-end gap-1">
+              P&L <SortIcon field="pnl" sortField={sortField} sortDirection={sortDirection} />
+            </span>
+          </TableHead>
+          <TableHead
+            className="text-right hidden sm:table-cell cursor-pointer select-none"
+            onClick={() => handleSort("pnl_pct")}
+            aria-sort={sortField === "pnl_pct" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+          >
+            <span className="flex items-center justify-end gap-1">
+              P&L % <SortIcon field="pnl_pct" sortField={sortField} sortDirection={sortDirection} />
+            </span>
+          </TableHead>
           <TableHead className="text-right w-20">Actions</TableHead>
           <TableHead className="w-8 md:hidden"><span className="sr-only">Expand</span></TableHead>
         </TableRow>
@@ -168,15 +233,15 @@ export function HoldingsTable({ holdings, livePrices, onEdit, onDelete, deleting
                   <td colSpan={8} className="px-4 py-3">
                     <div className="grid grid-cols-3 gap-4 text-sm">
                       <div>
-                        <p className="text-slate-500 text-xs mb-1">Quantity</p>
+                        <p className="text-slate-400 text-xs mb-1">Quantity</p>
                         <p className="text-slate-200">{formatQuantity(holding.quantity)}</p>
                       </div>
                       <div>
-                        <p className="text-slate-500 text-xs mb-1">Buy Price</p>
+                        <p className="text-slate-400 text-xs mb-1">Buy Price</p>
                         <p className="text-slate-200">{formatCurrency(holding.buy_price_usd)}</p>
                       </div>
                       <div>
-                        <p className="text-slate-500 text-xs mb-1">Cost Basis</p>
+                        <p className="text-slate-400 text-xs mb-1">Cost Basis</p>
                         <p className="text-slate-200">{formatCurrency(costBasis)}</p>
                       </div>
                     </div>

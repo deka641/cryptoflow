@@ -123,12 +123,12 @@ export default function MarketPage() {
       {/* Search & Filter */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative max-w-md flex-1">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
           <Input
             placeholder="Search coins..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500/50 focus:ring-indigo-500/20 transition-all duration-200"
+            className="pl-10 bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-400 focus:border-indigo-500/50 focus:ring-indigo-500/20 transition-all duration-200"
           />
         </div>
         {categories.length > 0 && (
@@ -198,7 +198,7 @@ export default function MarketPage() {
                     }}
                   />
                 ) : (
-                  <div className="flex h-48 items-center justify-center text-slate-500">
+                  <div className="flex h-48 items-center justify-center text-slate-400">
                     {debouncedSearch
                       ? `No coins found matching "${debouncedSearch}"`
                       : "No coins available"}
@@ -278,7 +278,7 @@ export default function MarketPage() {
                       isWatched={isWatched}
                     />
                   ) : (
-                    <div className="flex h-48 flex-col items-center justify-center gap-3 text-slate-500">
+                    <div className="flex h-48 flex-col items-center justify-center gap-3 text-slate-400">
                       <Star className="size-8 text-slate-600" />
                       <p>Your watchlist is empty.</p>
                       <p className="text-xs text-slate-600">Star a coin to add it!</p>

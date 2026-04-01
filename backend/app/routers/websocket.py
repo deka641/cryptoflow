@@ -13,9 +13,9 @@ router = APIRouter()
 
 
 @router.websocket("/prices")
-async def websocket_prices(websocket: WebSocket):
+async def websocket_prices(websocket: WebSocket, user_id: int | None = None):
     """Accept a WebSocket connection and stream real-time price updates."""
-    await manager.connect(websocket)
+    await manager.connect(websocket, user_id=user_id)
     try:
         while True:
             try:

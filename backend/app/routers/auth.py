@@ -1,19 +1,19 @@
 import logging
 import secrets
-import time
-from collections import defaultdict
 from datetime import datetime, timezone, timedelta
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.auth import UserRegister, UserLogin, UserResponse, Token, PasswordChange, ForgotPasswordRequest, ResetPasswordRequest
+from app.schemas.auth import UserRegister, UserLogin, UserResponse, Token, PasswordChange, ForgotPasswordRequest, ResetPasswordRequest, WebhookUpdate
 from app.auth.jwt import hash_password, verify_password, create_access_token, decode_access_token_for_refresh
 from app.auth.dependencies import get_current_user
 from app.config import settings
 from app.utils.url_validation import validate_webhook_url
+from app.utils.rate_limiter import check_rate_limit, clear_all as _clear_rate_limits
 
 _logger = logging.getLogger(__name__)
 
@@ -22,96 +22,11 @@ _DUMMY_HASH = hash_password("dummy-constant-password")
 
 router = APIRouter()
 
-# Rate limiter config
-_RATE_LIMIT_WINDOW = 60  # seconds
-
-# In-memory fallback rate limiter
-_rate_limit_attempts: dict[str, list[float]] = defaultdict(list)
-_last_sweep: float = 0.0
-_SWEEP_INTERVAL = 60.0  # seconds between cleanup sweeps
-
-# Try to use Redis for rate limiting (works across workers)
-_redis_client = None
-
-
-def _get_redis():
-    global _redis_client
-    if _redis_client is None:
-        try:
-            import redis
-            _redis_client = redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
-            _redis_client.ping()
-        except Exception:
-            _redis_client = False  # Mark as unavailable
-            _logger.info("Redis unavailable for rate limiting, using in-memory fallback")
-    return _redis_client if _redis_client is not False else None
-
-
-def _clear_rate_limits():
-    """Clear all rate limit state (for testing)."""
-    _rate_limit_attempts.clear()
-    r = _get_redis()
-    if r:
-        try:
-            for key in r.scan_iter("rate_limit:*"):
-                r.delete(key)
-        except Exception:
-            pass
-
-
-def _check_rate_limit(request: Request, prefix: str, max_attempts: int, detail: str) -> None:
-    ip = request.client.host if request.client else "unknown"
-    r = _get_redis()
-
-    if r:
-        key = f"rate_limit:{prefix}:{ip}"
-        try:
-            current = r.incr(key)
-            if current == 1:
-                r.expire(key, _RATE_LIMIT_WINDOW)
-            if current > max_attempts:
-                raise HTTPException(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail=detail,
-                )
-            return
-        except HTTPException:
-            raise
-        except Exception:
-            pass  # Fall through to in-memory
-
-    # In-memory fallback
-    mem_key = f"{prefix}:{ip}"
-    now = time.monotonic()
-    attempts = _rate_limit_attempts[mem_key]
-    cleaned = [t for t in attempts if now - t < _RATE_LIMIT_WINDOW]
-    if not cleaned:
-        # Remove empty keys to prevent unbounded dict growth
-        _rate_limit_attempts.pop(mem_key, None)
-        cleaned = []
-    else:
-        _rate_limit_attempts[mem_key] = cleaned
-    if len(cleaned) >= max_attempts:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=detail,
-        )
-    _rate_limit_attempts[mem_key].append(now)
-
-    # Periodic TTL-based sweep instead of nuclear clear
-    global _last_sweep
-    if now - _last_sweep > _SWEEP_INTERVAL:
-        _last_sweep = now
-        stale_keys = [k for k, v in _rate_limit_attempts.items()
-                      if not v or now - v[-1] >= _RATE_LIMIT_WINDOW]
-        for k in stale_keys:
-            _rate_limit_attempts.pop(k, None)
-
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def register(payload: UserRegister, request: Request, db: Session = Depends(get_db)):
     """Register a new user account."""
-    _check_rate_limit(request, "register", 5, "Too many registration attempts. Please try again later.")
+    check_rate_limit(request, "register", 5, detail="Too many registration attempts. Please try again later.")
     existing = db.query(User).filter(User.email == payload.email).first()
     if existing:
         raise HTTPException(
@@ -133,7 +48,7 @@ def register(payload: UserRegister, request: Request, db: Session = Depends(get_
 @router.post("/login", response_model=Token)
 def login(payload: UserLogin, request: Request, db: Session = Depends(get_db)):
     """Authenticate user and return a JWT access token."""
-    _check_rate_limit(request, "login", 10, "Too many login attempts. Please try again later.")
+    check_rate_limit(request, "login", 10, detail="Too many login attempts. Please try again later.")
     user = db.query(User).filter(User.email == payload.email).first()
     # Always run verify_password to prevent timing-based username enumeration
     password_valid = verify_password(
@@ -181,17 +96,125 @@ def refresh_token(request: Request, db: Session = Depends(get_db)):
 
 @router.put("/webhook")
 def update_webhook(
-    request_body: dict,
+    payload: WebhookUpdate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Update the current user's webhook URL for alert notifications."""
-    webhook_url = request_body.get("webhook_url", "").strip()
+    webhook_url = payload.webhook_url.strip()
     if webhook_url:
         validate_webhook_url(webhook_url)
     current_user.webhook_url = webhook_url or None
     db.commit()
     return {"message": "Webhook URL updated", "webhook_url": current_user.webhook_url}
+
+
+def _detect_webhook_platform(url: str) -> str:
+    """Detect webhook platform from URL."""
+    if "discord.com/api/webhooks/" in url:
+        return "discord"
+    if "hooks.slack.com/" in url:
+        return "slack"
+    return "generic"
+
+
+def _build_test_webhook_payload(platform: str) -> dict:
+    """Build a platform-specific test webhook payload."""
+    now = datetime.now(timezone.utc).isoformat()
+
+    if platform == "discord":
+        return {
+            "embeds": [{
+                "title": "\U0001f514 CryptoFlow Webhook Test",
+                "description": "This is a test notification from CryptoFlow price alerts. Your webhook is working correctly!",
+                "color": 0x34d399,
+                "fields": [
+                    {"name": "Current Price", "value": "$0.00", "inline": True},
+                    {"name": "Target Price", "value": "$0.00", "inline": True},
+                    {"name": "Direction", "value": "Test", "inline": True},
+                ],
+                "footer": {"text": "CryptoFlow Alerts"},
+                "timestamp": now,
+            }]
+        }
+
+    if platform == "slack":
+        return {
+            "blocks": [
+                {
+                    "type": "header",
+                    "text": {"type": "plain_text", "text": "\U0001f514 CryptoFlow Webhook Test"},
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "This is a test notification from CryptoFlow price alerts. Your webhook is working correctly!",
+                    },
+                },
+                {
+                    "type": "section",
+                    "fields": [
+                        {"type": "mrkdwn", "text": "*Current Price:* $0.00"},
+                        {"type": "mrkdwn", "text": "*Target Price:* $0.00"},
+                        {"type": "mrkdwn", "text": "*Direction:* Test"},
+                    ],
+                },
+            ]
+        }
+
+    # Generic
+    return {
+        "event": "webhook_test",
+        "message": "This is a test notification from CryptoFlow price alerts. Your webhook is working correctly!",
+        "timestamp": now,
+        "platform_hint": "generic",
+    }
+
+
+@router.post("/webhook/test")
+async def test_webhook(
+    current_user: User = Depends(get_current_user),
+):
+    """Send a test payload to the user's configured webhook URL."""
+    if not current_user.webhook_url:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No webhook URL configured. Set a webhook URL first.",
+        )
+
+    webhook_url = current_user.webhook_url
+    validate_webhook_url(webhook_url)
+
+    platform = _detect_webhook_platform(webhook_url)
+    payload = _build_test_webhook_payload(platform)
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                webhook_url,
+                json=payload,
+                headers={"Content-Type": "application/json"},
+            )
+        if resp.status_code >= 400:
+            return {
+                "message": "Webhook test failed",
+                "status_code": resp.status_code,
+            }
+        return {
+            "message": "Test webhook sent",
+            "status_code": resp.status_code,
+        }
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="Webhook request timed out",
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Failed to send webhook: {str(e)}",
+        )
 
 
 @router.get("/me", response_model=UserResponse)
@@ -220,7 +243,7 @@ def change_password(
 @router.post("/forgot-password")
 def forgot_password(payload: ForgotPasswordRequest, request: Request, db: Session = Depends(get_db)):
     """Request a password reset token."""
-    _check_rate_limit(request, "forgot_password", 3, "Too many password reset requests. Please try again later.")
+    check_rate_limit(request, "forgot_password", 3, detail="Too many password reset requests. Please try again later.")
     user = db.query(User).filter(User.email == payload.email).first()
 
     # Always return success to prevent email enumeration

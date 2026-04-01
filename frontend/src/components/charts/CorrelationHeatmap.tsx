@@ -50,7 +50,7 @@ export function CorrelationHeatmap({ coins, matrix, onCellClick }: CorrelationHe
 
   if (!coins.length || !matrix.length) {
     return (
-      <div className="flex h-64 items-center justify-center text-slate-500">
+      <div className="flex h-64 items-center justify-center text-slate-400">
         No correlation data available
       </div>
     );

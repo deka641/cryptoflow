@@ -229,7 +229,7 @@ export function MarketTreemap({ coins, livePrices }: MarketTreemapProps) {
 
   if (!coins.length) {
     return (
-      <div className="flex h-64 items-center justify-center text-slate-500">
+      <div className="flex h-64 items-center justify-center text-slate-400">
         No market data available
       </div>
     );
@@ -303,7 +303,7 @@ export function MarketTreemap({ coins, livePrices }: MarketTreemapProps) {
           }}
         />
         <span>+10%</span>
-        <span className="ml-3 text-slate-500">Size = Market Cap</span>
+        <span className="ml-3 text-slate-400">Size = Market Cap</span>
       </div>
     </div>
   );

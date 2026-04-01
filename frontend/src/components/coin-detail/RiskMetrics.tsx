@@ -38,7 +38,7 @@ function MetricValue({ value, children }: { value: number | null | undefined; ch
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <span className="text-2xl font-bold text-slate-500 cursor-help">-</span>
+          <span className="text-2xl font-bold text-slate-400 cursor-help">-</span>
         </TooltipTrigger>
         <TooltipContent
           side="bottom"

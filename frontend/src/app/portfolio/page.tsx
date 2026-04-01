@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { Briefcase, Download, Plus, Loader2 } from "lucide-react";
+import { Briefcase, Download, Plus, Loader2, Search, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { useAuth } from "@/providers/auth-provider";
 import { useLivePricesContext } from "@/providers/live-prices-provider";
 import { usePortfolio } from "@/hooks/use-portfolio";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
@@ -16,6 +17,7 @@ import { FadeIn } from "@/components/ui/fade-in";
 import { ChartErrorBoundary } from "@/components/ui/chart-error-boundary";
 import { PortfolioSummaryCards } from "@/components/portfolio/PortfolioSummaryCards";
 import { HoldingsTable } from "@/components/portfolio/HoldingsTable";
+import type { HoldingSortField, HoldingSortDirection } from "@/components/portfolio/HoldingsTable";
 import { AllocationChart } from "@/components/portfolio/AllocationChart";
 import { PerformanceChart } from "@/components/portfolio/PerformanceChart";
 import { AttributionChart } from "@/components/portfolio/AttributionChart";
@@ -31,6 +33,12 @@ export default function PortfolioPage() {
   const [csvExporting, setCsvExporting] = useState(false);
   const [attribution, setAttribution] = useState<PortfolioAttribution | null>(null);
   const [attributionLoading, setAttributionLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortField, setSortField] = useState<HoldingSortField>("current_value");
+  const [sortDirection, setSortDirection] = useState<HoldingSortDirection>("desc");
+  const [insights, setInsights] = useState<string | null>(null);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [insightsError, setInsightsError] = useState(false);
 
   const fetchAttribution = useCallback(async () => {
     setAttributionLoading(true);
@@ -41,6 +49,20 @@ export default function PortfolioPage() {
       setAttribution(null);
     } finally {
       setAttributionLoading(false);
+    }
+  }, []);
+
+  const fetchInsights = useCallback(async () => {
+    setInsightsLoading(true);
+    setInsightsError(false);
+    try {
+      const data = await api.getPortfolioInsights();
+      setInsights(data.insights);
+    } catch {
+      setInsightsError(true);
+      setInsights(null);
+    } finally {
+      setInsightsLoading(false);
     }
   }, []);
 
@@ -59,6 +81,68 @@ export default function PortfolioPage() {
     setEditHolding(null);
     setDialogOpen(true);
   };
+
+  const handleSortChange = useCallback((field: HoldingSortField, direction: HoldingSortDirection) => {
+    setSortField(field);
+    setSortDirection(direction);
+  }, []);
+
+  const filteredAndSortedHoldings = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim();
+
+    const filtered = query
+      ? holdings.filter(
+          (h) =>
+            h.name.toLowerCase().includes(query) ||
+            h.symbol.toLowerCase().includes(query)
+        )
+      : holdings;
+
+    return [...filtered].sort((a, b) => {
+      let aVal: number | null;
+      let bVal: number | null;
+
+      const aLive = prices[a.coingecko_id];
+      const bLive = prices[b.coingecko_id];
+      const aPrice = aLive ?? a.current_price_usd;
+      const bPrice = bLive ?? b.current_price_usd;
+
+      switch (sortField) {
+        case "current_value":
+          aVal = aPrice != null ? a.quantity * aPrice : null;
+          bVal = bPrice != null ? b.quantity * bPrice : null;
+          break;
+        case "pnl": {
+          const aValue = aPrice != null ? a.quantity * aPrice : null;
+          const bValue = bPrice != null ? b.quantity * bPrice : null;
+          aVal = aValue != null ? aValue - a.cost_basis_usd : null;
+          bVal = bValue != null ? bValue - b.cost_basis_usd : null;
+          break;
+        }
+        case "pnl_pct": {
+          const aValue2 = aPrice != null ? a.quantity * aPrice : null;
+          const bValue2 = bPrice != null ? b.quantity * bPrice : null;
+          const aPnl = aValue2 != null ? aValue2 - a.cost_basis_usd : null;
+          const bPnl = bValue2 != null ? bValue2 - b.cost_basis_usd : null;
+          aVal = aPnl != null && a.cost_basis_usd > 0 ? (aPnl / a.cost_basis_usd) * 100 : null;
+          bVal = bPnl != null && b.cost_basis_usd > 0 ? (bPnl / b.cost_basis_usd) * 100 : null;
+          break;
+        }
+        case "quantity":
+          aVal = a.quantity;
+          bVal = b.quantity;
+          break;
+        default:
+          return 0;
+      }
+
+      if (aVal === null && bVal === null) return 0;
+      if (aVal === null) return 1;
+      if (bVal === null) return -1;
+
+      return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+    });
+  }, [holdings, prices, searchQuery, sortField, sortDirection]);
 
   // State 1: Not logged in
   if (!user) {
@@ -179,18 +263,113 @@ export default function PortfolioPage() {
 
       <PortfolioSummaryCards summary={summary} holdings={holdings} prices={prices} />
 
+      <Card className="glass-card">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-white text-base">AI Insights</CardTitle>
+              <span className="inline-flex items-center gap-1 rounded-full bg-indigo-500/15 px-2 py-0.5 text-xs font-medium text-indigo-400">
+                <Sparkles className="size-3" />
+                AI
+              </span>
+            </div>
+            <Button
+              onClick={fetchInsights}
+              size="sm"
+              variant="outline"
+              disabled={insightsLoading}
+              className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+            >
+              {insightsLoading ? (
+                <Loader2 className="size-4 mr-1 animate-spin" />
+              ) : (
+                <Sparkles className="size-4 mr-1" />
+              )}
+              {insightsLoading ? "Analyzing..." : insights ? "Refresh Insights" : "Generate Insights"}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!insights && !insightsLoading && !insightsError && (
+            <p className="text-sm text-slate-400">
+              Click &ldquo;Generate Insights&rdquo; to get an AI-powered analysis of your portfolio.
+            </p>
+          )}
+          {insightsError && !insightsLoading && (
+            <p className="text-sm text-red-400">
+              Failed to generate insights. Please try again.
+            </p>
+          )}
+          {insightsLoading && (
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-full bg-slate-700" />
+              <Skeleton className="h-4 w-5/6 bg-slate-700" />
+              <Skeleton className="h-4 w-4/6 bg-slate-700" />
+              <Skeleton className="h-4 w-full bg-slate-700" />
+            </div>
+          )}
+          {insights && !insightsLoading && (
+            <FadeIn>
+              <div className="prose prose-sm prose-invert max-w-none text-slate-300 [&>ul]:space-y-1 [&>ul]:list-disc [&>ul]:pl-4 [&_strong]:text-white [&_li]:text-slate-300">
+                {insights.split("\n").map((line, i) => {
+                  if (!line.trim()) return null;
+                  // Render markdown-style bold
+                  const parts = line.replace(/^- /, "").split(/(\*\*[^*]+\*\*)/g);
+                  return (
+                    <div key={i} className="flex gap-1.5 text-sm leading-relaxed">
+                      {line.trim().startsWith("-") && <span className="text-indigo-400 mt-0.5 shrink-0">&#x2022;</span>}
+                      <span>
+                        {parts.map((part, j) =>
+                          part.startsWith("**") && part.endsWith("**") ? (
+                            <strong key={j} className="text-white font-medium">
+                              {part.slice(2, -2)}
+                            </strong>
+                          ) : (
+                            <span key={j}>{part}</span>
+                          )
+                        )}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </FadeIn>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="glass-card lg:col-span-2 overflow-hidden">
           <CardHeader className="pb-2">
-            <CardTitle className="text-white text-base">Holdings</CardTitle>
+            <div className="flex items-center justify-between gap-4">
+              <CardTitle className="text-white text-base">Holdings</CardTitle>
+              <div className="relative w-full max-w-xs">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
+                <Input
+                  placeholder="Search by name or symbol..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-8 bg-slate-800/50 border-slate-700 text-slate-200 placeholder:text-slate-400 text-sm"
+                />
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
-            <HoldingsTable
-              holdings={holdings}
-              livePrices={prices}
-              onEdit={handleEdit}
-              onDelete={deleteHolding}
-            />
+            {filteredAndSortedHoldings.length === 0 && searchQuery ? (
+              <div className="py-8 text-center text-sm text-slate-400">
+                No holdings match &ldquo;{searchQuery}&rdquo;
+              </div>
+            ) : (
+              <HoldingsTable
+                holdings={filteredAndSortedHoldings}
+                livePrices={prices}
+                onEdit={handleEdit}
+                onDelete={deleteHolding}
+                sortField={sortField}
+                sortDirection={sortDirection}
+                onSortChange={handleSortChange}
+              />
+            )}
           </CardContent>
         </Card>
 

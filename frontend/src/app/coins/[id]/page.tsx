@@ -93,6 +93,7 @@ export default function CoinDetailPage() {
   const [coinList, setCoinList] = useState<Coin[]>([]);
   const [days, setDays] = useState(30);
   const [chartType, setChartType] = useState<"line" | "candle">("candle");
+  const [showBands, setShowBands] = useState(false);
   const [loading, setLoading] = useState(true);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [ohlcvLoading, setOhlcvLoading] = useState(true);
@@ -276,7 +277,7 @@ export default function CoinDetailPage() {
 
   if (!coin) {
     return (
-      <div className="flex h-64 flex-col items-center justify-center gap-4 text-slate-500">
+      <div className="flex h-64 flex-col items-center justify-center gap-4 text-slate-400">
         <p>Coin not found</p>
         <Button variant="outline" asChild className="border-slate-700 text-slate-300">
           <Link href="/market">
@@ -316,7 +317,7 @@ export default function CoinDetailPage() {
         </Button>
         <div className="flex items-center gap-2">
           {coinListError ? (
-            <span className="text-xs text-slate-500">Nav unavailable</span>
+            <span className="text-xs text-slate-400">Nav unavailable</span>
           ) : (
             <>
               {prevCoin && (
@@ -523,7 +524,7 @@ export default function CoinDetailPage() {
                     )}
                   </div>
                   {coin.price_usd != null && (
-                    <p className="text-xs text-slate-500 text-center">
+                    <p className="text-xs text-slate-400 text-center">
                       Current: <span className="text-white font-medium">{formatCurrency(coin.price_usd)}</span>
                     </p>
                   )}
@@ -552,7 +553,7 @@ export default function CoinDetailPage() {
                       </span>
                     )}
                     {coin.ath_date && (
-                      <span className="text-slate-500">
+                      <span className="text-slate-400">
                         {new Date(coin.ath_date).toLocaleDateString()}
                       </span>
                     )}
@@ -579,7 +580,7 @@ export default function CoinDetailPage() {
                       </span>
                     )}
                     {coin.atl_date && (
-                      <span className="text-slate-500">
+                      <span className="text-slate-400">
                         {new Date(coin.atl_date).toLocaleDateString()}
                       </span>
                     )}
@@ -624,7 +625,7 @@ export default function CoinDetailPage() {
                           style={{ width: `${Math.min(supplyRatio, 100)}%` }}
                         />
                       </div>
-                      <p className="text-xs text-slate-500 text-center">
+                      <p className="text-xs text-slate-400 text-center">
                         {supplyRatio.toFixed(1)}% of max supply in circulation
                       </p>
                     </div>
@@ -675,6 +676,21 @@ export default function CoinDetailPage() {
                 <LineChart className="size-3.5 mr-1" />
                 Line
               </Button>
+              {chartType === "line" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowBands((b) => !b)}
+                  className={
+                    showBands
+                      ? "bg-indigo-600/30 text-indigo-300 hover:bg-indigo-600/40 h-7 px-2 border border-indigo-500/30"
+                      : "text-slate-400 hover:text-white hover:bg-transparent h-7 px-2"
+                  }
+                  title="Show ±1 standard deviation bands based on rolling 20-period volatility"
+                >
+                  Volatility Bands
+                </Button>
+              )}
             </div>
             <div className="flex gap-1">
               {TIME_PERIODS.map((period) => (
@@ -715,7 +731,7 @@ export default function CoinDetailPage() {
           ) : (
             <FadeIn>
               <ChartErrorBoundary>
-                <PriceChart data={chartData} />
+                <PriceChart data={chartData} showVolatilityBands={showBands} />
               </ChartErrorBoundary>
             </FadeIn>
           )}
@@ -849,8 +865,8 @@ export default function CoinDetailPage() {
       {user && coin && alerts.filter((a) => a.coin_id === coin.id && !a.triggered).length === 0 && (
         <Card className="glass-card border-dashed border-slate-700/50">
           <CardContent className="flex items-center justify-center gap-3 py-4">
-            <Bell className="size-4 text-slate-500" />
-            <p className="text-sm text-slate-500">
+            <Bell className="size-4 text-slate-400" />
+            <p className="text-sm text-slate-400">
               Set a price alert to get notified when {coin.symbol.toUpperCase()} hits your target.
             </p>
             <Button
@@ -909,7 +925,7 @@ export default function CoinDetailPage() {
                   className="bg-slate-800 border-slate-700 text-white"
                 />
                 {coin.price_usd && (
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-400">
                     Current price: {formatCurrency(coin.price_usd)}
                   </p>
                 )}

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Bell, Plus, Trash2, ArrowUp, ArrowDown, Clock } from "lucide-react";
+import { Bell, Plus, Trash2, Pencil, ArrowUp, ArrowDown, Clock } from "lucide-react";
 import { useAuth } from "@/providers/auth-provider";
 import { useLivePricesContext } from "@/providers/live-prices-provider";
 import { useAlerts } from "@/hooks/use-alerts";
@@ -13,6 +13,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FadeIn } from "@/components/ui/fade-in";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import type { PriceAlert } from "@/types";
 
 function formatDateTime(iso: string | null): string {
@@ -25,14 +33,114 @@ function formatDateTime(iso: string | null): string {
   });
 }
 
+function EditAlertDialog({
+  alert,
+  open,
+  onOpenChange,
+  onSave,
+}: {
+  alert: PriceAlert;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSave: (id: number, data: { target_price?: number; direction?: string }) => Promise<unknown>;
+}) {
+  const [targetPrice, setTargetPrice] = useState(String(alert.target_price));
+  const [direction, setDirection] = useState(alert.direction);
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const price = parseFloat(targetPrice);
+    if (!price || price <= 0) return;
+    setSaving(true);
+    try {
+      await onSave(alert.id, { target_price: price, direction });
+      onOpenChange(false);
+    } catch {
+      // toast handled by hook
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="bg-slate-900 border-slate-700 sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-white">
+            Edit Alert — {alert.symbol.toUpperCase()}
+          </DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-slate-300">Target Price (USD)</Label>
+            <Input
+              type="number"
+              step="any"
+              min="0"
+              value={targetPrice}
+              onChange={(e) => setTargetPrice(e.target.value)}
+              className="bg-slate-800 border-slate-700 text-white"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-slate-300">Direction</Label>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={direction === "above" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setDirection("above")}
+                className={direction === "above" ? "bg-emerald-600 hover:bg-emerald-700" : "border-slate-700 text-slate-300"}
+              >
+                <ArrowUp className="size-3.5 mr-1" /> Above
+              </Button>
+              <Button
+                type="button"
+                variant={direction === "below" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setDirection("below")}
+                className={direction === "below" ? "bg-red-600 hover:bg-red-700" : "border-slate-700 text-slate-300"}
+              >
+                <ArrowDown className="size-3.5 mr-1" /> Below
+              </Button>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onOpenChange(false)}
+              className="border-slate-700 text-slate-300"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={saving}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              {saving ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function AlertRow({
   alert,
   currentPrice,
   onDelete,
+  onEdit,
 }: {
   alert: PriceAlert;
   currentPrice: number | null;
   onDelete: (id: number) => void;
+  onEdit: (alert: PriceAlert) => void;
 }) {
   const distance =
     currentPrice && alert.target_price
@@ -94,8 +202,17 @@ function AlertRow({
       <Button
         variant="ghost"
         size="sm"
+        onClick={() => onEdit(alert)}
+        className="text-slate-400 hover:text-indigo-400 h-8 w-8 p-0"
+        aria-label="Edit alert"
+      >
+        <Pencil className="size-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => onDelete(alert.id)}
-        className="text-slate-500 hover:text-red-400 h-8 w-8 p-0"
+        className="text-slate-400 hover:text-red-400 h-8 w-8 p-0"
         aria-label="Delete alert"
       >
         <Trash2 className="size-4" />
@@ -147,6 +264,7 @@ export default function AlertsPage() {
   const {
     alerts,
     loading,
+    updateAlert,
     deleteAlert,
     triggeredAlerts,
     triggeredLoading,
@@ -155,6 +273,7 @@ export default function AlertsPage() {
     setTriggeredPage,
   } = useAlerts();
   const [tab, setTab] = useState("active");
+  const [editingAlert, setEditingAlert] = useState<PriceAlert | null>(null);
 
   if (!user) {
     return (
@@ -235,6 +354,7 @@ export default function AlertsPage() {
                         alert={alert}
                         currentPrice={livePrice}
                         onDelete={deleteAlert}
+                        onEdit={setEditingAlert}
                       />
                     );
                   })}
@@ -245,7 +365,7 @@ export default function AlertsPage() {
                   <p className="text-lg font-medium text-slate-300">
                     No Active Alerts
                   </p>
-                  <p className="text-sm text-slate-500 mt-2 max-w-md">
+                  <p className="text-sm text-slate-400 mt-2 max-w-md">
                     Set price alerts from any coin&apos;s detail page. You can
                     create up to 20 active alerts.
                   </p>
@@ -284,7 +404,7 @@ export default function AlertsPage() {
                   <p className="text-lg font-medium text-slate-300">
                     No Triggered Alerts Yet
                   </p>
-                  <p className="text-sm text-slate-500 mt-2 max-w-md">
+                  <p className="text-sm text-slate-400 mt-2 max-w-md">
                     When your price alerts are triggered, they&apos;ll appear
                     here with timestamps.
                   </p>
@@ -322,6 +442,15 @@ export default function AlertsPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {editingAlert && (
+        <EditAlertDialog
+          alert={editingAlert}
+          open={!!editingAlert}
+          onOpenChange={(open) => !open && setEditingAlert(null)}
+          onSave={updateAlert}
+        />
+      )}
     </div>
   );
 }

@@ -56,7 +56,7 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
 export function VolatilityChart({ data, compact = false }: VolatilityChartProps) {
   if (!data || data.length === 0) {
     return (
-      <div className="flex h-64 items-center justify-center text-slate-500">
+      <div className="flex h-64 items-center justify-center text-slate-400">
         No volatility data available
       </div>
     );
@@ -122,7 +122,7 @@ export function VolatilityChart({ data, compact = false }: VolatilityChartProps)
           <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "#f87171" }} />
           <span>High risk</span>
         </div>
-        <span className="ml-2 text-slate-500">Relative to highest in set</span>
+        <span className="ml-2 text-slate-400">Relative to highest in set</span>
       </div>
     </div>
   );

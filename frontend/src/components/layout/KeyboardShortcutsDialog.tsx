@@ -38,7 +38,7 @@ export function KeyboardShortcutsDialog({
 
         <div className="space-y-4">
           <div>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
               Navigation
             </h3>
             <div className="space-y-1.5">
@@ -64,7 +64,7 @@ export function KeyboardShortcutsDialog({
           </div>
 
           <div>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
               General
             </h3>
             <div className="space-y-1.5">

@@ -13,7 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
-import { GitCompareArrows, TrendingUp } from "lucide-react";
+import { GitCompareArrows, TrendingUp, Share2, Copy, Check, Bookmark } from "lucide-react";
+import { toast } from "sonner";
 import { ChartErrorBoundary } from "@/components/ui/chart-error-boundary";
 
 const PERIODS = [
@@ -62,6 +63,47 @@ function CompareContent() {
   const [historyError, setHistoryError] = useState(false);
   const [analyticsError, setAnalyticsError] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLink = useCallback(() => {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      setCopied(true);
+      toast.success("Link copied to clipboard");
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, []);
+
+  const handleShare = useCallback(async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `CryptoFlow Compare: ${selectedCoins.map(c => c.symbol.toUpperCase()).join(" vs ")}`,
+          url: window.location.href,
+        });
+      } catch {
+        // User cancelled or share failed — copy link as fallback
+        handleCopyLink();
+      }
+    } else {
+      handleCopyLink();
+    }
+  }, [selectedCoins, handleCopyLink]);
+
+  const handleSaveComparison = useCallback(() => {
+    const key = "cryptoflow_saved_comparisons";
+    const saved: { coins: string; period: number; label: string }[] = JSON.parse(localStorage.getItem(key) || "[]");
+    const label = selectedCoins.map(c => c.symbol.toUpperCase()).join(" vs ");
+    const coins = selectedCoins.map(c => c.symbol.toLowerCase()).join(",");
+    // Avoid duplicates
+    if (saved.some(s => s.coins === coins && s.period === periodDays)) {
+      toast.info("This comparison is already saved");
+      return;
+    }
+    saved.unshift({ coins, period: periodDays, label });
+    if (saved.length > 10) saved.pop();
+    localStorage.setItem(key, JSON.stringify(saved));
+    toast.success("Comparison saved");
+  }, [selectedCoins, periodDays]);
 
   // Parse URL params on mount
   useEffect(() => {
@@ -314,12 +356,48 @@ function CompareContent() {
   return (
     <div className="space-y-6">
       {/* Page Intro */}
-      <div>
-        <h2 className="text-2xl font-bold text-white">Compare Coins</h2>
-        <p className="mt-1 text-sm text-slate-400">
-          Select up to 5 coins to compare their normalized performance, key
-          metrics, and pairwise correlations side by side.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-white">Compare Coins</h2>
+          <p className="mt-1 text-sm text-slate-400">
+            Select up to 5 coins to compare their normalized performance, key
+            metrics, and pairwise correlations side by side.
+          </p>
+        </div>
+        {selectedCoins.length >= 2 && (
+          <div className="flex gap-1.5 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCopyLink}
+              className="border-slate-700 text-slate-300 hover:text-white h-8"
+              title="Copy link to clipboard"
+            >
+              {copied ? <Check className="size-3.5 mr-1" /> : <Copy className="size-3.5 mr-1" />}
+              {copied ? "Copied" : "Copy Link"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleShare}
+              className="border-slate-700 text-slate-300 hover:text-white h-8"
+              title="Share comparison"
+            >
+              <Share2 className="size-3.5 mr-1" />
+              Share
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSaveComparison}
+              className="border-slate-700 text-slate-300 hover:text-white h-8"
+              title="Save this comparison"
+            >
+              <Bookmark className="size-3.5 mr-1" />
+              Save
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Controls */}
@@ -370,7 +448,7 @@ function CompareContent() {
             <p className="text-lg font-medium text-slate-300">
               Compare Cryptocurrencies
             </p>
-            <p className="text-sm text-slate-500 mt-2 max-w-md">
+            <p className="text-sm text-slate-400 mt-2 max-w-md">
               Select at least 2 coins above to compare their normalized performance, risk metrics, and pairwise correlations side by side.
             </p>
             <div className="flex flex-wrap gap-2 mt-6">
@@ -399,6 +477,31 @@ function CompareContent() {
                 DOGE vs SHIB
               </Button>
             </div>
+            {(() => {
+              const saved: { coins: string; period: number; label: string }[] = JSON.parse(
+                typeof window !== "undefined" ? localStorage.getItem("cryptoflow_saved_comparisons") || "[]" : "[]"
+              );
+              if (saved.length === 0) return null;
+              return (
+                <div className="mt-6 pt-4 border-t border-slate-800">
+                  <p className="text-sm font-medium text-slate-300 mb-2">Saved Comparisons</p>
+                  <div className="flex flex-wrap gap-2">
+                    {saved.map((s, i) => (
+                      <Button
+                        key={i}
+                        variant="outline"
+                        size="sm"
+                        className="border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white"
+                        onClick={() => router.push(`/compare?coins=${s.coins}&period=${s.period}`)}
+                      >
+                        <Bookmark className="size-3 mr-1 text-indigo-400" />
+                        {s.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
       )}
